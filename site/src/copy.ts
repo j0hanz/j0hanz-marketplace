@@ -23,4 +23,7 @@ export const copy = {
   footerNote: 'MIT licensed.',
 } as const;
 
-export const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+/** Word only — pluralized when count is not one. Used where the count is shown separately. */
+export const pluralWord = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`;
+
+export const plural = (count: number, word: string) => `${count} ${pluralWord(count, word)}`;

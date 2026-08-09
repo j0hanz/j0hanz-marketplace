@@ -5,7 +5,7 @@ import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { copy } from '../copy';
+import { copy, pluralWord } from '../copy';
 import { site } from '../site';
 import { Command } from './Command';
 
@@ -66,7 +66,7 @@ export function Hero() {
                 {stat.count}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {stat.count === 1 ? stat.unit : `${stat.unit}s`}
+                {pluralWord(stat.count, stat.unit)}
               </Typography>
             </Stack>
           ))}

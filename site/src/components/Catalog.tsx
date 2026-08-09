@@ -9,9 +9,10 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import { copy, plural } from '../copy';
+import { copy } from '../copy';
 import { site } from '../site';
 import { Command } from './Command';
+import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 const ALL = 'all';
@@ -67,10 +68,7 @@ export function Catalog() {
                 </Typography>
 
                 <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
-                  <Chip size="small" label={plural(p.skills.length, copy.unit.skill)} />
-                  {p.agents.length > 0 && (
-                    <Chip size="small" label={plural(p.agents.length, copy.unit.agent)} />
-                  )}
+                  <PluginCountChips plugin={p} />
                   {p.hookEvents.map((event) => (
                     <Chip key={event} size="small" variant="outlined" label={event} />
                   ))}

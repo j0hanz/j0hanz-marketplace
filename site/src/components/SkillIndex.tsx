@@ -9,9 +9,10 @@ import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { copy, plural } from '../copy';
+import { copy } from '../copy';
 import { site } from '../site';
 import { mono } from '../theme';
+import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 /** One row: the invocation on top, its description below. Same shape for skills and agents. */
@@ -55,10 +56,7 @@ export function SkillIndex() {
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>{p.displayName}</Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-              <Chip size="small" label={plural(p.skills.length, copy.unit.skill)} />
-              {p.agents.length > 0 && (
-                <Chip size="small" label={plural(p.agents.length, copy.unit.agent)} />
-              )}
+              <PluginCountChips plugin={p} />
             </Stack>
           </AccordionSummary>
           <AccordionDetails>
