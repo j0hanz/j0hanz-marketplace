@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { copy, pluralWord } from '../copy';
 import { site } from '../site';
+import { steel } from '../theme';
 import { Command } from './Command';
 
 const stats = [
@@ -22,7 +23,12 @@ export function Hero() {
         <Typography variant="h2" component="h1">
           {copy.heroTitle}
         </Typography>
-        <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
+        <Typography
+          variant="h6"
+          component="p"
+          color="text.secondary"
+          sx={{ fontWeight: 400, maxWidth: '60ch' }}
+        >
           {copy.heroBody}
         </Typography>
 
@@ -43,16 +49,26 @@ export function Hero() {
           </Button>
         </Stack>
 
-        <Box className="industrial-bezel" sx={{ maxWidth: 520, p: 1, bgcolor: 'background.paper' }}>
+        {/* The one bezel on the page: the command that starts everything, in a steel frame. */}
+        <Box
+          sx={{
+            maxWidth: 520,
+            p: 1,
+            bgcolor: 'background.paper',
+            border: `3px solid ${steel}`,
+            boxShadow: 'inset 0 0 0 3px var(--mui-palette-primary-main)',
+          }}
+        >
           <Command value={site.addCommand} />
         </Box>
 
         <Stack
           component="ul"
           direction="row"
+          useFlexGap
           spacing={3}
           divider={<Divider orientation="vertical" flexItem />}
-          sx={{ listStyle: 'none', p: 0, m: 0 }}
+          sx={{ listStyle: 'none', p: 0, m: 0, flexWrap: 'wrap' }}
         >
           {stats.map((stat) => (
             <Stack
@@ -62,7 +78,7 @@ export function Hero() {
               spacing={1}
               sx={{ alignItems: 'baseline' }}
             >
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
                 {stat.count}
               </Typography>
               <Typography variant="body2" color="text.secondary">

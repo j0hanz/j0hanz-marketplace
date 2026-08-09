@@ -21,9 +21,6 @@ export interface Plugin {
   category: string;
   /** One-breath pitch from the catalog entry. */
   summary: string;
-  /** Long form from the plugin manifest. */
-  description: string;
-  keywords: string[];
   homepage: string;
   installCommand: string;
   hookEvents: string[];
@@ -39,7 +36,7 @@ export interface Site {
   repoUrl: string;
   addCommand: string;
   categories: string[];
-  totals: { plugins: number; skills: number; commands: number; agents: number };
+  totals: { plugins: number; skills: number; agents: number };
   plugins: Plugin[];
 }
 

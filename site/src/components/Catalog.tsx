@@ -29,7 +29,8 @@ export function Catalog() {
         size="small"
         value={category}
         onChange={(_, next: string | null) => next && setCategory(next)}
-        sx={{ mb: 4, flexWrap: 'wrap' }}
+        aria-label={copy.catalogTitle}
+        sx={{ mb: 4, flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44 } }}
       >
         <ToggleButton value={ALL}>{copy.catalogAll}</ToggleButton>
         {site.categories.map((name) => (
@@ -49,7 +50,7 @@ export function Catalog() {
                   spacing={1}
                   sx={{ alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                  <Typography variant="h6" component="h3">
+                  <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
                     <Link
                       href={p.homepage}
                       target="_blank"
@@ -60,7 +61,7 @@ export function Catalog() {
                       {p.displayName}
                     </Link>
                   </Typography>
-                  <Chip label={p.version} size="small" variant="outlined" />
+                  <Chip label={p.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
                 </Stack>
 
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

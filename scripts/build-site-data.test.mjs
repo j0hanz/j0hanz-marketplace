@@ -42,7 +42,6 @@ test('totals and categories are derived from the plugins', () => {
   const skills = site.plugins.flatMap((p) => p.skills);
   assert.equal(site.totals.plugins, site.plugins.length);
   assert.equal(site.totals.skills, skills.length);
-  assert.equal(site.totals.commands, skills.filter((s) => s.invocable).length);
   assert.equal(
     site.totals.agents,
     site.plugins.reduce((n, p) => n + p.agents.length, 0),

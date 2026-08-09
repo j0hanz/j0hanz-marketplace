@@ -11,18 +11,16 @@ import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 import { copy } from '../copy';
 import { site } from '../site';
+import { steel } from '../theme';
 
 function ModeToggle() {
   const { mode, systemMode, setMode } = useColorScheme();
   // `mode` is 'system' until the visitor picks one, and undefined before mount.
   const resolved = mode === 'system' ? systemMode : mode;
+  const next = resolved === 'dark' ? 'light' : 'dark';
 
   return (
-    <IconButton
-      color="inherit"
-      aria-label={copy.modeLabel}
-      onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
-    >
+    <IconButton color="inherit" aria-label={copy.modeLabel[next]} onClick={() => setMode(next)}>
       {resolved === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
     </IconButton>
   );
@@ -36,8 +34,8 @@ export function Nav() {
       enableColorOnDark
       sx={{
         bgcolor: 'background.paper',
-        borderBottom: '3px solid #4A5568',
-        boxShadow: 'inset 0 -3px 0 0 #FFB000',
+        borderBottom: `3px solid ${steel}`,
+        boxShadow: 'inset 0 -3px 0 0 var(--mui-palette-primary-main)',
       }}
     >
       <Container maxWidth="lg">
@@ -46,7 +44,13 @@ export function Nav() {
             variant="h6"
             component="a"
             href="#top"
-            sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none', fontWeight: 600 }}
+            sx={{
+              flexGrow: 1,
+              color: 'inherit',
+              textDecoration: 'none',
+              fontWeight: 700,
+              py: 1,
+            }}
           >
             {site.name}
           </Typography>

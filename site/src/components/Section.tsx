@@ -17,9 +17,15 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <Container component="section" id={id} maxWidth="lg" sx={{ py: { xs: 6, md: 9 } }}>
+    <Container
+      component="section"
+      id={id}
+      aria-labelledby={`${id}-title`}
+      maxWidth="lg"
+      sx={{ py: { xs: 6, md: 9 } }}
+    >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: { xs: 3, md: 4 } }}>
-        <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
+        <Typography id={`${id}-title`} variant="h4" component="h2">
           {title}
         </Typography>
         {count !== undefined && <Chip label={count} size="small" />}

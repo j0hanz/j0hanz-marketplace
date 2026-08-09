@@ -101,10 +101,8 @@ export function build() {
     displayName: manifest.displayName || manifest.name,
     version: manifest.version ?? '',
     category: entry.category ?? '',
-    // Catalog line is the one-breath pitch; the manifest carries the long form.
+    // Catalog line is the one-breath pitch, and the only prose the cards show.
     summary: entry.description ?? '',
-    description: manifest.description ?? '',
-    keywords: manifest.keywords ?? [],
     homepage:
       manifest.homepage || `https://github.com/${repo}/tree/main/${root.replace(/^\.\//, '')}`,
     installCommand: `/plugin install ${manifest.name}@${catalog.name}`,
@@ -127,7 +125,6 @@ export function build() {
     totals: {
       plugins: plugins.length,
       skills: total((p) => p.skills.length),
-      commands: total((p) => p.skills.filter((s) => s.invocable).length),
       agents: total((p) => p.agents.length),
     },
     plugins,

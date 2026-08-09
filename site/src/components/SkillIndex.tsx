@@ -36,7 +36,11 @@ function Entry({
             useFlexGap
             sx={{ flexWrap: 'wrap', alignItems: 'center' }}
           >
-            <Typography component="code" variant="body2" sx={{ fontFamily: mono }}>
+            <Typography
+              component="code"
+              variant="body2"
+              sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
+            >
               {code}
             </Typography>
             {extra}
@@ -50,11 +54,13 @@ function Entry({
 
 export function SkillIndex() {
   return (
-    <Section id="skills" title={copy.skillsTitle} count={site.totals.skills}>
+    <Section id="skills" title={copy.skillsTitle} count={site.totals.skills + site.totals.agents}>
       {site.plugins.map((p, i) => (
         <Accordion key={p.name} defaultExpanded={i === 0} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>{p.displayName}</Typography>
+            <Typography component="h3" sx={{ flexGrow: 1, fontWeight: 500 }}>
+              {p.displayName}
+            </Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
               <PluginCountChips plugin={p} />
             </Stack>
@@ -73,7 +79,7 @@ export function SkillIndex() {
                           component="code"
                           variant="caption"
                           color="text.secondary"
-                          sx={{ fontFamily: mono }}
+                          sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
                         >
                           {skill.argumentHint}
                         </Typography>

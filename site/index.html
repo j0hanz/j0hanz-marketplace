@@ -3,8 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
     <title>%TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230F1215'/><path d='M7 10l6 6-6 6M17 22h9' stroke='%23FFB000' stroke-width='3' fill='none'/></svg>"
+    />
+    <script>
+      // Paint the chosen scheme before first paint; MUI only applies the class on mount,
+      // which flashes the wrong theme for anyone who picked one.
+      try {
+        var mode = localStorage.getItem('mui-mode') || 'system';
+        var dark =
+          mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : mode === 'dark';
+        document.documentElement.classList.add(dark ? 'dark' : 'light');
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
