@@ -1,8 +1,5 @@
-import Box from '@mui/material/Box';
-import Step from '@mui/material/Step';
-import StepContent from '@mui/material/StepContent';
-import StepLabel from '@mui/material/StepLabel';
-import Stepper from '@mui/material/Stepper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { copy } from '../copy';
 import { site } from '../site';
 import { Command } from './Command';
@@ -19,18 +16,16 @@ const rows = [
 export function Install() {
   return (
     <Section id="install" title={copy.installTitle}>
-      <Stepper orientation="vertical" nonLinear activeStep={-1} sx={{ maxWidth: 560 }}>
-        {rows.map((row) => (
-          <Step key={row.label} active expanded>
-            <StepLabel>{row.label}</StepLabel>
-            <StepContent>
-              <Box sx={{ pb: 1 }}>
-                <Command value={row.value} />
-              </Box>
-            </StepContent>
-          </Step>
+      <Stack component="ol" spacing={3} sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 560 }}>
+        {rows.map((row, i) => (
+          <Stack key={row.label} component="li" spacing={1}>
+            <Typography variant="overline" color="text.secondary">
+              Step {i + 1} — {row.label}
+            </Typography>
+            <Command value={row.value} />
+          </Stack>
         ))}
-      </Stepper>
+      </Stack>
     </Section>
   );
 }
