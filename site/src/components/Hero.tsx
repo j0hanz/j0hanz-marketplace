@@ -18,8 +18,8 @@ const stats = [
 export function Hero() {
   return (
     <Container component="section" id="top" maxWidth="lg" sx={{ py: { xs: 8, md: 14 } }}>
-      <Stack spacing={4} sx={{ maxWidth: 720 }}>
-        <Typography variant="h2" component="h1" sx={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
+      <Stack spacing={4}>
+        <Typography variant="h2" component="h1">
           {copy.heroTitle}
         </Typography>
         <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
@@ -43,7 +43,7 @@ export function Hero() {
           </Button>
         </Stack>
 
-        <Box sx={{ maxWidth: 520 }}>
+        <Box className="industrial-bezel" sx={{ maxWidth: 520, p: 1, bgcolor: 'background.paper' }}>
           <Command value={site.addCommand} />
         </Box>
 

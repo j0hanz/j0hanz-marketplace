@@ -34,8 +34,11 @@ export function Nav() {
       position="sticky"
       color="default"
       enableColorOnDark
-      elevation={0}
-      sx={{ borderBottom: 1, borderColor: 'divider' }}
+      sx={{
+        bgcolor: 'background.paper',
+        borderBottom: '3px solid #4A5568',
+        boxShadow: 'inset 0 -3px 0 0 #FFB000',
+      }}
     >
       <Container maxWidth="lg">
         <Toolbar disableGutters>
