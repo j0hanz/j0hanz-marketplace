@@ -7,17 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
-import { mono } from '../theme';
-
-// Announced, never seen. `width: 1` in sx means 100%, so these stay strings.
-const srOnly = {
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  overflow: 'hidden',
-  clipPath: 'inset(50%)',
-  whiteSpace: 'nowrap',
-} as const;
+import { mono, srOnly } from '../theme';
 
 /** A real, selectable command with a copy button. Not a picture of a terminal. */
 export function Command({ value }: { value: string }) {

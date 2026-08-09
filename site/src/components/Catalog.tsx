@@ -43,7 +43,20 @@ export function Catalog() {
       <Grid container spacing={3}>
         {visible.map((p) => (
           <Grid key={p.name} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card variant="outlined" sx={{ height: 1, display: 'flex', flexDirection: 'column' }}>
+            <Card
+              variant="outlined"
+              sx={{
+                height: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                // Outlined cards give no sign they are anything but a box. The edge lights
+                // up amber under the cursor, matching the nav and the hero bezel.
+                '&:hover': { borderColor: 'primary.main', transform: 'translateY(-2px)' },
+                '@media (prefers-reduced-motion: no-preference)': {
+                  transition: 'border-color 200ms ease, transform 200ms ease',
+                },
+              }}
+            >
               <CardContent sx={{ flexGrow: 1 }}>
                 <Stack
                   direction="row"

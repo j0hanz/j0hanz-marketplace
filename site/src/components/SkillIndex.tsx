@@ -28,7 +28,12 @@ function Entry({
   return (
     <ListItem disableGutters divider alignItems="flex-start">
       <ListItemText
-        slotProps={{ primary: { component: 'div' }, secondary: { sx: { mt: 0.5 } } }}
+        // Skill descriptions are full sentences; at container width they run past 140
+        // characters a line, which is roughly twice a readable measure.
+        slotProps={{
+          primary: { component: 'div' },
+          secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
+        }}
         primary={
           <Stack
             direction="row"

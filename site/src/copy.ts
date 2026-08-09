@@ -1,5 +1,6 @@
 // Every string on the page that is not derived from the marketplace data.
 export const copy = {
+  skipLink: 'Skip to content',
   navLinks: [
     { label: 'Plugins', href: '#plugins' },
     { label: 'Skills', href: '#skills' },

@@ -19,7 +19,7 @@ export function Install() {
       <Stack component="ol" spacing={3} sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 560 }}>
         {rows.map((row, i) => (
           <Stack key={row.label} component="li" spacing={1}>
-            <Typography variant="overline" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
               Step {i + 1} — {row.label}
             </Typography>
             <Command value={row.value} />

@@ -9,8 +9,11 @@ const DATA = new URL('./site/src/data/marketplace.json', import.meta.url);
 const siteMeta = (): Plugin => ({
   name: 'site-meta',
   transformIndexHtml: (html) => {
-    const { name, description } = JSON.parse(readFileSync(DATA, 'utf8'));
-    return html.replaceAll('%TITLE%', name).replaceAll('%DESCRIPTION%', description);
+    const { name, description, repo } = JSON.parse(readFileSync(DATA, 'utf8'));
+    return html
+      .replaceAll('%TITLE%', name)
+      .replaceAll('%DESCRIPTION%', description)
+      .replaceAll('%REPO%', repo);
   },
 });
 

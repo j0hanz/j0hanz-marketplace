@@ -6,6 +6,12 @@
     <meta name="color-scheme" content="dark light" />
     <title>%TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
+    <!-- GitHub renders a card for the repo itself, so the share image needs no asset here. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="%TITLE%" />
+    <meta property="og:description" content="%DESCRIPTION%" />
+    <meta property="og:image" content="https://opengraph.githubassets.com/1/%REPO%" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230F1215'/><path d='M7 10l6 6-6 6M17 22h9' stroke='%23FFB000' stroke-width='3' fill='none'/></svg>"

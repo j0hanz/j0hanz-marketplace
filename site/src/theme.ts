@@ -6,14 +6,26 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 /** Structural steel: the 3px chassis edges. Deliberately the same in both schemes. */
 export const steel = '#4A5568';
 
+/** Announced, never seen. `width: 1` in sx means 100%, so these stay strings. */
+export const srOnly = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  overflow: 'hidden',
+  clipPath: 'inset(50%)',
+  whiteSpace: 'nowrap',
+} as const;
+
 // One heading treatment — uppercase, tracked, mono — sized fluidly so the display line
-// never eats a phone's first screen.
-const heading = (min: string, max: string) => ({
+// never eats a phone's first screen. Mono is already wide; the display size takes far less
+// extra tracking than the section headings do, or it falls apart into loose letters.
+const heading = (min: string, max: string, letterSpacing: string) => ({
   fontWeight: 700,
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.08em',
-  lineHeight: 1.15,
+  letterSpacing,
+  lineHeight: 1.1,
   fontSize: `clamp(${min}, 6vw, ${max})`,
+  textWrap: 'balance' as const,
 });
 
 /** One focus ring for everything focusable, buttons and plain anchors alike. */
@@ -22,6 +34,13 @@ const focusRing = {
   outlineOffset: '2px',
 };
 
+// Fixed grain over the whole page. Flat fills read as sterile at this scale; 3.5% of
+// fractal noise gives the steel-and-amber chassis some tooth without touching contrast.
+// Sized rather than viewport-filling, so it tiles from one small raster instead of
+// re-running the filter across the whole screen on every resize.
+const grain =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
@@ -29,7 +48,6 @@ export const theme = createTheme({
       palette: {
         // Amber deepened for light: #FFB000 on white is 1.9:1 and fails as text or icon.
         primary: { main: '#8F5B00', contrastText: '#FFFFFF' },
-        secondary: { main: '#C2410C' },
         background: { default: '#F2F4F6', paper: '#FFFFFF' },
         text: { primary: '#0F1215', secondary: steel },
         divider: '#CBD2DA',
@@ -38,7 +56,6 @@ export const theme = createTheme({
     dark: {
       palette: {
         primary: { main: '#FFB000', contrastText: '#0F1215' },
-        secondary: { main: '#FF6B00' },
         background: { default: '#0F1215', paper: '#1C2127' },
         text: { primary: '#E2E8F0' },
         // Default dark divider is 1.4:1 against the page and reads as no edge at all.
@@ -49,8 +66,10 @@ export const theme = createTheme({
   shape: { borderRadius: 0 },
   typography: {
     fontFamily: mono,
-    h2: heading('2rem', '3.75rem'),
-    h4: heading('1.25rem', '2.125rem'),
+    h2: heading('2rem', '3.75rem', '0.01em'),
+    h4: heading('1.25rem', '2.125rem', '0.06em'),
+    body1: { textWrap: 'pretty' },
+    body2: { textWrap: 'pretty' },
   },
   components: {
     MuiCssBaseline: {
@@ -59,10 +78,34 @@ export const theme = createTheme({
           scrollPaddingTop: 80,
           '@media (prefers-reduced-motion: no-preference)': { scrollBehavior: 'smooth' },
         },
+        body: {
+          '&::before': {
+            content: '""',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            opacity: 0.035,
+            backgroundImage: grain,
+          },
+        },
         ':focus-visible': focusRing,
       },
     },
-    // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
-    MuiButtonBase: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
+    MuiButtonBase: {
+      styleOverrides: {
+        root: {
+          // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
+          '&.Mui-focusVisible': focusRing,
+          // Presses answer back. Transform only, so it never reflows the row it sits in.
+          '&:active': { transform: 'translateY(1px)' },
+          '@media (prefers-reduced-motion: no-preference)': {
+            transition: 'transform 120ms ease',
+          },
+        },
+      },
+    },
+    // Chips default to a 16px pill, which is the one rounded shape on a zero-radius page.
+    MuiChip: { styleOverrides: { root: { borderRadius: 0 } } },
   },
 });
