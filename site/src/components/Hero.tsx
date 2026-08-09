@@ -27,7 +27,7 @@ export function Hero() {
         </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <Button variant="contained" size="large" href={copy.navLinks[0].href} disableElevation>
+          <Button variant="contained" size="large" href={copy.heroPrimaryHref} disableElevation>
             {copy.heroPrimary}
           </Button>
           <Button

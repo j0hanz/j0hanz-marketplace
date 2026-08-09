@@ -64,7 +64,7 @@ export function Nav() {
               href={site.repoUrl}
               target="_blank"
               rel="noreferrer"
-              aria-label={copy.heroSecondary}
+              aria-label={copy.githubLabel}
             >
               <GitHubIcon />
             </IconButton>
