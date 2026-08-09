@@ -1,0 +1,46 @@
+{
+  "name": "j0hanz-marketplace",
+  "description": "Personal Claude Code plugin marketplace",
+  "owner": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "plugins": [
+    {
+      "name": "tutor",
+      "source": "./plugins/tutor",
+      "description": "Teach one topic across many sessions: workspace, spaced repetition, offline HTML lessons sealed behind a retrieval quiz",
+      "category": "learning"
+    },
+    {
+      "name": "css",
+      "source": "./plugins/css",
+      "description": "Stops agents wrecking your CSS: refuses writes carrying provable defects, advises on performance and accessibility failures",
+      "category": "frontend"
+    },
+    {
+      "name": "mcp-hub",
+      "source": "./plugins/mcp-hub",
+      "description": "MCP development skills for TypeScript SDK v2",
+      "category": "development"
+    },
+    {
+      "name": "craft",
+      "source": "./plugins/craft",
+      "description": "Author Claude Code extensions properly: what makes a skill predictable, and how to write, audit and debug hooks",
+      "category": "authoring"
+    },
+    {
+      "name": "review",
+      "source": "./plugins/review",
+      "description": "Clean Code readability pass and a strict maintainability review, both behavior-preserving",
+      "category": "quality"
+    },
+    {
+      "name": "prompt",
+      "source": "./plugins/prompt",
+      "description": "Rewrites a rough, half-formed prompt into one that works on current Claude models",
+      "category": "productivity"
+    }
+  ]
+}

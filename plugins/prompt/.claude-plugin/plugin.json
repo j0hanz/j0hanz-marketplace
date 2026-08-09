@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "prompt",
+  "displayName": "Prompt",
+  "version": "1.0.0",
+  "description": "Rewrites a rough, half-formed prompt into one that works on current Claude models.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": ["prompting", "prompt-engineering", "rewrite", "claude"]
+}

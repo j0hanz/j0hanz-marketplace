@@ -1,0 +1,18 @@
+{
+  "name": "j0hanz-marketplace",
+  "private": true,
+  "description": "Dev tooling for the marketplace. Plugin metadata lives in each plugins/<name>/.claude-plugin/plugin.json.",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test",
+    "validate": "node scripts/validate.mjs",
+    "check": "npm run format:check && npm run validate && npm test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
+  }
+}

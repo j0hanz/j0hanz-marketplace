@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- {{QUIZ-STRINGS — course not in English? add every data-* override for the words quiz.js write
+to the html tag below, per references/DESIGN.md § Quiz. Then delete this comment; English
+course, delete it unfilled.}} -->
+<html
+  lang="{{LANG}}"
+  data-accent="{{ACCENT — a name from DESIGN.md § Per-lesson hooks; drop this attribute for the default}}"
+  data-density="{{DENSITY — a name from DESIGN.md § Per-lesson hooks; drop this attribute for the default}}"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{TITLE}} — {{TOPIC}}</title>
+    <link rel="stylesheet" href="./assets/roots.css" />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <main class="lesson">
+      <header class="lesson-header">
+        <p class="eyebrow">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"
+            /></svg
+          >{{EYEBROW — where this lesson sits, e.g. "Lesson 4 · ownership"}}
+        </p>
+        <h1>{{TITLE}}</h1>
+        <p class="lead">{{LEAD — the one thing this lesson lands, in one or two sentences.}}</p>
+      </header>
+
+      <nav class="toc" aria-label="{{ROUTE-LABEL}}">
+        <span class="toc-eyebrow">{{ROUTE-LABEL}}</span>
+        <ul class="toc-list">
+          <li>
+            <a href="#recall"><span class="toc-stop">1</span> {{STOP-1}}</a>
+          </li>
+          <li>
+            <a href="#knowledge"><span class="toc-stop">2</span> {{STOP-2}}</a>
+          </li>
+          <li>
+            <a href="#skills"><span class="toc-stop">3</span> {{STOP-3}}</a>
+          </li>
+          <li>
+            <a href="#where-next"><span class="toc-stop">4</span> {{STOP-4}}</a>
+          </li>
+        </ul>
+      </nav>
+
+      <section class="cold-open" id="recall" aria-labelledby="recall-title">
+        <!-- cold-open: 1={{RECORD-ID}} -->
+        <p class="eyebrow">
+          {{COLD-OPEN-EYEBROW — optional; drop this whole p when the title carry it}}
+        </p>
+        <h2 id="recall-title">{{COLD-OPEN-TITLE}}</h2>
+        <p class="cold-open-intro">
+          {{COLD-OPEN-INTRO — answer from memory, and what unlocks the lesson.}}
+        </p>
+
+        <div
+          class="quiz"
+          data-releases="content"
+          data-label="{{QUIZ-LABEL}}"
+          data-lesson="{{LESSON-ID}}"
+        >
+          <div class="quiz-item" role="group" aria-labelledby="q1" data-correct="0">
+            <p class="quiz-q" id="q1">{{QUESTION}}</p>
+            <ul class="quiz-options">
+              <li><button class="quiz-btn" type="button">{{OPT}}</button></li>
+              <li><button class="quiz-btn" type="button">{{OPT}}</button></li>
+              <li><button class="quiz-btn" type="button">{{OPT}}</button></li>
+            </ul>
+            <p class="quiz-fb" role="status" hidden>
+              {{FEEDBACK — why the correct option is correct and why a chosen wrong one is wrong,
+              not merely confirm.}}
+            </p>
+          </div>
+
+          <p class="quiz-result"></p>
+          <button class="quiz-copy" type="button" hidden>{{COPY-LABEL}}</button>
+          <p class="quiz-copy-status" role="status"></p>
+        </div>
+
+        <p
+          class="seal-note"
+          role="status"
+          data-unsealed-label="{{UNSEALED-LABEL — released, plus the one instruction the page
+          otherwise never gives: paste the result line back.}}"
+        >
+          {{SEAL-NOTE — what the learner must do to open the lesson.}}
+        </p>
+      </section>
+
+      <div
+        class="lesson-content sealed"
+        id="content"
+        inert
+        data-seal-label="{{SEAL-LABEL — the veil's own line.}}"
+      >
+        <h2 id="knowledge">{{STOP-2}}</h2>
+        <p>
+          {{BODY. Every claim cites. One idea per paragraph; front-load each paragraph with the
+          point.}}
+        </p>
+        <p class="sidenote" id="n1">
+          ¹ <a href="{{URL}}">{{Author, Title}}</a> — {{one line on what it covers}}.
+        </p>
+        {{KNOWLEDGE-BLOCKS — optional components this lesson earns, in the order it earns them:
+        callout, figure, self-explanation reveal, aside, table, and one .sidenote per further
+        citation. Gate density on record state. Markup: references/DESIGN.md § Components.}}
+
+        <h2 id="skills">{{STOP-3}}</h2>
+        {{SKILLS-BLOCKS — worked example (required for a procedural skill), parallel bare problem,
+        practice quiz — faded by record state. Markup: references/DESIGN.md § Components.}}
+
+        <section class="synthesis" id="synthesis">
+          <h2>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+              /></svg
+            >{{SYNTHESIS-TITLE}}
+          </h2>
+          <ul class="synthesis-points">
+            <li>{{core idea, one line — 3 to 5 of these, one per idea}}</li>
+            <li>{{core idea, one line}}</li>
+            <li>{{core idea, one line}}</li>
+          </ul>
+          <p class="synthesis-rule">{{re-state the core rule in light of what practice showed}}</p>
+          <p class="synthesis-prompt">
+            {{SYNTHESIS-PROMPT — nudge them to say it back in their own words, then have it
+            checked.}}
+          </p>
+        </section>
+
+        <h2 id="where-next">{{STOP-4}}</h2>
+        <p>
+          {{WHERE-NEXT — name and link the primary source, the related lesson, the reference doc and
+          course home. Navigation only. Link shapes: references/DESIGN.md § Where next.}}
+        </p>
+        <p>{{FOLLOW-UP — one line inviting the question they have not asked yet.}}</p>
+
+        <nav class="lesson-nav" aria-label="{{NAV-LABEL}}">
+          <div class="lesson-nav-cell">
+            <span class="lesson-nav-eyebrow">{{PREV-LABEL}}</span>
+            <a class="lesson-nav-link" href="{{PREV-LESSON}}.html">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+                /></svg
+              >{{PREV-LESSON-TITLE}}
+            </a>
+          </div>
+          <div class="lesson-nav-cell next">
+            <span class="lesson-nav-eyebrow">{{NEXT-LABEL}}</span>
+            <a class="lesson-nav-link" href="{{NEXT-LESSON}}.html"
+              >{{NEXT-LESSON-TITLE}}
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3"
+                />
+              </svg>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </main>
+
+    <script src="./assets/quiz.js"></script>
+  </body>
+</html>

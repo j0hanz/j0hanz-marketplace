@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "review",
+  "displayName": "Review",
+  "version": "1.0.0",
+  "description": "Two review passes that leave behavior untouched: a Clean Code readability pass over naming, function size, comments and structure, and a strict maintainability review of abstraction quality, giant files and spaghetti-condition growth.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": ["code-review", "clean-code", "maintainability", "refactoring", "code-smells"]
+}

@@ -1,0 +1,27 @@
+{
+  "description": "tutor session hooks. Bash-only (shell form): the interpreter is picked with `command -v`, which PowerShell cannot parse — on Windows that means Git Bash. Silent no-op when no python is on PATH, and outside a teach workspace.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=\"$(command -v python || command -v python3)\"; [ -n \"$P\" ] || exit 0; \"$P\" \"${CLAUDE_PLUGIN_ROOT}/hooks/teach_hook.py\" --event session-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=\"$(command -v python || command -v python3)\"; [ -n \"$P\" ] || exit 0; \"$P\" \"${CLAUDE_PLUGIN_ROOT}/hooks/teach_hook.py\" --event stop",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

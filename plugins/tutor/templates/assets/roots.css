@@ -1,0 +1,114 @@
+/* teach-template-version: 25 */
+:root {
+  color-scheme: light;
+  --paper: oklch(97% 0.008 85);
+  --paper-2: oklch(99% 0.004 85);
+  --paper-3: oklch(94% 0.011 80);
+  --ink: oklch(22% 0.012 60);
+  --ink-soft: oklch(45% 0.015 60);
+  --rule: oklch(85% 0.015 75);
+  --rule-2: oklch(50% 0.022 60);
+  --accent-h: 255;
+  --accent: oklch(45% 0.13 var(--accent-h));
+  --accent-bg: oklch(94% 0.022 80);
+  --signal: oklch(58% 0.18 28);
+  --wrong: oklch(50% 0.13 30);
+  --success: oklch(48% 0.11 150);
+  --serif: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+  --sans: Inter, Aptos, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --s-1: 0.5rem;
+  --s-2: 1rem;
+  --s-3: 1.5rem;
+  --s-4: 2rem;
+  --s-5: 3rem;
+  --s-6: 4rem;
+  --s-7: 6rem;
+  --measure: clamp(36rem, 30rem + 17vw, 45rem);
+  --margin-w: clamp(15rem, 12rem + 9vw, 20rem);
+  --radius: 0.375rem;
+  --radius-sm: 0.25rem;
+  --tap: 3rem;
+  --stop-size: 1.25rem;
+  --rule-thin: 2px;
+  --rule-thick: 3px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  --shadow-sm: 0 1px 0 var(--rule);
+}
+
+/* Per-lesson accent — `<html data-accent="…">`. Hue only, so light, dark and
+   print keep their own lightness and chroma and no rule here has to be
+   restated per scheme. Closed set on purpose: a lesson pick a name, never a
+   value; a free colour in a lesson restate a token (DESIGN.md § Tokens) and the course
+   stop reading as one course. --signal stay fixed — the route stop is
+   identity, the accent is the lesson's own. */
+:root[data-accent='cobalt'] {
+  --accent-h: 255;
+}
+
+:root[data-accent='teal'] {
+  --accent-h: 200;
+}
+
+:root[data-accent='violet'] {
+  --accent-h: 285;
+}
+
+:root[data-accent='plum'] {
+  --accent-h: 320;
+}
+
+/* Per-lesson density — `<html data-density="…">`. Section rhythm only;
+   component padding (--s-1…4) stay fixed, so a compact lesson is a shorter
+   page, not a different one. --measure never move: line length is a
+   typographic decision, not a density knob (DESIGN.md § Tokens). */
+:root[data-density='compact'] {
+  --s-5: 2.25rem;
+  --s-6: 3rem;
+  --s-7: 4rem;
+}
+
+:root[data-density='roomy'] {
+  --s-5: 3.5rem;
+  --s-6: 5rem;
+  --s-7: 8rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: oklch(16% 0.008 70);
+    --paper-2: oklch(20% 0.01 70);
+    --paper-3: oklch(25% 0.012 70);
+    --ink: oklch(94% 0.012 80);
+    --ink-soft: oklch(72% 0.018 70);
+    --rule: oklch(34% 0.015 70);
+    --rule-2: oklch(62% 0.022 70);
+    --accent: oklch(78% 0.11 var(--accent-h));
+    --accent-bg: oklch(28% 0.04 var(--accent-h));
+    --signal: oklch(72% 0.16 30);
+    --wrong: oklch(70% 0.13 30);
+    --success: oklch(76% 0.12 150);
+    --shadow-sm: 0 1px 0 var(--rule);
+  }
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+    --paper: #ffffff;
+    --paper-2: #ffffff;
+    --paper-3: #ffffff;
+    --ink: #000000;
+    --ink-soft: #333333;
+    --rule: #999999;
+    --rule-2: #555555;
+    --accent: #1f3a5f;
+    --accent-bg: #f0f0f0;
+    --signal: #8a2f1e;
+    --wrong: #6b2a1e;
+    --success: #2a4a32;
+    --shadow-sm: none;
+  }
+}

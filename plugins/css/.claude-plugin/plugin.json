@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "css",
+  "displayName": "CSS",
+  "version": "0.8.0",
+  "description": "Stops agents wrecking your CSS. Checks CSS as it is written: refuses writes carrying defects provable from the edit alone — invalid values, declarations that silently do nothing — and advises on measurable performance and accessibility failures. Raw CSS, CSS-in-JS, and single-file component styles; makes no style decisions for you.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/css",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace",
+  "license": "MIT"
+}

@@ -1,0 +1,11 @@
+# root only
+/.claude
+/.wayfinder
+/graphify-out
+/docs
+
+# any depth
+node_modules
+__pycache__
+.ruff_cache
+.venv
