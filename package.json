@@ -7,12 +7,29 @@
     "format:check": "prettier --check .",
     "test": "node --test",
     "validate": "node scripts/validate.mjs",
-    "check": "npm run format:check && npm run validate && npm test"
+    "site:data": "node scripts/build-site-data.mjs",
+    "check": "npm run format:check && npm run validate && npm run typecheck && npm test",
+    "site:dev": "npm run site:data && vite",
+    "site:build": "npm run site:data && vite build",
+    "typecheck": "npm run site:data && tsc --noEmit"
   },
   "engines": {
     "node": ">=24"
   },
   "devDependencies": {
-    "prettier": "^3.9.6"
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

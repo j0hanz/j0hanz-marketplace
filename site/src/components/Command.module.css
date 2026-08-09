@@ -1,0 +1,60 @@
+.cmd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.85rem 0.85rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.code {
+  display: block;
+  min-inline-size: 0;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-quiet);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    transform 120ms var(--ease);
+}
+
+.button:hover {
+  border-color: var(--accent-line);
+  color: var(--text);
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+/* Narrow containers (catalog cards) cannot fit the command beside the button. */
+.stacked {
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+}
+
+.stacked .code {
+  justify-self: stretch;
+  font-size: 0.72rem;
+}

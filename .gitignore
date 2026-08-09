@@ -3,9 +3,14 @@
 /.wayfinder
 /graphify-out
 /docs
+/dist
+/site/src/data
 
 # any depth
 node_modules
 __pycache__
 .ruff_cache
 .venv
+
+# Tooling scratch
+/.playwright-mcp

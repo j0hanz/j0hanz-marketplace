@@ -1,0 +1,87 @@
+.index {
+  border-block-start: 1px solid var(--line);
+}
+
+.index details {
+  border-block-end: 1px solid var(--line);
+}
+
+.index summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-block: 1rem;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.index summary::-webkit-details-marker {
+  display: none;
+}
+
+.counts {
+  display: flex;
+  gap: 0.75rem;
+  margin-inline-start: auto;
+}
+
+.caret {
+  align-self: center;
+  color: var(--text-quiet);
+  transition: rotate var(--dur) var(--ease);
+}
+
+.index details[open] .caret {
+  rotate: 180deg;
+}
+
+.index ul {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.index li {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.index code {
+  font-size: 0.85rem;
+}
+
+.hint {
+  color: var(--text-quiet);
+}
+
+.index p {
+  max-inline-size: 72ch;
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
+.tag {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--text-quiet);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}
+
+@media (width >= 48rem) {
+  .index li {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}

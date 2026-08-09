@@ -1,0 +1,196 @@
+/* Global: design tokens, reset, and the handful of primitives more than one section
+   uses. Everything else is a CSS Module beside its component. Modules are unlayered, so
+   component rules always win over the primitives below without specificity games. */
+@layer tokens, base, primitives;
+
+/* Stagger index for `.rise`, written per element by React (Hero.tsx). Registered so it
+   is typed and has a real initial value rather than being an undeclared token. */
+@property --i {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    --accent: #d97757;
+    --accent-line: color-mix(in oklab, var(--accent) 40%, transparent);
+
+    --bg: light-dark(#fbfaf9, #131211);
+    --surface: light-dark(#ffffff, #1a1918);
+    --line: light-dark(#e5e1dd, #2f2c29);
+    --text: light-dark(#1b1917, #f2efec);
+    --text-quiet: light-dark(#605a54, #a8a29b);
+    /* 6.7:1 against --accent, so the fill reads the same in both modes. */
+    --on-accent: #1b1917;
+
+    --page: 1200px;
+    --pad: clamp(1rem, 4vw, 2rem);
+    --nav-h: 4rem;
+    --section: clamp(3.5rem, 6vw, 5.5rem);
+
+    /* Shape lock: surfaces 10px, controls 8px. Nothing else. */
+    --r: 10px;
+    --r-sm: 8px;
+
+    --sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --display: clamp(2.5rem, 5.5vw, 4rem);
+
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur: 260ms;
+  }
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-block-start: var(--nav-h);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  code {
+    font-family: var(--mono);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+}
+
+@layer primitives {
+  .page {
+    inline-size: min(100% - 2 * var(--pad), var(--page));
+    margin-inline: auto;
+  }
+
+  .section {
+    padding-block: var(--section);
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-block-end: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .count {
+    color: var(--text-quiet);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.15rem;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--dur) var(--ease),
+      border-color var(--dur) var(--ease),
+      transform 120ms var(--ease);
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .btn-primary:hover {
+    background: color-mix(in oklab, var(--accent) 88%, #000);
+  }
+
+  .btn-ghost {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent-line);
+  }
+
+  /* Entry stagger, ordered by --i. Browsers without @starting-style land on the final
+     state with no transition. */
+  .rise {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 520ms var(--ease) calc(var(--i, 0) * 80ms),
+      translate 520ms var(--ease) calc(var(--i, 0) * 80ms);
+  }
+
+  @starting-style {
+    .rise {
+      opacity: 0;
+      translate: 0 14px;
+    }
+  }
+}
+
+/* Unlayered, so it outranks every layered !important. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
