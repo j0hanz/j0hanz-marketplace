@@ -8,6 +8,7 @@ export const copy = {
   ],
   heroTitle: 'Skills and agents for Claude Code.',
   heroBody: 'Install one plugin at a time. No build step, no dependencies.',
+  heroExplainer: 'Plugins bundle skills (slash-commands) and agents (autonomous helpers).',
   heroPrimary: 'Browse plugins',
   heroPrimaryHref: '#plugins',
   heroSecondary: 'GitHub',
@@ -16,15 +17,19 @@ export const copy = {
   installSteps: ['Add the marketplace', 'Install a plugin', 'Run it'],
   catalogTitle: 'Plugins',
   catalogAll: 'All',
+  catalogSearch: 'Search plugins, skills, agents…',
   // The list carries agents as well as skills; the heading and its count say so.
   skillsTitle: 'Skills and agents',
   modelLoadedTag: 'model-loaded',
+  modelLoadedHint: 'Claude auto-loads this skill. It is not a user-facing slash command.',
   agentTag: 'agent',
   unit: { plugin: 'plugin', skill: 'skill', agent: 'agent' },
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
+  selectLabel: 'Press Ctrl/⌘+C to copy',
   // Names the outcome of pressing it, which is what the toggle's label has to say.
   modeLabel: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
+  menuLabel: 'Open menu',
   footerNote: 'MIT licensed.',
 } as const;
 

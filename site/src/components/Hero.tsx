@@ -2,7 +2,6 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { copy, pluralWord } from '../copy';
@@ -31,6 +30,9 @@ export function Hero() {
         >
           {copy.heroBody}
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '60ch' }}>
+          {copy.heroExplainer}
+        </Typography>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <Button variant="contained" size="large" href={copy.heroPrimaryHref} disableElevation>
@@ -56,7 +58,6 @@ export function Hero() {
             p: 1,
             bgcolor: 'background.paper',
             border: `3px solid ${steel}`,
-            boxShadow: 'inset 0 0 0 3px var(--mui-palette-primary-main)',
           }}
         >
           <Command value={site.addCommand} />
@@ -67,7 +68,6 @@ export function Hero() {
           direction="row"
           useFlexGap
           spacing={3}
-          divider={<Divider orientation="vertical" flexItem />}
           sx={{ listStyle: 'none', p: 0, m: 0, flexWrap: 'wrap' }}
         >
           {stats.map((stat) => (
@@ -76,7 +76,11 @@ export function Hero() {
               component="li"
               direction="row"
               spacing={1}
-              sx={{ alignItems: 'baseline' }}
+              sx={{
+                alignItems: 'baseline',
+                '&::before': { content: '"·"' },
+                '&:first-of-type::before': { content: 'none' },
+              }}
             >
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
                 {stat.count}

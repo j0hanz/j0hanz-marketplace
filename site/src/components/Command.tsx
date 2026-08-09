@@ -9,21 +9,22 @@ import { useEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
 import { mono, srOnly } from '../theme';
 
-/** A real, selectable command with a copy button. Not a picture of a terminal. */
+type CopyState = 'idle' | 'copied' | 'select';
+
 export function Command({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<CopyState>('idle');
   const code = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 1600);
+    if (state === 'idle') return;
+    const timer = setTimeout(() => setState('idle'), 1600);
     return () => clearTimeout(timer);
-  }, [copied]);
+  }, [state]);
 
   const write = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
+      setState('copied');
     } catch {
       // Clipboard denied or unavailable (insecure context). Select the command instead,
       // so the keyboard copy still works rather than the button doing nothing.
@@ -33,8 +34,14 @@ export function Command({ value }: { value: string }) {
       const selection = getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
+      setState('select');
     }
   };
+
+  const tip =
+    state === 'copied' ? copy.copiedLabel : state === 'select' ? copy.selectLabel : copy.copyLabel;
+  const Icon = state === 'copied' ? CheckIcon : ContentCopyIcon;
+  const iconColor = state === 'copied' ? 'primary' : undefined;
 
   return (
     <Paper
@@ -51,17 +58,19 @@ export function Command({ value }: { value: string }) {
       >
         {value}
       </Typography>
-      <Tooltip title={copied ? copy.copiedLabel : copy.copyLabel}>
+      <Tooltip
+        title={tip}
+        // Delay the first tip so hover-sweeping the catalog doesn't flash them; once one
+        // is open, peers show instantly while the cursor scans the row.
+        enterDelay={400}
+        enterNextDelay={0}
+      >
         <IconButton onClick={write} aria-label={`${copy.copyLabel} ${value}`} sx={{ p: 1.5 }}>
-          {copied ? (
-            <CheckIcon fontSize="small" color="primary" />
-          ) : (
-            <ContentCopyIcon fontSize="small" />
-          )}
+          <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" sx={srOnly}>
-        {copied ? copy.copiedLabel : ''}
+        {state === 'copied' ? copy.copiedLabel : state === 'select' ? copy.selectLabel : ''}
       </Box>
     </Paper>
   );

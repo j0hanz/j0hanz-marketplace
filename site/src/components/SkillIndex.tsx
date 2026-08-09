@@ -7,6 +7,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
@@ -20,10 +21,12 @@ function Entry({
   code,
   description,
   extra,
+  leading,
 }: {
   code: string;
   description: string;
   extra?: ReactNode;
+  leading?: ReactNode;
 }) {
   return (
     <ListItem disableGutters divider alignItems="flex-start">
@@ -41,6 +44,7 @@ function Entry({
             useFlexGap
             sx={{ flexWrap: 'wrap', alignItems: 'center' }}
           >
+            {leading}
             <Typography
               component="code"
               variant="body2"
@@ -77,22 +81,24 @@ export function SkillIndex() {
                   key={skill.name}
                   code={skill.command ?? skill.name}
                   description={skill.description}
-                  extra={
-                    <>
-                      {skill.argumentHint && (
-                        <Typography
-                          component="code"
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
-                        >
-                          {skill.argumentHint}
-                        </Typography>
-                      )}
-                      {!skill.invocable && (
+                  leading={
+                    !skill.invocable ? (
+                      <Tooltip title={copy.modelLoadedHint} enterDelay={400} enterNextDelay={0}>
                         <Chip size="small" variant="outlined" label={copy.modelLoadedTag} />
-                      )}
-                    </>
+                      </Tooltip>
+                    ) : undefined
+                  }
+                  extra={
+                    skill.argumentHint && (
+                      <Typography
+                        component="code"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
+                      >
+                        {skill.argumentHint}
+                      </Typography>
+                    )
                   }
                 />
               ))}

@@ -1,10 +1,13 @@
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -60,6 +63,56 @@ function ModeToggle() {
     <IconButton color="inherit" aria-label={copy.modeLabel[next]} onClick={() => setMode(next)}>
       {resolved === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
     </IconButton>
+  );
+}
+
+/** Below `sm` the inline buttons disappear; the burger is the only way in. */
+function MobileMenu() {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const open = Boolean(anchor);
+  const close = () => setAnchor(null);
+
+  return (
+    <>
+      <IconButton
+        color="inherit"
+        aria-label={copy.menuLabel}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+      >
+        <MenuIcon />
+      </IconButton>
+      <Menu
+        anchorEl={anchor}
+        open={open}
+        onClose={close}
+        slotProps={{ paper: { sx: { border: `3px solid ${steel}`, borderRadius: 0 } } }}
+      >
+        {copy.navLinks.map((link) => (
+          <MenuItem
+            key={link.href}
+            component="a"
+            href={link.href}
+            onClick={close}
+            sx={{ fontFamily: 'inherit' }}
+          >
+            {link.label}
+          </MenuItem>
+        ))}
+        <MenuItem
+          component="a"
+          href={site.repoUrl}
+          target="_blank"
+          rel="noreferrer"
+          onClick={close}
+          sx={{ fontFamily: 'inherit' }}
+        >
+          {copy.githubLabel}
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
 
@@ -121,9 +174,11 @@ export function Nav() {
               target="_blank"
               rel="noreferrer"
               aria-label={copy.githubLabel}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <GitHubIcon />
             </IconButton>
+            <MobileMenu />
           </Stack>
         </Toolbar>
       </Container>
