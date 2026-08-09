@@ -2,6 +2,7 @@
 export const copy = {
   navLinks: [
     { label: 'Plugins', href: '#plugins' },
+    { label: 'Skills', href: '#skills' },
     { label: 'Install', href: '#install' },
   ],
   heroTitle: 'Skills and agents for Claude Code.',
@@ -18,6 +19,7 @@ export const copy = {
   unit: { plugin: 'plugin', skill: 'skill', agent: 'agent' },
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
+  modeLabel: 'Toggle light and dark mode',
   footerNote: 'MIT licensed.',
 } as const;
 

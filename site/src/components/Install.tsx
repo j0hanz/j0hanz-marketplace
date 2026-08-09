@@ -1,7 +1,12 @@
+import Box from '@mui/material/Box';
+import Step from '@mui/material/Step';
+import StepContent from '@mui/material/StepContent';
+import StepLabel from '@mui/material/StepLabel';
+import Stepper from '@mui/material/Stepper';
 import { copy } from '../copy';
 import { site } from '../site';
 import { Command } from './Command';
-import styles from './Install.module.css';
+import { Section } from './Section';
 
 // Steps two and three are command shapes rather than one arbitrary plugin's command;
 // the exact per-plugin command lives on its catalog card.
@@ -13,19 +18,19 @@ const rows = [
 
 export function Install() {
   return (
-    <section className="page section" id="install">
-      <div className="section-head">
-        <h2>{copy.installTitle}</h2>
-      </div>
-
-      <div className={styles.ladder}>
+    <Section id="install" title={copy.installTitle}>
+      <Stepper orientation="vertical" nonLinear activeStep={-1} sx={{ maxWidth: 560 }}>
         {rows.map((row) => (
-          <div className={styles.row} key={row.label}>
-            <span>{row.label}</span>
-            <Command value={row.value} />
-          </div>
+          <Step key={row.label} active expanded>
+            <StepLabel>{row.label}</StepLabel>
+            <StepContent>
+              <Box sx={{ pb: 1 }}>
+                <Command value={row.value} />
+              </Box>
+            </StepContent>
+          </Step>
         ))}
-      </div>
-    </section>
+      </Stepper>
+    </Section>
   );
 }

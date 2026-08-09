@@ -1,10 +1,13 @@
-import type { CSSProperties } from 'react';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { copy } from '../copy';
 import { site } from '../site';
 import { Command } from './Command';
-import styles from './Hero.module.css';
-
-const rise = (index: number) => ({ '--i': index }) as CSSProperties;
 
 const stats = [
   { count: site.totals.plugins, unit: copy.unit.plugin },
@@ -14,34 +17,61 @@ const stats = [
 
 export function Hero() {
   return (
-    <section className={`page ${styles.hero}`} id="top">
-      <div className={styles.copy}>
-        <h1 className="rise" style={rise(0)}>
+    <Container component="section" id="top" maxWidth="lg" sx={{ py: { xs: 8, md: 14 } }}>
+      <Stack spacing={4} sx={{ maxWidth: 720 }}>
+        <Typography variant="h2" component="h1" sx={{ fontWeight: 600, letterSpacing: '-0.02em' }}>
           {copy.heroTitle}
-        </h1>
-        <p className="rise" style={rise(1)}>
+        </Typography>
+        <Typography variant="h6" component="p" color="text.secondary" sx={{ fontWeight: 400 }}>
           {copy.heroBody}
-        </p>
-        <div className={`${styles.cta} rise`} style={rise(2)}>
-          <a className="btn btn-primary" href={copy.navLinks[0].href}>
+        </Typography>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Button variant="contained" size="large" href={copy.navLinks[0].href} disableElevation>
             {copy.heroPrimary}
-          </a>
-          <a className="btn btn-ghost" href={site.repoUrl} target="_blank" rel="noreferrer">
+          </Button>
+          <Button
+            variant="outlined"
+            size="large"
+            color="inherit"
+            href={site.repoUrl}
+            target="_blank"
+            rel="noreferrer"
+            startIcon={<GitHubIcon />}
+          >
             {copy.heroSecondary}
-          </a>
-        </div>
-        <div className={`${styles.commandSlot} rise`} style={rise(3)}>
+          </Button>
+        </Stack>
+
+        <Box sx={{ maxWidth: 520 }}>
           <Command value={site.addCommand} />
-        </div>
-      </div>
-      <ul className={`${styles.stats} rise`} style={rise(4)}>
-        {stats.map((stat) => (
-          <li key={stat.unit}>
-            <span>{stat.count}</span>
-            {stat.count === 1 ? stat.unit : `${stat.unit}s`}
-          </li>
-        ))}
-      </ul>
-    </section>
+        </Box>
+
+        <Stack
+          component="ul"
+          direction="row"
+          spacing={3}
+          divider={<Divider orientation="vertical" flexItem />}
+          sx={{ listStyle: 'none', p: 0, m: 0 }}
+        >
+          {stats.map((stat) => (
+            <Stack
+              key={stat.unit}
+              component="li"
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'baseline' }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                {stat.count}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {stat.count === 1 ? stat.unit : `${stat.unit}s`}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      </Stack>
+    </Container>
   );
 }

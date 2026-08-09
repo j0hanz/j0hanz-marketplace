@@ -1,10 +1,15 @@
-import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
+import CheckIcon from '@mui/icons-material/Check';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { copy } from '../copy';
-import styles from './Command.module.css';
+import { mono } from '../theme';
 
 /** A real, selectable command with a copy button. Not a picture of a terminal. */
-export function Command({ value, stacked = false }: { value: string; stacked?: boolean }) {
+export function Command({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -24,17 +29,26 @@ export function Command({ value, stacked = false }: { value: string; stacked?: b
   };
 
   return (
-    <div className={stacked ? `${styles.cmd} ${styles.stacked}` : styles.cmd}>
-      <code className={styles.code}>{value}</code>
-      <button
-        type="button"
-        className={styles.button}
-        onClick={write}
-        aria-label={`${copy.copyLabel} ${value}`}
+    <Paper
+      variant="outlined"
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 0.5, py: 0.5, width: 1 }}
+    >
+      <Typography
+        component="code"
+        variant="body2"
+        sx={{ flexGrow: 1, fontFamily: mono, overflowX: 'auto', whiteSpace: 'nowrap' }}
       >
-        {copied ? <CheckIcon weight="bold" /> : <CopyIcon />}
-        <span>{copied ? copy.copiedLabel : copy.copyLabel}</span>
-      </button>
-    </div>
+        {value}
+      </Typography>
+      <Tooltip title={copied ? copy.copiedLabel : copy.copyLabel}>
+        <IconButton size="small" onClick={write} aria-label={`${copy.copyLabel} ${value}`}>
+          {copied ? (
+            <CheckIcon fontSize="small" color="primary" />
+          ) : (
+            <ContentCopyIcon fontSize="small" />
+          )}
+        </IconButton>
+      </Tooltip>
+    </Paper>
   );
 }

@@ -1,55 +1,104 @@
-import { CaretDownIcon } from '@phosphor-icons/react';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import Chip from '@mui/material/Chip';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ReactNode } from 'react';
 import { copy, plural } from '../copy';
 import { site } from '../site';
-import styles from './SkillIndex.module.css';
+import { mono } from '../theme';
+import { Section } from './Section';
+
+/** One row: the invocation on top, its description below. Same shape for skills and agents. */
+function Entry({
+  code,
+  description,
+  extra,
+}: {
+  code: string;
+  description: string;
+  extra?: ReactNode;
+}) {
+  return (
+    <ListItem disableGutters divider alignItems="flex-start">
+      <ListItemText
+        slotProps={{ primary: { component: 'div' }, secondary: { sx: { mt: 0.5 } } }}
+        primary={
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: 'wrap', alignItems: 'center' }}
+          >
+            <Typography component="code" variant="body2" sx={{ fontFamily: mono }}>
+              {code}
+            </Typography>
+            {extra}
+          </Stack>
+        }
+        secondary={description}
+      />
+    </ListItem>
+  );
+}
 
 export function SkillIndex() {
   return (
-    <section className="page section" id="skills">
-      <div className="section-head">
-        <h2>{copy.skillsTitle}</h2>
-        <span className="count">{site.totals.skills}</span>
-      </div>
-
-      <div className={styles.index}>
-        {site.plugins.map((p, i) => (
-          <details key={p.name} open={i === 0}>
-            <summary>
-              <span>{p.displayName}</span>
-              <span className={styles.counts}>
-                <span className="count">{plural(p.skills.length, copy.unit.skill)}</span>
-                {p.agents.length > 0 && (
-                  <span className="count">{plural(p.agents.length, copy.unit.agent)}</span>
-                )}
-              </span>
-              <CaretDownIcon className={styles.caret} size={16} />
-            </summary>
-            <ul>
+    <Section id="skills" title={copy.skillsTitle} count={site.totals.skills}>
+      {site.plugins.map((p, i) => (
+        <Accordion key={p.name} defaultExpanded={i === 0} disableGutters>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>{p.displayName}</Typography>
+            <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+              <Chip size="small" label={plural(p.skills.length, copy.unit.skill)} />
+              {p.agents.length > 0 && (
+                <Chip size="small" label={plural(p.agents.length, copy.unit.agent)} />
+              )}
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <List disablePadding>
               {p.skills.map((skill) => (
-                <li key={skill.name}>
-                  <div className={styles.names}>
-                    <code>{skill.command ?? skill.name}</code>
-                    {skill.argumentHint && (
-                      <code className={styles.hint}>{skill.argumentHint}</code>
-                    )}
-                    {!skill.invocable && <span className={styles.tag}>{copy.modelLoadedTag}</span>}
-                  </div>
-                  <p>{skill.description}</p>
-                </li>
+                <Entry
+                  key={skill.name}
+                  code={skill.command ?? skill.name}
+                  description={skill.description}
+                  extra={
+                    <>
+                      {skill.argumentHint && (
+                        <Typography
+                          component="code"
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontFamily: mono }}
+                        >
+                          {skill.argumentHint}
+                        </Typography>
+                      )}
+                      {!skill.invocable && (
+                        <Chip size="small" variant="outlined" label={copy.modelLoadedTag} />
+                      )}
+                    </>
+                  }
+                />
               ))}
               {p.agents.map((agent) => (
-                <li key={agent.name}>
-                  <div className={styles.names}>
-                    <code>{agent.name}</code>
-                    <span className={styles.tag}>{copy.agentTag}</span>
-                  </div>
-                  <p>{agent.description}</p>
-                </li>
+                <Entry
+                  key={agent.name}
+                  code={agent.name}
+                  description={agent.description}
+                  extra={<Chip size="small" variant="outlined" label={copy.agentTag} />}
+                />
               ))}
-            </ul>
-          </details>
-        ))}
-      </div>
-    </section>
+            </List>
+          </AccordionDetails>
+        </Accordion>
+      ))}
+    </Section>
   );
 }
