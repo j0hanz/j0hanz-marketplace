@@ -37,6 +37,7 @@ export function Install() {
           listStyle: 'none',
           p: 0,
           m: 0,
+          bgcolor: 'background.paper',
           border: rule,
           boxShadow: lit('top'),
           display: 'grid',

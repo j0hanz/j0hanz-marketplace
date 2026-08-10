@@ -25,12 +25,9 @@ declare module '@mui/material/styles' {
 
 const paperSteel = '#4A5568';
 
-/**
- * Press feedback. Snappy down, eased back up: the press is the user's, the
- * release is ours. Button, IconButton and ToggleButton each declare their own
- * `transition`, which would drop transform from the list, so the colour
- * properties are restated here rather than left to the defaults.
- */
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
 const press = {
   transition: [
     'transform 160ms var(--ease-out)',
@@ -82,12 +79,22 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)' },
-        '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)' },
+        ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)', '--grain': 0.028 },
+        '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)', '--grain': 0.05 },
         html: {
           scrollPaddingTop: scrollOffset,
           scrollBehavior: 'smooth',
         },
+        'body::after': {
+          content: '""',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1,
+          pointerEvents: 'none',
+          opacity: 'var(--grain)',
+          backgroundImage: GRAIN,
+        },
+        '@media print': { 'body::after': { display: 'none' } },
         ':focus-visible': focusRing,
         '@media (prefers-reduced-motion: reduce)': {
           '*, *::before, *::after': {
