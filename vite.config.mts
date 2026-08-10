@@ -21,5 +21,22 @@ export default defineConfig({
   root: 'site',
   base: '/',
   plugins: [react(), siteMeta()],
-  build: { outDir: '../dist', emptyOutDir: true },
+  build: {
+    outDir: '../dist',
+    emptyOutDir: true,
+    // Split the heavy, rarely-changing vendors into their own cacheable chunks so
+    // app-code changes don't invalidate them. gsap/Flip is excluded here — it's
+    // split off via a dynamic import in motion.ts (loadFlip) and stays its own
+    // async chunk loaded on demand.
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('@emotion/') || id.includes('@mui/')) return 'mui';
+          if (id.includes('@gsap/react') || (id.includes('/gsap/') && !id.includes('Flip'))) {
+            return 'gsap';
+          }
+        },
+      },
+    },
+  },
 });

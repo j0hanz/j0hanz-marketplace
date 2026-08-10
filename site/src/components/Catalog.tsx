@@ -10,6 +10,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { memo } from 'react';
 import { countLabel, site, type Plugin } from '../site';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useGridFlip } from '../hooks/useGridFlip';
@@ -23,7 +24,7 @@ const litEdge = {
   boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
 };
 
-function PluginCard({ plugin }: { plugin: Plugin }) {
+const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
   return (
     <Card
       variant="outlined"
@@ -81,7 +82,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
       </CardActions>
     </Card>
   );
-}
+});
 
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();

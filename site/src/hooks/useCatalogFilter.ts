@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { site } from '../site';
+import { type Plugin, site } from '../site';
 
 export const ALL = 'all';
 
@@ -23,13 +23,16 @@ export function useCatalogFilter() {
 
   const visible = useMemo(() => {
     const needle = deferred.trim().toLowerCase();
-    return searchIndex
-      .filter(
-        ({ plugin, haystack }) =>
-          (category === ALL || plugin.category === category) &&
-          (!needle || haystack.includes(needle)),
-      )
-      .map(({ plugin }) => plugin);
+    const result: Plugin[] = [];
+    for (const { plugin, haystack } of searchIndex) {
+      if (
+        (category === ALL || plugin.category === category) &&
+        (!needle || haystack.includes(needle))
+      ) {
+        result.push(plugin);
+      }
+    }
+    return result;
   }, [category, deferred]);
 
   return {
