@@ -15,12 +15,8 @@ const example = site.plugins.flatMap((plugin) =>
 
 const steps = [
   { label: 'Add the marketplace', value: site.addCommand },
-  ...(example
-    ? [
-        { label: 'Install a plugin', value: example.install },
-        { label: 'Run it', value: example.run },
-      ]
-    : []),
+  { label: 'Install a plugin', value: example.install },
+  { label: 'Run it', value: example.run },
 ];
 
 export function Install() {

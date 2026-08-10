@@ -158,42 +158,7 @@
   }
 }
 
-/*
- * main.tsx already withholds data-motion when motion is unwelcome. This is the
- * backstop if it ever gets set anyway: theme/mui strips the transitions, so
- * this only has to undo the offsets they were meant to close.
- */
-@media (prefers-reduced-motion: reduce) {
-  :root[data-motion] [data-reveal] {
-    opacity: 1;
-    transform: none;
-  }
-
-  :root[data-motion] [data-draw]::after,
-  :root[data-motion] [data-draw-load]::after {
-    transform: scaleX(1);
-    animation: none;
-  }
-
-  :root[data-motion] [data-hero],
-  :root[data-motion] [data-hero-panel],
-  :root[data-motion] [data-draw-check],
-  :root[data-motion] [data-swap-in],
-  :root[data-motion] [data-settle] {
-    animation: none;
-  }
-
-  /* The blanket `*` rule in theme/mui never reaches these — view-transition
-     pseudo-elements are not descendants of anything it matches. */
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none;
-  }
-}
-
-/* Print never scrolls, so undo anything still waiting for its trigger. */
-@media print {
+@media (prefers-reduced-motion: reduce), print {
   :root[data-motion] [data-reveal] {
     opacity: 1;
     transform: none;
@@ -207,6 +172,22 @@
 
   :root[data-motion] [data-hero],
   :root[data-motion] [data-hero-panel] {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-motion] [data-draw-check],
+  :root[data-motion] [data-swap-in],
+  :root[data-motion] [data-settle] {
+    animation: none;
+  }
+
+  /* The blanket `*` rule in theme/mui never reaches these — view-transition
+     pseudo-elements are not descendants of anything it matches. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
     animation: none;
   }
 }

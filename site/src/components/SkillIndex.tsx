@@ -60,7 +60,7 @@ export function SkillIndex() {
 
   // Rows the user explicitly toggled away from the viewport default. Kept so a
   // resize doesn't undo a deliberate collapse.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const [overrides, setOverrides] = useState<Partial<Record<string, boolean>>>({});
   const firstName = site.plugins[0]?.name;
   const isOpen = (name: string) => overrides[name] ?? (isDesktop && name === firstName);
   const toggle = (name: string) => setOverrides((prev) => ({ ...prev, [name]: !isOpen(name) }));

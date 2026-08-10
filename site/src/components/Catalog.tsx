@@ -12,10 +12,10 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { memo, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
-import { relay } from '../motion';
 import { countLabel, site, type Plugin } from '../site';
 import { accent, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
@@ -150,7 +150,16 @@ export function Catalog() {
           exclusive
           size="small"
           value={category}
-          onChange={(_, next: string | null) => next && relay(() => setCategory(next))}
+          onChange={(_, next: string | null) => {
+            if (!next) return;
+            if (!document.startViewTransition || !document.documentElement.dataset.motion) {
+              setCategory(next);
+              return;
+            }
+            document
+              .startViewTransition(() => flushSync(() => setCategory(next)))
+              .ready.catch(() => {});
+          }}
           aria-label="Filter plugins by category"
           sx={{
             flexWrap: 'wrap',
