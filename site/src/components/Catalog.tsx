@@ -18,7 +18,7 @@ import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
-const SEARCH_LABEL = 'Search plugins, skills, agents…';
+const SEARCH_HINT = 'Search plugins, skills, agents…';
 
 /** The lit card edge, reached through two different selectors. */
 const litEdge = {
@@ -149,7 +149,11 @@ export function Catalog() {
       >
         <TextField
           type="search"
-          size="small"
+          // Labelled, not just placeheld: the placeholder is the first thing to leave once
+          // there is a query, and it was the only thing naming the field. Medium rather than
+          // the old small-plus-44px-override — medium is 56px, past a thumb without the hack,
+          // and it makes the search read as the primary control of the section that it is.
+          label="Search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -158,12 +162,9 @@ export function Catalog() {
               e.preventDefault();
             }
           }}
-          placeholder={SEARCH_LABEL}
+          placeholder={SEARCH_HINT}
           slotProps={{
-            // Match the touch target the toggle row below sets for itself.
-            input: { sx: { minHeight: 44 } },
             htmlInput: {
-              'aria-label': SEARCH_LABEL,
               autoComplete: 'off',
               spellCheck: false,
               inputMode: 'search',
@@ -176,7 +177,9 @@ export function Catalog() {
           size="small"
           value={category}
           onChange={(_, next: string | null) => next && setCategory(next)}
-          aria-label="Plugins"
+          // Named for what the group does. "Plugins" repeated the section heading, so the
+          // group and the h2 above it announced as the same thing.
+          aria-label="Filter plugins by category"
           sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 } }}
         >
           <ToggleButton value={ALL}>All</ToggleButton>

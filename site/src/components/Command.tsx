@@ -3,21 +3,35 @@ import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, ContentCopyIcon } from '../icons';
 import { codeSx, srOnly } from '../theme/tokens';
 
+// Three states, not a boolean: `writeText` rejects on an insecure origin and whenever the
+// permission is denied, and a boolean has no way to say so — the button just went on reading
+// "Copy" while nothing reached the clipboard, which is the one failure a copy button must not
+// keep quiet about.
+type Status = '' | 'Copied' | 'Copy failed';
+
 export function Command({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<Status>('');
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 1600);
-    return () => clearTimeout(timer);
-  }, [copied]);
+  // The countdown restarts on the click, not on the state changing: two copies inside the
+  // window leave `status` at the same value, so an effect keyed to it never re-ran and the
+  // second confirmation expired on the first one's timer.
+  const announce = (next: Status) => {
+    setStatus(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setStatus(''), 1600);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
 
-  const tip = copied ? 'Copied' : 'Copy';
+  const copied = status === 'Copied';
+  const tip = status || 'Copy';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
+  // Lifted out of the icon: three colours is one ternary past the point of reading.
+  const iconColor = copied ? 'primary' : status ? 'error' : undefined;
 
   return (
     <Paper
@@ -47,18 +61,24 @@ export function Command({ value }: { value: string }) {
       <Tooltip title={tip}>
         <IconButton
           onClick={async () => {
-            await navigator.clipboard.writeText(value);
-            setCopied(true);
+            try {
+              await navigator.clipboard.writeText(value);
+              announce('Copied');
+            } catch {
+              announce('Copy failed');
+            }
           }}
           aria-label={`Copy ${value}`}
           sx={{ p: 1.5 }}
         >
-          <Icon fontSize="small" color={copied ? 'primary' : undefined} />
+          {/* The tooltip carries the words, but it only opens on hover — on a touch screen
+              the tint is the whole of the failure notice a sighted visitor gets. */}
+          <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>
       {/* Idle says nothing: the button already carries its own label. */}
       <Box component="span" role="status" sx={srOnly}>
-        {copied ? tip : ''}
+        {status}
       </Box>
     </Paper>
   );

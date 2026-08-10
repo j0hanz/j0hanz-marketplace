@@ -18,7 +18,7 @@ import {
   SettingsBrightnessIcon,
 } from '../icons';
 import { site } from '../site';
-import { mono, scrollOffset, steel } from '../theme/tokens';
+import { ground, mono, scrollOffset, steel } from '../theme/tokens';
 
 const navLinks = [
   { label: 'Plugins', href: '#plugins' },
@@ -90,7 +90,17 @@ const modeNext = {
 const iconButtonSx = { p: 1.5 };
 
 function ModeToggle() {
-  const { mode, setMode } = useColorScheme();
+  const { mode, setMode, colorScheme } = useColorScheme();
+
+  // The browser's own chrome, kept on the scheme the page is actually painting. `colorScheme`
+  // and not `mode`: it is the resolved one, so this follows the system too while the toggle
+  // sits on 'system'. Here rather than in App because this is the hook call that already
+  // subscribes — a second one page-level would only re-read the same thing.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (colorScheme) meta?.setAttribute('content', ground[colorScheme]);
+  }, [colorScheme]);
+
   // `mode` is undefined before mount and 'system' by default.
   const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];

@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
+    <!-- The page ground, so a mobile browser's own chrome joins the frame instead of capping
+         it with a default bar in the opposite colour. One tag, not the `media` pair: the media
+         form answers the *system* setting, and anyone who picked a scheme here would have got
+         a bar in the colour they turned off. Graphite is only the pre-mount value — Nav sets
+         it from the resolved scheme, and keeps setting it as the toggle runs. -->
+    <meta name="theme-color" content="#0E1116" />
     <title>%TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
     <!-- GitHub renders a card for the repo itself, so the share image needs no asset here. -->

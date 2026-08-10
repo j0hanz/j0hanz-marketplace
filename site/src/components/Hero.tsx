@@ -27,8 +27,11 @@ export function Hero() {
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
+        // `opacity`, not `autoAlpha`, for the same reason the page reveal uses it: autoAlpha
+        // parks `visibility: hidden` on the subtree, and the subtree here opens with the h1.
+        // A screen reader landing mid-tween would have found the page's one heading missing.
         gsap.from('[data-hero]', {
-          autoAlpha: 0,
+          opacity: 0,
           y: 20,
           duration: 0.5,
           stagger: 0.09,

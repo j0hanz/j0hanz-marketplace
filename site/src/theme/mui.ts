@@ -1,5 +1,5 @@
 import { createTheme } from '@mui/material/styles';
-import { focusRing, heading, mono, sans, scrollOffset, steel } from './tokens';
+import { focusRing, ground, heading, mono, sans, scrollOffset } from './tokens';
 
 /**
  * `edge` is the control boundary, which is a different job from `divider`. WCAG 1.4.11 puts
@@ -10,35 +10,57 @@ import { focusRing, heading, mono, sans, scrollOffset, steel } from './tokens';
 declare module '@mui/material/styles' {
   interface Palette {
     edge: string;
+    steel: string;
   }
   interface PaletteOptions {
     edge?: string;
+    steel?: string;
   }
 }
+
+/**
+ * One grey doing two jobs on paper: the reading colour for secondary text, and the structural
+ * stop the 3px chassis is drawn in. Named once because the two are only equal by measurement —
+ * 6.6:1 clears body text and a frame at the same time on this ground — and a hand-edit to one
+ * literal would have quietly split them.
+ */
+const paperSteel = '#4A5568';
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
     // Amber at one lightness cannot serve both grounds: the value that survives white is
     // brown, and the value that glows on graphite is 1.8:1 on paper. One hue at two stops,
-    // and in both schemes a *fill* wearing an ink label rather than ink itself.
+    // and in both schemes a *fill* wearing whichever label reads on it.
+    //
+    // The light stop is the deeper one because amber is the page's only non-text indicator —
+    // the nav underline, the selected filter, the open row, the lit card edge — and every one
+    // of those is a 3px bar that has to clear 3:1 (WCAG 1.4.11) against whatever it sits on.
+    // The old #D97706 was 2.8:1 on the page ground: the footer bar, the accordion spine and
+    // the selected toggle all failed, and they are the marks that say where you are.
     light: {
       palette: {
-        primary: { main: '#D97706', contrastText: '#0E1116' },
-        background: { default: '#EDF0F3', paper: '#FFFFFF' },
-        text: { primary: '#0E1116', secondary: steel },
+        // 4.4:1 on the ground, 5.0:1 on paper, and 5.0:1 under a white label. Ink on this
+        // stop is 3.8:1 — below the 4.5:1 a button label owes — so the light fill wears white.
+        primary: { main: '#B45309', contrastText: '#FFFFFF' },
+        background: { default: ground.light, paper: '#FFFFFF' },
+        text: { primary: '#0E1116', secondary: paperSteel },
         divider: '#C3CBD4',
         edge: '#7B8593',
+        steel: paperSteel,
       },
     },
     dark: {
       palette: {
         primary: { main: '#F5A524', contrastText: '#0E1116' },
-        background: { default: '#0E1116', paper: '#171C23' },
+        background: { default: ground.dark, paper: '#171C23' },
         text: { primary: '#E7EBF0', secondary: '#9BA6B4' },
         // Surfaces sit a tenth of a stop apart, so the hairline is what separates them.
         divider: '#404A59',
         edge: '#626E80',
+        // A stop above `edge`, the way the 3px frame sits above a 1px control boundary:
+        // 4.1:1 on the ground where the light chassis value was 2.5:1 and read as absent.
+        steel: '#68758A',
       },
     },
   },

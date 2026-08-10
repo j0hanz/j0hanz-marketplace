@@ -8,8 +8,19 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 export const sans =
   "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-/** Structural steel: the 3px chassis edges. Deliberately the same in both schemes. */
-export const steel = '#4A5568';
+/**
+ * Structural steel: the 3px chassis edges. One value could not serve both grounds — #4A5568
+ * is 6.6:1 on paper and 2.3:1 on graphite, so the frame the whole page is built from all but
+ * vanished in the scheme it opens in. Two stops of one grey, per scheme in the palette; read
+ * here as the variable so every chassis edge keeps its one-token spelling.
+ */
+export const steel = 'var(--mui-palette-steel)';
+
+/**
+ * The page ground per scheme. Literal rather than read off the theme because its second
+ * consumer is the `theme-color` meta, and a meta tag's content cannot hold a `var()`.
+ */
+export const ground = { light: '#EDF0F3', dark: '#0E1116' } as const;
 
 /** Pinned: AppBar height (Toolbar default 64 + 3px steel chassis + a little slack). */
 export const scrollOffset = 80;
