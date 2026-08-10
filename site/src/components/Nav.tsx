@@ -203,6 +203,8 @@ export function Nav() {
               color: 'inherit',
               textDecoration: 'none',
               fontWeight: 700,
+              fontSize: '1rem',
+              letterSpacing: '0.05em',
               py: 1,
             }}
           >

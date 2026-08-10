@@ -6,10 +6,10 @@ export function PluginCountChips({ plugin }: { plugin: Plugin }) {
   return (
     <>
       {plugin.skills.length > 0 && (
-        <Chip size="small" label={plural(plugin.skills.length, 'skill')} />
+        <Chip size="small" variant="outlined" label={plural(plugin.skills.length, 'skill')} />
       )}
       {plugin.agents.length > 0 && (
-        <Chip size="small" label={plural(plugin.agents.length, 'agent')} />
+        <Chip size="small" variant="outlined" label={plural(plugin.agents.length, 'agent')} />
       )}
     </>
   );

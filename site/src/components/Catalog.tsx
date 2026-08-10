@@ -20,7 +20,6 @@ const SEARCH_LABEL = 'Search plugins, skills, agents…';
 
 /** The lit card edge, reached through two different selectors. */
 const litEdge = {
-  borderColor: 'primary.main',
   boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
 };
 
@@ -39,7 +38,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         // Hover is gated to devices that have one. A tap fires `:hover` and leaves it fired,
         // marking a card that was not selected and is not a link.
         '@media (hover: hover) and (pointer: fine)': { '&:hover': litEdge },
-        transition: 'border-color 200ms ease, box-shadow 200ms ease',
+        transition: 'box-shadow 200ms ease',
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>

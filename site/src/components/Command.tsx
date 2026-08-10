@@ -23,7 +23,8 @@ export function Command({ value }: { value: string }) {
     <Paper
       variant="outlined"
       // A recessed bar, not another box: every command sits inside something already framed
-      // (a card, the hero bezel, the install rail).
+      // (a card, the hero bezel, the install rail). 1px edge hairline keeps the bar
+      // visible inside the white hero bezel without competing with the 3px chassis.
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -33,6 +34,8 @@ export function Command({ value }: { value: string }) {
         py: 0.5,
         width: 1,
         bgcolor: 'background.default',
+        borderColor: 'var(--mui-palette-edge)',
+        borderWidth: 1,
       }}
     >
       <Typography component="code" variant="body2" sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}>

@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { GitHubIcon } from '../icons';
 import { pluralWord, site } from '../site';
-import { mono, steel } from '../theme/tokens';
+import { mono } from '../theme/tokens';
 import { Command } from './Command';
 
 const stats = [
@@ -66,7 +66,7 @@ export function Hero() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack
             spacing={2}
-            sx={{ p: 2, bgcolor: 'background.paper', border: `3px solid ${steel}` }}
+            sx={{ p: 2, bgcolor: 'background.paper', border: '3px solid var(--mui-palette-edge)' }}
           >
             <Typography
               component="p"
@@ -96,7 +96,9 @@ export function Hero() {
             >
               {stats.map((stat) => (
                 <Box component="li" key={stat.unit}>
-                  <Typography sx={{ fontFamily: mono, fontWeight: 700, lineHeight: 1.2 }}>
+                  <Typography
+                    sx={{ fontFamily: mono, fontWeight: 700, lineHeight: 1.2, fontSize: '1.75rem' }}
+                  >
                     {stat.count}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">

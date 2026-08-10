@@ -26,8 +26,8 @@ export function Footer() {
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {site.name}
           </Typography>
-          <Typography variant="body2" color="textSecondary">
-            MIT licensed.
+          <Typography variant="caption" color="textSecondary" component="span" title="MIT licensed">
+            MIT
           </Typography>
           <Link
             href={site.repoUrl}

@@ -9,11 +9,30 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { plural, site } from '../site';
 import { codeSx } from '../theme/tokens';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
+
+const useMatchMedia = (query: string) => {
+  // `mounted` gates the read: server renders with `false`, the first client render
+  // matches that, and only after mount does the real media query take effect. Without
+  // it, Accordion's uncontrolled `defaultExpanded` would flip between server HTML and
+  // client hydration on a desktop viewport.
+  const [mounted, setMounted] = useState(false);
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    setMatches(mq.matches);
+    setMounted(true);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+  return mounted && matches;
+};
 
 /** One row: the invocation on top, its description below. Same shape for skills and agents. */
 function Entry({
@@ -57,6 +76,11 @@ function Entry({
 }
 
 export function SkillIndex() {
+  // First accordion opens by default on desktop, where the visitor is scanning for a
+  // specific plugin. On a phone the section starts collapsed so the page does not eat a
+  // screen before reaching Install.
+  const isDesktop = useMatchMedia('(min-width: 900px)');
+
   return (
     <Section
       id="skills"
@@ -71,7 +95,7 @@ export function SkillIndex() {
       {site.plugins.map((plugin, i) => (
         <Accordion
           key={plugin.name}
-          defaultExpanded={i === 0}
+          defaultExpanded={isDesktop && i === 0}
           disableGutters
           square
           elevation={0}

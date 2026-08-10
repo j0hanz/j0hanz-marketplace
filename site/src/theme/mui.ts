@@ -45,7 +45,7 @@ export const theme = createTheme({
   shape: { borderRadius: 0 },
   typography: {
     fontFamily: sans,
-    h2: heading('1.75rem', '3.25rem', '0.01em'),
+    h2: heading('1.75rem', '3.75rem', '0.01em'),
     h4: heading('1.25rem', '2rem', '0.06em'),
     h5: { fontFamily: mono },
     h6: { fontFamily: mono },

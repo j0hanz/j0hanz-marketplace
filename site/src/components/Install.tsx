@@ -19,9 +19,6 @@ const steps = [
 ];
 
 const MARKER = 28;
-// Half the 3px rail plus half the marker: absolute offsets are measured from the padding
-// box, which starts inside the border.
-const MARKER_LEFT = '-15.5px';
 
 export function Install() {
   return (
@@ -55,7 +52,9 @@ export function Install() {
                 aria-hidden
                 sx={{
                   position: 'absolute',
-                  left: MARKER_LEFT,
+                  // Centered on the rail: the rail is the parent's left border, and the
+                  // marker sits half its width on either side regardless of padding changes.
+                  left: 0,
                   top: 0,
                   width: MARKER,
                   height: MARKER,
@@ -66,6 +65,10 @@ export function Install() {
                   fontSize: '0.8125rem',
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
+                  // Marker center sits on the rail: absolute `left: 0` resolves to the
+                  // padding-box edge (1.5px inside the 3px border), so translate by half
+                  // the marker plus half the border to land it on the border line.
+                  transform: `translate(${-(MARKER / 2 + 1.5)}px, 0)`,
                 }}
               >
                 {i + 1}
