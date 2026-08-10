@@ -1,4 +1,5 @@
-export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+export const mono =
+  "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
 export const sans =
   "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";

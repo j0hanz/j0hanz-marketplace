@@ -1,6 +1,6 @@
-import '@fontsource/jetbrains-mono/latin-400.css';
-import '@fontsource/jetbrains-mono/latin-500.css';
-import '@fontsource/jetbrains-mono/latin-700.css';
+// One variable face covers 400/500/700: one request instead of three, and the
+// woff fallbacks the static package shipped are gone with it.
+import '@fontsource-variable/jetbrains-mono/wght.css';
 import './index.css';
 
 import CssBaseline from '@mui/material/CssBaseline';
