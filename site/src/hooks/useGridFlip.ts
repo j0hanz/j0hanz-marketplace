@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Flip, ScrollTrigger, gsap, motionOk, useGSAP } from '../motion';
 
 function killDetachedTriggers() {
@@ -10,15 +10,11 @@ function killDetachedTriggers() {
 export function useGridFlip(items: readonly unknown[]) {
   const grid = useRef<HTMLDivElement>(null);
   const previousLayout = useRef<ReturnType<typeof Flip.getState> | null>(null);
-  const rendered = useRef(items);
 
-  if (rendered.current !== items) {
-    // During render, DOM still holds the previous commit's children — capture them
-    // before React commits the new items.
-    rendered.current = items;
+  useLayoutEffect(() => {
     previousLayout.current =
       grid.current && motionOk() ? Flip.getState(grid.current.children) : null;
-  }
+  }, [items]);
 
   useGSAP(
     () => {
