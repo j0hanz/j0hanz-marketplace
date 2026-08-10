@@ -84,7 +84,12 @@ export function SkillIndex() {
                   leading={
                     !skill.invocable ? (
                       <Tooltip title={copy.modelLoadedHint} enterDelay={400} enterNextDelay={0}>
-                        <Chip size="small" variant="outlined" label={copy.modelLoadedTag} />
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          tabIndex={0}
+                          label={copy.modelLoadedTag}
+                        />
                       </Tooltip>
                     ) : undefined
                   }

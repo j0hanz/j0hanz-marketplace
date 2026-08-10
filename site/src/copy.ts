@@ -28,8 +28,15 @@ export const copy = {
   copiedLabel: 'Copied',
   selectLabel: 'Press Ctrl/⌘+C to copy',
   // Names the outcome of pressing it, which is what the toggle's label has to say.
-  modeLabel: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
+  // Three modes, one per system state; the toggle composes a "<current> — <next>" label.
+  modeToggle: {
+    system: 'Follow system theme',
+    light: 'Use light theme',
+    dark: 'Use dark theme',
+  },
   menuLabel: 'Open menu',
+  catalogEmpty: 'No plugins match this search.',
+  catalogClear: 'Clear filters',
   footerNote: 'MIT licensed.',
 } as const;
 

@@ -28,7 +28,9 @@ export function Section({
         <Typography id={`${id}-title`} variant="h4" component="h2">
           {title}
         </Typography>
-        {count !== undefined && <Chip label={count} size="small" />}
+        {count !== undefined && (
+          <Chip label={count} size="small" aria-label={`${count} ${title.toLowerCase()}`} />
+        )}
       </Stack>
       {children}
     </Container>

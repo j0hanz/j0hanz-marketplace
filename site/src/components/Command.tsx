@@ -65,7 +65,7 @@ export function Command({ value }: { value: string }) {
         enterDelay={400}
         enterNextDelay={0}
       >
-        <IconButton onClick={write} aria-label={`${copy.copyLabel} ${value}`} sx={{ p: 1.5 }}>
+        <IconButton onClick={write} aria-label={copy.copyLabel} sx={{ p: 1.5 }}>
           <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>

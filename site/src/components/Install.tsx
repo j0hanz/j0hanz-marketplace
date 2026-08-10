@@ -5,21 +5,27 @@ import { site } from '../site';
 import { Command } from './Command';
 import { Section } from './Section';
 
-// Steps two and three are command shapes rather than one arbitrary plugin's command;
-// the exact per-plugin command lives on its catalog card. Step three resolves to the
-// first invocable skill across the catalog so the visitor sees a real shape.
-const exampleInvocation = (() => {
+// Step 2 and 3 use one real plugin so the visitor sees a worked install trace,
+// not a placeholder they have to substitute themselves. Tutor wins by being
+// first in the catalog with an invocable skill that takes a clear argument.
+const example = (() => {
   for (const p of site.plugins) {
     const skill = p.skills.find((s) => s.invocable && s.command);
-    if (skill) return `/${p.name}:${skill.command}`;
+    if (skill) return { plugin: p, skill };
   }
-  return '/<plugin>:<skill>';
+  return null;
 })();
 
 const rows = [
   { label: copy.installSteps[0], value: site.addCommand },
-  { label: copy.installSteps[1], value: `/plugin install <plugin>@${site.name}` },
-  { label: copy.installSteps[2], value: exampleInvocation },
+  {
+    label: copy.installSteps[1],
+    value: example ? example.plugin.installCommand : `/plugin install <plugin>@${site.name}`,
+  },
+  {
+    label: copy.installSteps[2],
+    value: example ? (example.skill.command ?? `/<plugin>:<skill>`) : '/<plugin>:<skill>',
+  },
 ];
 
 export function Install() {

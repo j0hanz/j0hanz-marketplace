@@ -53,18 +53,29 @@ function useActiveSection() {
   return active;
 }
 
+// Three modes in a cycle: the pre-paint script in index.html stamps 'system' as the
+// default; the cycle matches MUI's supported modes without inventing a fourth.
+const modeCycle = ['system', 'light', 'dark'] as const;
+type Mode = (typeof modeCycle)[number];
+
 function ModeToggle() {
-  const { mode, systemMode, setMode } = useColorScheme();
-  // `mode` is 'system' until the visitor picks one, and undefined before mount.
-  const resolved = mode === 'system' ? systemMode : mode;
-  const next = resolved === 'dark' ? 'light' : 'dark';
+  const { mode, setMode } = useColorScheme();
+  // `mode` is undefined before mount and 'system' by default. Map to the cycle index
+  // and rotate. `system` uses the DarkModeIcon by default (it shows the resolved
+  // theme's opposite, signalling "click to override").
+  const current: Mode = (mode as Mode | undefined) ?? 'system';
+  const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
+  const Icon = next === 'light' ? LightModeIcon : DarkModeIcon;
+  const label = `${copy.modeToggle[current]} — ${copy.modeToggle[next]}`;
 
   return (
-    <IconButton color="inherit" aria-label={copy.modeLabel[next]} onClick={() => setMode(next)}>
-      {resolved === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+    <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={{ p: 1 }}>
+      <Icon />
     </IconButton>
   );
 }
+
+const mobileMenuId = 'nav-mobile-menu';
 
 /** Below `sm` the inline buttons disappear; the burger is the only way in. */
 function MobileMenu() {
@@ -79,16 +90,22 @@ function MobileMenu() {
         aria-label={copy.menuLabel}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? mobileMenuId : undefined}
         onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+        sx={{ display: { xs: 'inline-flex', sm: 'none' }, p: 1 }}
       >
         <MenuIcon />
       </IconButton>
       <Menu
+        id={mobileMenuId}
         anchorEl={anchor}
         open={open}
         onClose={close}
-        slotProps={{ paper: { sx: { border: `3px solid ${steel}`, borderRadius: 0 } } }}
+        slotProps={{
+          paper: {
+            sx: { border: `3px solid ${steel}`, borderRadius: 0 },
+          },
+        }}
       >
         {copy.navLinks.map((link) => (
           <MenuItem
@@ -152,7 +169,7 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 color="inherit"
-                aria-current={active === link.href ? 'true' : undefined}
+                aria-current={active === link.href ? 'page' : undefined}
                 sx={{
                   display: { xs: 'none', sm: 'inline-flex' },
                   // The amber underline is the same signal the chassis uses everywhere
@@ -174,7 +191,7 @@ export function Nav() {
               target="_blank"
               rel="noreferrer"
               aria-label={copy.githubLabel}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' }, p: 1 }}
             >
               <GitHubIcon />
             </IconButton>

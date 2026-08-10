@@ -7,6 +7,9 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 export const steel = '#4A5568';
 
 /** Announced, never seen. `width: 1` in sx means 100%, so these stay strings. */
+/** Pinned: AppBar height (Toolbar default 64 + 3px steel chassis + a little slack). */
+export const scrollOffset = 80;
+
 export const srOnly = {
   position: 'absolute',
   width: '1px',
@@ -75,7 +78,7 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          scrollPaddingTop: 80,
+          scrollPaddingTop: scrollOffset,
           '@media (prefers-reduced-motion: no-preference)': { scrollBehavior: 'smooth' },
         },
         body: {
@@ -107,5 +110,21 @@ export const theme = createTheme({
     },
     // Chips default to a 16px pill, which is the one rounded shape on a zero-radius page.
     MuiChip: { styleOverrides: { root: { borderRadius: 0 } } },
+    // The one widget that defaults to a different chassis — MUI's grey tooltip
+    // surface reads as a foreign object against the amber/steel frame. Match it:
+    // paper background, primary text, 2px primary border, square corners, no arrow
+    // shadow that would imply a non-zero radius elsewhere.
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          backgroundColor: 'var(--mui-palette-background-paper)',
+          color: 'var(--mui-palette-text-primary)',
+          border: '2px solid var(--mui-palette-primary-main)',
+          borderRadius: 0,
+          fontSize: '0.75rem',
+        },
+        arrow: { color: 'var(--mui-palette-background-paper)' },
+      },
+    },
   },
 });

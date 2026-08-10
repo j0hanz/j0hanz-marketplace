@@ -6,7 +6,9 @@ import type { Plugin } from '../site';
 export function PluginCountChips({ plugin }: { plugin: Plugin }) {
   return (
     <>
-      <Chip size="small" label={plural(plugin.skills.length, copy.unit.skill)} />
+      {plugin.skills.length > 0 && (
+        <Chip size="small" label={plural(plugin.skills.length, copy.unit.skill)} />
+      )}
       {plugin.agents.length > 0 && (
         <Chip size="small" label={plural(plugin.agents.length, copy.unit.agent)} />
       )}
