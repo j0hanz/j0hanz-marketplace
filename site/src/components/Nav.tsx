@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
-import { mono, rule } from '../theme/tokens';
+import { accent, drawable, lit, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
@@ -62,13 +62,10 @@ function MobileMenu({ active }: { active: string }) {
             component="a"
             href={link.href}
             onClick={close}
-            aria-current={active === link.href ? 'page' : undefined}
+            aria-current={active === link.href ? 'true' : undefined}
             sx={{
               ...menuItemSx,
-              ...(active === link.href && {
-                fontWeight: 700,
-                boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
-              }),
+              ...(active === link.href && { fontWeight: 700, boxShadow: lit('left') }),
             }}
           >
             {link.label}
@@ -94,13 +91,15 @@ export function Nav() {
 
   return (
     <AppBar
+      data-draw-load
       position="sticky"
       color="default"
       enableColorOnDark
       sx={{
         bgcolor: 'background.paper',
         borderBottom: rule,
-        boxShadow: 'inset 0 -3px 0 0 var(--mui-palette-primary-main)',
+        boxShadow: 'none',
+        ...drawable('bottom', accent), // AppBar's own sticky positioning anchors it
       }}
     >
       <Container maxWidth="lg">
@@ -131,7 +130,7 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 color="inherit"
-                aria-current={active === link.href ? 'page' : undefined}
+                aria-current={active === link.href ? 'true' : undefined}
                 sx={{
                   display: { xs: 'none', sm: 'inline-flex' },
                   minHeight: 44,

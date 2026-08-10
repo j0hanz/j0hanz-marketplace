@@ -1,63 +1,69 @@
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
-import { useReveal } from '../motion';
+import { useEnter } from '../motion';
 import { site } from '../site';
-import { mono, steel } from '../theme/tokens';
+import { lit, mono, rule } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
-const example = site.plugins
-  .flatMap((p) =>
-    p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
-  )
-  .find((x) => x.run)!;
+const example = site.plugins.flatMap((plugin) =>
+  plugin.skills.flatMap((skill) =>
+    skill.command ? [{ install: plugin.installCommand, run: skill.command }] : [],
+  ),
+)[0];
 
 const steps = [
   { label: 'Add the marketplace', value: site.addCommand },
-  { label: 'Install a plugin', value: example.install },
-  { label: 'Run it', value: example.run },
+  ...(example
+    ? [
+        { label: 'Install a plugin', value: example.install },
+        { label: 'Run it', value: example.run },
+      ]
+    : []),
 ];
-
-const MARKER_SIZE = 28;
-const RAIL_WIDTH = 3;
 
 export function Install() {
   const listRef = useRef<HTMLOListElement>(null);
-  useReveal('[data-reveal]', {}, listRef);
+  useEnter(listRef);
+
   return (
     <Section id="install" title="Install">
       <Box
         component="ol"
         role="list"
         ref={listRef}
-        sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 620 }}
+        sx={{
+          listStyle: 'none',
+          p: 0,
+          m: 0,
+          border: rule,
+          boxShadow: lit('top'),
+          display: 'grid',
+          gridTemplateColumns: { md: `repeat(${steps.length}, 1fr)` },
+        }}
       >
-        {steps.map((step, i) => {
-          const last = i === steps.length - 1;
-          return (
-            <Box
-              component="li"
-              key={step.label}
-              data-reveal
-              sx={{
-                position: 'relative',
-                ml: `${MARKER_SIZE / 2}px`,
-                pl: { xs: 3, sm: 4 },
-                pb: last ? 0 : 5,
-                borderLeft: `${RAIL_WIDTH}px solid`,
-                borderColor: last ? 'transparent' : steel,
-              }}
-            >
+        {steps.map((step, i) => (
+          <Box
+            component="li"
+            key={step.label}
+            data-reveal
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              minWidth: 0,
+              p: { xs: 2, md: 3 },
+              ...(i > 0 && { borderTop: { xs: rule, md: 0 }, borderLeft: { md: rule } }),
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box
                 aria-hidden
                 sx={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: MARKER_SIZE,
-                  height: MARKER_SIZE,
+                  flexShrink: 0,
+                  width: 28,
+                  height: 28,
                   display: 'grid',
                   placeItems: 'center',
                   fontFamily: mono,
@@ -65,20 +71,17 @@ export function Install() {
                   fontSize: '0.8125rem',
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
-                  transform: `translate(${-(MARKER_SIZE / 2 + RAIL_WIDTH / 2)}px, 0)`,
                 }}
               >
                 {i + 1}
               </Box>
-              <Stack spacing={1.5} sx={{ minWidth: 0, pt: 0.5 }}>
-                <Typography component="h3" variant="body2" sx={{ fontWeight: 600 }}>
-                  {step.label}
-                </Typography>
-                <Command value={step.value} />
-              </Stack>
+              <Typography component="h3" variant="body2" sx={{ fontWeight: 600 }}>
+                {step.label}
+              </Typography>
             </Box>
-          );
-        })}
+            <Command value={step.value} />
+          </Box>
+        ))}
       </Box>
     </Section>
   );

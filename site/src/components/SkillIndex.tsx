@@ -8,12 +8,13 @@ import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { useReveal } from '../motion';
+import { useEnter } from '../motion';
 import { countLabel, site } from '../site';
-import { codeSx } from '../theme/tokens';
+import { codeSx, lit, outline } from '../theme/tokens';
 import { Section } from './Section';
 
 function Entry({
@@ -55,45 +56,19 @@ function Entry({
 }
 
 export function SkillIndex() {
-  const [isDesktop, setIsDesktop] = useState(() => matchMedia('(min-width: 900px)').matches);
-  useEffect(() => {
-    const mql = matchMedia('(min-width: 900px)');
-    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, []);
+  const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
 
-  // User-controlled overrides: names the user explicitly toggled away from the
-  // viewport default. Stored so resize doesn't undo a deliberate collapse.
-  const [userCollapsed, setUserCollapsed] = useState<Set<string>>(() => new Set());
-  const [userExpanded, setUserExpanded] = useState<Set<string>>(() => new Set());
+  // Rows the user explicitly toggled away from the viewport default. Kept so a
+  // resize doesn't undo a deliberate collapse.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const firstName = site.plugins[0]?.name;
-  const isOpen = (name: string) => {
-    if (userExpanded.has(name)) return true;
-    if (userCollapsed.has(name)) return false;
-    return Boolean(firstName) && name === firstName && isDesktop;
-  };
-  const toggle = (name: string) => {
-    if (isOpen(name)) {
-      setUserCollapsed((prev) => new Set(prev).add(name));
-      setUserExpanded((prev) => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      });
-    } else {
-      setUserExpanded((prev) => new Set(prev).add(name));
-      setUserCollapsed((prev) => {
-        const next = new Set(prev);
-        next.delete(name);
-        return next;
-      });
-    }
-  };
+  const isOpen = (name: string) => overrides[name] ?? (isDesktop && name === firstName);
+  const toggle = (name: string) => setOverrides((prev) => ({ ...prev, [name]: !isOpen(name) }));
+
   const listRef = useRef<HTMLDivElement>(null);
-  // Structural wrapper: gives `useReveal` a single scope to query descendants
+  // Structural wrapper: gives `useEnter` a single scope to query descendants
   // from, so per-Accordion refs aren't needed.
-  useReveal('[data-reveal]', {}, listRef);
+  useEnter(listRef);
 
   return (
     <Section
@@ -116,13 +91,10 @@ export function SkillIndex() {
             data-reveal
             sx={{
               bgcolor: 'transparent',
-              borderTop: 1,
-              borderColor: 'divider',
-              '&:last-of-type': { borderBottom: 1, borderColor: 'divider' },
+              borderTop: outline,
+              '&:last-of-type': { borderBottom: outline },
               '&::before': { display: 'none' },
-              '&.Mui-expanded': {
-                boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
-              },
+              '&.Mui-expanded': { boxShadow: lit('left') },
             }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>

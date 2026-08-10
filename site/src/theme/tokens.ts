@@ -4,9 +4,43 @@ export const sans =
   "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
 export const steel = 'var(--mui-palette-steel)';
+export const edge = 'var(--mui-palette-edge)';
+export const accent = 'var(--mui-palette-primary-main)';
 
-/** Structural frame: nav, footer, section headers, skip link, menu paper. */
-export const rule = `3px solid ${steel}`;
+export const RULE_WIDTH = 3;
+
+/** Structural frame: nav, footer, section headers, skip link, menu paper, panels. */
+export const rule = `${RULE_WIDTH}px solid ${steel}`;
+
+/** Object outline: cards, command bars, anything sitting inside a frame. */
+export const outline = `1px solid ${edge}`;
+
+/** Amber edge marking a frame as live: current section, selected filter, open row. */
+const LIT_OFFSET = {
+  top: `0 ${RULE_WIDTH}px`,
+  bottom: `0 -${RULE_WIDTH}px`,
+  left: `${RULE_WIDTH}px 0`,
+} as const;
+
+export const lit = (side: keyof typeof LIT_OFFSET) => `inset ${LIT_OFFSET[side]} 0 0 ${accent}`;
+
+/**
+ * Geometry for a structural rule that motion can draw in; index.css owns the
+ * timing and the states. Undrawn is not the default, so no-JS, print, and
+ * reduced-motion keep the frame. The caller owns positioning: the element must
+ * establish a containing block.
+ */
+export const drawable = (side: 'top' | 'bottom', color = steel) => ({
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    [side]: 0,
+    insetInline: 0,
+    height: RULE_WIDTH,
+    bgcolor: color,
+    transformOrigin: 'left',
+  },
+});
 
 export const ground = { light: '#EDF0F3', dark: '#0E1116' } as const;
 

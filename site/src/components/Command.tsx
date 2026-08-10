@@ -5,9 +5,9 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, ContentCopyIcon } from '../icons';
-import { codeSx, srOnly } from '../theme/tokens';
+import { codeSx, outline, srOnly } from '../theme/tokens';
 
-type Status = '' | 'Copied' | 'Copy failed';
+type Status = '' | 'Copied' | 'Copy failed — select the text and copy it';
 
 export function Command({ value }: { value: string }) {
   const [status, setStatus] = useState<Status>('');
@@ -25,7 +25,7 @@ export function Command({ value }: { value: string }) {
       await navigator.clipboard.writeText(value);
       announce('Copied');
     } catch {
-      announce('Copy failed');
+      announce('Copy failed — select the text and copy it');
     }
   };
 
@@ -46,8 +46,7 @@ export function Command({ value }: { value: string }) {
         py: 0.5,
         width: 1,
         bgcolor: 'background.default',
-        borderColor: 'var(--mui-palette-edge)',
-        borderWidth: 1,
+        border: outline,
       }}
     >
       <Typography component="code" variant="body2" sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}>

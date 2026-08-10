@@ -1,5 +1,5 @@
 import { createTheme } from '@mui/material/styles';
-import { focusRing, ground, heading, mono, sans, scrollOffset } from './tokens';
+import { edge, focusRing, ground, heading, lit, mono, sans, scrollOffset } from './tokens';
 
 declare module '@mui/material/styles' {
   interface Palette {
@@ -14,12 +14,30 @@ declare module '@mui/material/styles' {
 
 const paperSteel = '#4A5568';
 
+/**
+ * Press feedback. Snappy down, eased back up: the press is the user's, the
+ * release is ours. Button, IconButton and ToggleButton each declare their own
+ * `transition`, which would drop transform from the list, so the colour
+ * properties are restated here rather than left to the defaults.
+ */
+const press = {
+  transition: [
+    'transform 160ms var(--ease-out)',
+    'background-color 200ms var(--ease-out)',
+    'border-color 200ms var(--ease-out)',
+    'box-shadow 200ms var(--ease-out)',
+    'color 200ms var(--ease-out)',
+  ].join(', '),
+  '&:active': { transform: 'scale(0.97)', transitionDuration: '60ms' },
+};
+
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
     light: {
       palette: {
         primary: { main: '#B45309', contrastText: '#FFFFFF' },
+        error: { main: '#B42318', contrastText: '#FFFFFF' },
         background: { default: ground.light, paper: '#FFFFFF' },
         text: { primary: '#0E1116', secondary: paperSteel },
         divider: '#C3CBD4',
@@ -30,6 +48,7 @@ export const theme = createTheme({
     dark: {
       palette: {
         primary: { main: '#F5A524', contrastText: '#0E1116' },
+        error: { main: '#F97066', contrastText: '#0E1116' },
         background: { default: ground.dark, paper: '#171C23' },
         text: { primary: '#E7EBF0', secondary: '#9BA6B4' },
         divider: '#404A59',
@@ -41,7 +60,7 @@ export const theme = createTheme({
   shape: { borderRadius: 0 },
   typography: {
     fontFamily: sans,
-    h2: heading({ min: '1.75rem', max: '3.75rem', letterSpacing: '0.01em' }),
+    h2: heading({ min: '1.75rem', max: '4.25rem', letterSpacing: '0.01em' }),
     h4: heading({ min: '1.25rem', max: '2rem', letterSpacing: '0.06em' }),
     h5: { fontFamily: mono },
     h6: { fontFamily: mono },
@@ -74,48 +93,47 @@ export const theme = createTheme({
     MuiButtonBase: {
       defaultProps: { disableRipple: true },
       styleOverrides: {
-        root: {
-          '&.Mui-focusVisible': focusRing,
-          '&:active': { transform: 'translateY(1px)' },
-        },
+        root: { '&.Mui-focusVisible': focusRing },
       },
     },
+    MuiButton: { styleOverrides: { root: press } },
+    MuiIconButton: { styleOverrides: { root: press } },
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
+    MuiCard: { styleOverrides: { root: { borderColor: edge } } },
     MuiChip: {
       styleOverrides: {
         root: { borderRadius: 0, fontFamily: mono },
-        outlined: { borderColor: 'var(--mui-palette-edge)' },
+        outlined: { borderColor: edge },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--mui-palette-edge)' } },
+        root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: edge } },
       },
     },
     MuiToggleButtonGroup: {
       styleOverrides: {
-        root: {
-          '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
-            borderLeftColor: 'var(--mui-palette-edge)',
-          },
-        },
+        root: { '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { borderLeftColor: edge } },
       },
     },
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderColor: 'var(--mui-palette-edge)',
+          ...press,
+          borderColor: edge,
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,
-            boxShadow: 'inset 0 -3px 0 0 var(--mui-palette-primary-main)',
+            boxShadow: lit('bottom'),
           },
         },
       },
     },
     MuiAccordion: { defaultProps: { slotProps: { transition: { timeout: 200 } } } },
     MuiTooltip: {
-      defaultProps: { enterDelay: 400, enterNextDelay: 0 },
+      // describeChild keeps the child's own visible label as its accessible
+      // name; without it MUI replaces "2 hooks" with the tooltip text.
+      defaultProps: { enterDelay: 400, enterNextDelay: 0, describeChild: true },
       styleOverrides: {
         tooltip: {
           backgroundColor: 'var(--mui-palette-background-paper)',

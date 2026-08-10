@@ -1,0 +1,149 @@
+/*
+ * Motion. Geometry for the drawn rules comes from `drawable()` in theme/tokens;
+ * this file owns every duration, curve and state change.
+ *
+ * Every hidden start-state is nested under :root[data-motion], which main.tsx
+ * sets only when JavaScript runs and the visitor allows motion. Without it
+ * nothing here hides anything, so no-JS and reduced-motion visitors get the
+ * finished page rather than an empty one.
+ */
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dur-reveal: 380ms;
+  --dur-draw: 600ms;
+}
+
+/* Content arriving: subordinate to the rule draws. */
+:root[data-motion] [data-reveal] {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity var(--dur-reveal) var(--ease-out),
+    transform var(--dur-reveal) var(--ease-out);
+}
+
+:root[data-motion] [data-reveal][data-shown] {
+  opacity: 1;
+  transform: none;
+}
+
+/*
+ * The site's one motion idea: structural rules draw themselves along their axis.
+ * The transform sits on the pseudo-element that actually moves, so the browser
+ * hands each one to the compositor instead of restyling the bar's whole subtree.
+ */
+:root[data-motion] [data-draw]::after {
+  transform: scaleX(0);
+  transition: transform var(--dur-draw) var(--ease-out);
+}
+
+:root[data-motion] [data-draw][data-shown]::after {
+  transform: scaleX(1);
+}
+
+/* Already on screen at load, so it draws on its own rather than on entry. */
+:root[data-motion] [data-draw-load]::after {
+  animation: draw 800ms var(--ease-out) both;
+}
+
+/* The same rule as feedback: a card lights its top edge under the pointer. */
+[data-lit]::after {
+  transform: scaleX(0);
+}
+
+[data-lit]:focus-within::after {
+  transform: scaleX(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-lit]:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+:root[data-motion] [data-lit]::after {
+  transition: transform 180ms var(--ease-out);
+}
+
+/* The authored moment: the pitch rises, then the panel wipes in behind its frame. */
+:root[data-motion] [data-hero] {
+  animation: rise 700ms var(--ease-out) both;
+}
+
+:root[data-motion] [data-hero]:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+:root[data-motion] [data-hero]:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+:root[data-motion] [data-hero-panel] {
+  animation: wipe 800ms var(--ease-out) 350ms both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/*
+ * main.tsx already withholds data-motion when motion is unwelcome. This is the
+ * backstop if it ever gets set anyway: keep the fade, drop every movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-motion] [data-reveal] {
+    transform: none;
+    transition: opacity 200ms linear;
+  }
+
+  :root[data-motion] [data-draw]::after,
+  :root[data-motion] [data-draw-load]::after {
+    transform: scaleX(1);
+    transition: none;
+    animation: none;
+  }
+
+  :root[data-motion] [data-hero],
+  :root[data-motion] [data-hero-panel] {
+    animation: none;
+  }
+
+  [data-lit]::after {
+    transition: none;
+  }
+}
+
+/* Print never scrolls, so undo anything still waiting for its trigger. */
+@media print {
+  :root[data-motion] [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+
+  :root[data-motion] [data-draw]::after,
+  :root[data-motion] [data-draw-load]::after {
+    transform: scaleX(1);
+    animation: none;
+  }
+
+  :root[data-motion] [data-hero],
+  :root[data-motion] [data-hero-panel] {
+    animation: none;
+  }
+}

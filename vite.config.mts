@@ -31,10 +31,6 @@ export default defineConfig({
           if (id.includes('/node_modules/@mui/') || id.includes('/node_modules/@emotion/')) {
             return 'mui';
           }
-          if (id.includes('/node_modules/@gsap/react') || id.includes('/node_modules/gsap/')) {
-            if (id.includes('Flip')) return;
-            return 'gsap';
-          }
         },
       },
     },

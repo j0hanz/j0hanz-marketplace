@@ -1,64 +1,51 @@
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect } from 'react';
 
-const MOTION_QUERY = '(prefers-reduced-motion: no-preference)';
-export const motionOk = () => matchMedia(MOTION_QUERY).matches;
+const SELECTOR = '[data-reveal],[data-draw]';
 
-type TweenVars = Parameters<typeof gsap.to>[1];
-
-let fontsRefreshed = false;
-const refreshAfterFonts = () => {
-  if (fontsRefreshed) return;
-  fontsRefreshed = true;
-  document.fonts.ready.then(() => ScrollTrigger.refresh());
-};
+export const motionOk = () => matchMedia('(prefers-reduced-motion: no-preference)').matches;
 
 /**
- * Scroll-reveal items matching `selector` inside `scope`. Reduced-motion users
- * see static content immediately. Defaults to `opacity: 1, y: 0` on entry;
- * `toVars` lets callers override or extend the to-state.
+ * Marks reveals and rule draws as they enter view, once each. The start and end
+ * states live in index.css; this only decides when. `key` re-runs the pass when
+ * the scope's contents change.
  */
-export function useReveal(
-  selector: string,
-  toVars: TweenVars = {},
-  scope?: React.RefObject<HTMLElement | null>,
-) {
-  useGSAP(
-    () => {
-      if (!motionOk()) return;
-      const items = gsap.utils.toArray<HTMLElement>(selector, scope?.current);
-      gsap.set(items, { opacity: 0, y: 24 });
-      ScrollTrigger.batch(items, {
-        start: 'top 88%',
-        once: true,
-        onEnter: (batch) =>
-          gsap.to(batch, {
-            duration: 0.5,
-            opacity: 1,
-            y: 0,
-            stagger: 0.07,
-            ease: 'power2.out',
-            ...toVars,
-          }),
-      });
-      refreshAfterFonts();
-    },
-    { scope },
-  );
-}
+export function useEnter(scope: React.RefObject<HTMLElement | null>, key?: unknown) {
+  useEffect(() => {
+    const root = scope.current;
+    if (!root || !document.documentElement.dataset.motion) return;
 
-/** Mount-reveal: items animate from `tween` start-state immediately on mount. */
-export function useRevealMount(
-  selector: string,
-  tween: TweenVars,
-  scope?: React.RefObject<HTMLElement | null>,
-) {
-  useGSAP(
-    () => {
-      if (!motionOk()) return;
-      gsap.from(gsap.utils.toArray<HTMLElement>(selector, scope?.current), tween);
-    },
-    { scope },
-  );
+    const pending = [root, ...root.querySelectorAll<HTMLElement>(SELECTOR)].filter(
+      (el) => el.matches(SELECTOR) && el.dataset.shown === undefined,
+    );
+    if (pending.length === 0) return;
+
+    let queued = 0;
+    let frame = 0;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target as HTMLElement;
+          // Reveals crossing in the same tick stagger; a lone latecomer doesn't
+          // wait. Draws transition their pseudo-element, which no delay reaches,
+          // and never appear as a group anyway.
+          if (el.dataset.reveal !== undefined) {
+            frame ||= requestAnimationFrame(() => {
+              queued = 0;
+              frame = 0;
+            });
+            el.style.transitionDelay = `${Math.min(queued++ * 60, 240)}ms`;
+          }
+          el.dataset.shown = '';
+          observer.unobserve(el);
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    for (const el of pending) observer.observe(el);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [scope, key]);
 }

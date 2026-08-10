@@ -10,31 +10,27 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { memo } from 'react';
-import { useGridFlip } from '../hooks/useGridFlip';
+import { memo, useRef } from 'react';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
-import { useReveal } from '../motion';
+import { useEnter } from '../motion';
 import { countLabel, site, type Plugin } from '../site';
+import { accent, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
-const SEARCH_HINT = 'Search plugins, skills, agents…';
-
-const litEdge = {
-  boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
-};
+const SEARCH_HINT = 'skill, agent, or hook name';
 
 const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
   return (
     <Card
       variant="outlined"
+      data-lit
       sx={{
         height: 1,
         display: 'flex',
         flexDirection: 'column',
-        '&:focus-within': litEdge,
-        '@media (hover: hover) and (pointer: fine)': { '&:hover': litEdge },
-        transition: 'box-shadow 200ms ease',
+        position: 'relative',
+        ...drawable('top', accent),
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>
@@ -99,8 +95,9 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
 
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
-  const grid = useGridFlip(visible);
-  useReveal('[data-reveal]', {}, grid);
+  const grid = useRef<HTMLDivElement>(null);
+  // Cards added by a filter change enter the same way they did on first load.
+  useEnter(grid, visible);
 
   return (
     <Section
@@ -115,7 +112,7 @@ export function Catalog() {
       >
         <TextField
           type="search"
-          label="Search"
+          label="Search plugins"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -140,7 +137,16 @@ export function Catalog() {
           value={category}
           onChange={(_, next: string | null) => next && setCategory(next)}
           aria-label="Filter plugins by category"
-          sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 } }}
+          sx={{
+            flexWrap: 'wrap',
+            gap: '3px',
+            '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 },
+            // Wrapped rows can't share edges, so give every button its own.
+            '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
+              ml: 0,
+              borderLeft: outline,
+            },
+          }}
         >
           <ToggleButton value={ALL}>All</ToggleButton>
           {site.categories.map((name) => (
@@ -154,10 +160,10 @@ export function Catalog() {
       {visible.length === 0 ? (
         <Stack spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
           <Typography variant="body1" color="textSecondary">
-            No plugins match this search.
+            {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>
           <Link component="button" variant="body2" color="text.primary" onClick={reset}>
-            Clear filters
+            {query && category !== ALL ? 'Clear search and category' : 'Show all plugins'}
           </Link>
         </Stack>
       ) : (

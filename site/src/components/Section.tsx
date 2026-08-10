@@ -5,8 +5,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
-import { useReveal } from '../motion';
-import { rule, srOnly } from '../theme/tokens';
+import { useEnter } from '../motion';
+import { drawable, srOnly } from '../theme/tokens';
 
 export function Section({
   id,
@@ -19,26 +19,29 @@ export function Section({
   count?: { total: number; label: string };
   children: ReactNode;
 }) {
-  const scope = useRef<HTMLElement>(null);
-  useReveal(':scope > [data-reveal]', {}, scope);
+  // Scoped to the header alone: the section's children own their own reveals,
+  // and a Container-wide scope would observe them a second time.
+  const header = useRef<HTMLDivElement>(null);
+  useEnter(header);
   return (
     <Container
       component="section"
       id={id}
       aria-labelledby={`${id}-title`}
-      ref={scope}
       maxWidth="lg"
-      sx={{ py: { xs: 7, md: 11 } }}
+      sx={{ py: { xs: 7, md: 9 } }}
     >
       <Stack
+        ref={header}
         direction="row"
         spacing={2}
-        data-reveal
+        data-draw
         sx={{
           alignItems: 'baseline',
           mb: { xs: 4, md: 5 },
           pb: 1.5,
-          borderBottom: rule,
+          position: 'relative',
+          ...drawable('bottom'),
         }}
       >
         <Typography id={`${id}-title`} variant="h4" component="h2" sx={{ flexGrow: 1 }}>

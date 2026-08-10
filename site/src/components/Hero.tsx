@@ -4,11 +4,9 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useRef } from 'react';
 import { GitHubIcon } from '../icons';
-import { useRevealMount } from '../motion';
 import { pluralize, site } from '../site';
-import { mono } from '../theme/tokens';
+import { lit, mono, rule } from '../theme/tokens';
 import { Command } from './Command';
 
 const stats = [
@@ -17,17 +15,11 @@ const stats = [
   { count: site.totals.agents, unit: 'agent' },
 ];
 
+// The one authored moment (index.css): the pitch rises, then the marketplace
+// panel wipes in behind its own frame. Everything after it is quieter by design.
 export function Hero() {
-  const scope = useRef<HTMLDivElement>(null);
-  useRevealMount(
-    '[data-hero]',
-    { opacity: 0, y: 20, duration: 0.5, stagger: 0.09, ease: 'power2.out' },
-    scope,
-  );
-
   return (
     <Container
-      ref={scope}
       component="section"
       id="top"
       maxWidth="lg"
@@ -69,8 +61,8 @@ export function Hero() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack
             spacing={2}
-            sx={{ p: 2, bgcolor: 'background.paper', border: '3px solid var(--mui-palette-edge)' }}
-            data-hero
+            data-hero-panel
+            sx={{ p: 2, bgcolor: 'background.paper', border: rule, boxShadow: lit('top') }}
           >
             <Typography
               component="p"
@@ -111,7 +103,7 @@ export function Hero() {
             </Stack>
 
             <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-              Plugins bundle skills (slash-commands) and agents (autonomous helpers).
+              Skills are slash commands you run. Agents are helpers Claude delegates work to.
             </Typography>
           </Stack>
         </Grid>
