@@ -75,7 +75,9 @@ function ModeToggle() {
   const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
   const Icon = modeIcons[current];
-  const label = `${copy.modeToggle[current]} — ${copy.modeToggle[next]}`;
+  // Two sentences, not a dash: screen readers skip a dash silently, so the state and the
+  // action ran together into one clause.
+  const label = `${copy.modeToggle[current]}. ${copy.modeToggle[next]}.`;
 
   return (
     <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={{ p: 1 }}>
@@ -184,8 +186,12 @@ export function Nav() {
                   // The amber underline is the same signal the chassis uses everywhere
                   // else; reserving its height keeps the row from shifting on scroll.
                   borderBottom: '2px solid transparent',
+                  // Weight and ink carry "you are here"; amber only underlines it. As the
+                  // link colour amber was 3.2:1 on paper and failed as text outright.
+                  color: 'text.secondary',
                   ...(active === link.href && {
-                    color: 'primary.main',
+                    color: 'text.primary',
+                    fontWeight: 700,
                     borderBottomColor: 'primary.main',
                   }),
                 }}

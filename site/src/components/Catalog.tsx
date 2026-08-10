@@ -47,13 +47,15 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         // Outlined cards give no sign they are anything but a box. The edge lights up amber
         // under the cursor or when a child has focus, matching the nav and the hero bezel.
         // :focus-within keeps the affordance for keyboard users without adding a new tab
-        // stop on the card itself.
+        // stop on the card itself. The top rule is an inset shadow, so lighting it costs
+        // no reflow and the card keeps its 1px frame underneath.
         '&:hover, &:focus-within': {
           borderColor: 'primary.main',
+          boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
           transform: 'translateY(-2px)',
         },
         '@media (prefers-reduced-motion: no-preference)': {
-          transition: 'border-color 200ms ease, transform 200ms ease',
+          transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
         },
       }}
     >
@@ -78,7 +80,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
           <Chip label={plugin.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
         </Stack>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
           {plugin.summary}
         </Typography>
 
@@ -143,7 +145,13 @@ export function Catalog() {
       title={copy.catalogTitle}
       count={{ total: visible.length, label: plural(visible.length, copy.unit.plugin) }}
     >
-      <Stack spacing={2} sx={{ mb: 4 }}>
+      {/* Search and filter share a row from md up: two controls on one line read as one
+          control surface, and the catalog starts a screen higher on a laptop. */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        sx={{ mb: 4, alignItems: { md: 'center' }, justifyContent: 'space-between' }}
+      >
         <TextField
           type="search"
           size="small"
@@ -166,7 +174,7 @@ export function Catalog() {
               inputMode: 'search',
             },
           }}
-          sx={{ maxWidth: 360 }}
+          sx={{ width: 1, maxWidth: { md: 320 } }}
         />
         <ToggleButtonGroup
           exclusive
@@ -174,7 +182,7 @@ export function Catalog() {
           value={category}
           onChange={(_, next: string | null) => next && setCategory(next)}
           aria-label={copy.catalogTitle}
-          sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44 } }}
+          sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 } }}
         >
           <ToggleButton value={ALL}>{copy.catalogAll}</ToggleButton>
           {site.categories.map((name) => (
@@ -187,7 +195,7 @@ export function Catalog() {
 
       {visible.length === 0 ? (
         <Stack spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="textSecondary">
             {copy.catalogEmpty}
           </Typography>
           <Link

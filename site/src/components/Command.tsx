@@ -46,7 +46,19 @@ export function Command({ value }: { value: string }) {
   return (
     <Paper
       variant="outlined"
-      sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 0.5, py: 0.5, width: 1 }}
+      // A recessed bar, not another box: every command sits inside something already framed
+      // (a card, the hero bezel, the install rail), and an outlined box inside an outlined
+      // box was the main reason the catalog read as boxes-in-boxes.
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        pl: 1.5,
+        pr: 0.5,
+        py: 0.5,
+        width: 1,
+        bgcolor: 'background.default',
+      }}
     >
       <Typography
         ref={code}

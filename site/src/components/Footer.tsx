@@ -5,10 +5,19 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { copy } from '../copy';
 import { site } from '../site';
+import { steel } from '../theme';
 
 export function Footer() {
   return (
-    <Box component="footer" sx={{ borderTop: 1, borderColor: 'divider', py: 4 }}>
+    <Box
+      component="footer"
+      // Mirrors the nav: steel edge, amber inset. The page closes on the frame it opened on.
+      sx={{
+        borderTop: `3px solid ${steel}`,
+        boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
+        py: 5,
+      }}
+    >
       <Container maxWidth="lg">
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -18,7 +27,7 @@ export function Footer() {
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {site.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {copy.footerNote}
           </Typography>
           <Link

@@ -70,16 +70,35 @@ export function SkillIndex() {
       }}
     >
       {site.plugins.map((plugin, i) => (
-        <Accordion key={plugin.name} defaultExpanded={i === 0} disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography component="h3" sx={{ flexGrow: 1, fontWeight: 500 }}>
+        <Accordion
+          key={plugin.name}
+          defaultExpanded={i === 0}
+          disableGutters
+          square
+          elevation={0}
+          // Six collapsed rows inside one raised paper slab is a box holding almost
+          // nothing. Dropped to hairline-divided rows on the page ground; the open row
+          // takes the amber edge, which is the same signal the nav and cards use.
+          sx={{
+            bgcolor: 'transparent',
+            borderTop: 1,
+            borderColor: 'divider',
+            '&:last-of-type': { borderBottom: 1, borderColor: 'divider' },
+            '&::before': { display: 'none' },
+            '&.Mui-expanded': {
+              boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
+            },
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
+            <Typography component="h3" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
               {plugin.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
               <PluginCountChips plugin={plugin} />
             </Stack>
           </AccordionSummary>
-          <AccordionDetails>
+          <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
             <List disablePadding>
               {plugin.skills.map((skill) => (
                 <Entry
@@ -103,7 +122,7 @@ export function SkillIndex() {
                       <Typography
                         component="code"
                         variant="caption"
-                        color="text.secondary"
+                        color="textSecondary"
                         sx={codeSx}
                       >
                         {skill.argumentHint}
