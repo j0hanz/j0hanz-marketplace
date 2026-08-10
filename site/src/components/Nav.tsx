@@ -1,6 +1,7 @@
 import AppBar from '@mui/material/AppBar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -52,6 +53,9 @@ function MobileMenu({ active }: { active: string }) {
         anchorEl={anchor}
         open={open}
         onClose={close}
+        // Grow opens from scale(0.75, 0.5625) — a 56% vertical squash, wrong on
+        // a page with no rounded corners. Position already ties it to the button.
+        slots={{ transition: Fade }}
         slotProps={{ paper: { sx: { border: rule, borderRadius: 0 } } }}
       >
         {navLinks.map((link) => (

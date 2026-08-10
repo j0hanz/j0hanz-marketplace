@@ -10,8 +10,9 @@
 
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --dur-reveal: 380ms;
+  --dur-reveal: 280ms;
   --dur-draw: 600ms;
+  --dur-swap: 160ms;
 }
 
 /* Content arriving: subordinate to the rule draws. */
@@ -26,6 +27,11 @@
 :root[data-motion] [data-reveal][data-shown] {
   opacity: 1;
   transform: none;
+}
+
+/* Content a filter put back, not content scrolled to: land it, don't reveal it. */
+:root[data-motion] [data-reveal][data-instant] {
+  transition: none;
 }
 
 /*
@@ -82,21 +88,49 @@
   }
 }
 
+/* One glyph replacing another in place. Callers set it only after a press. */
+:root[data-motion] [data-swap-in] {
+  animation: swap-in var(--dur-swap) var(--ease-out) both;
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Grid giving way to a message. Under 150ms, so it softens the cut without
+   reading as motion on a search. */
+:root[data-motion] [data-settle] {
+  animation: settle 140ms var(--ease-out) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Catalog's filter change. Off the UA's 250ms default, onto the site's curve. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 240ms;
+  animation-timing-function: var(--ease-out);
+}
+
 /* The authored moment: the pitch rises, then the panel wipes in behind its frame. */
+/* Cadence comes from --i on each element, so reordering the pitch carries it. */
 :root[data-motion] [data-hero] {
   animation: rise 700ms var(--ease-out) both paused;
+  animation-delay: calc(var(--i, 0) * 90ms);
 }
 
-:root[data-motion] [data-hero]:nth-child(2) {
-  animation-delay: 90ms;
-}
-
-:root[data-motion] [data-hero]:nth-child(3) {
-  animation-delay: 180ms;
-}
-
+/* Completes at 740ms, with the pitch. It holds the install command; clipping it
+   longer withholds the one thing the page is asking for. */
 :root[data-motion] [data-hero-panel] {
-  animation: wipe 800ms var(--ease-out) 350ms both paused;
+  animation: wipe 520ms var(--ease-out) 220ms both paused;
 }
 
 :root[data-motion][data-ready] [data-draw-load]::after,
@@ -126,29 +160,35 @@
 
 /*
  * main.tsx already withholds data-motion when motion is unwelcome. This is the
- * backstop if it ever gets set anyway: keep the fade, drop every movement.
+ * backstop if it ever gets set anyway: theme/mui strips the transitions, so
+ * this only has to undo the offsets they were meant to close.
  */
 @media (prefers-reduced-motion: reduce) {
   :root[data-motion] [data-reveal] {
+    opacity: 1;
     transform: none;
-    transition: opacity 200ms linear;
   }
 
   :root[data-motion] [data-draw]::after,
   :root[data-motion] [data-draw-load]::after {
     transform: scaleX(1);
-    transition: none;
     animation: none;
   }
 
   :root[data-motion] [data-hero],
   :root[data-motion] [data-hero-panel],
-  :root[data-motion] [data-draw-check] {
+  :root[data-motion] [data-draw-check],
+  :root[data-motion] [data-swap-in],
+  :root[data-motion] [data-settle] {
     animation: none;
   }
 
-  [data-lit]::after {
-    transition: none;
+  /* The blanket `*` rule in theme/mui never reaches these — view-transition
+     pseudo-elements are not descendants of anything it matches. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
   }
 }
 

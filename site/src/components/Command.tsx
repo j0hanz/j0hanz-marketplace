@@ -15,9 +15,13 @@ type Status = '' | typeof COPIED | typeof FAILED;
 
 export function Command({ value }: { value: string }) {
   const [status, setStatus] = useState<Status>('');
+  // Gates the icon swap and keys it: the page holds ten of these and none should
+  // animate on first paint, and a repeated failure swaps the same glyph back in.
+  const [presses, setPresses] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const announce = (next: Status) => {
+    setPresses((n) => n + 1);
     setStatus(next);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setStatus(''), 1600);
@@ -58,7 +62,12 @@ export function Command({ value }: { value: string }) {
       </Typography>
       <Tooltip title={tip}>
         <IconButton onClick={copy} aria-label={`Copy ${value}`}>
-          <Icon fontSize="small" color={iconColor} />
+          <Icon
+            key={presses}
+            fontSize="small"
+            color={iconColor}
+            data-swap-in={presses || undefined}
+          />
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" sx={srOnly}>

@@ -66,6 +66,26 @@ export const theme = createTheme({
     },
   },
   shape: { borderRadius: 0 },
+  // Menu, Tooltip and Accordion would otherwise run MUI's curve — a second
+  // vocabulary on a page with one. Easing is emitted as a CSS string, so the
+  // token resolves at paint. Leaving is quicker than entering.
+  transitions: {
+    easing: {
+      easeOut: 'var(--ease-out)',
+      easeIn: 'var(--ease-out)',
+      easeInOut: 'var(--ease-out)',
+      sharp: 'var(--ease-out)',
+    },
+    duration: {
+      shortest: 120,
+      shorter: 160,
+      short: 200,
+      standard: 240,
+      complex: 300,
+      enteringScreen: 200,
+      leavingScreen: 160,
+    },
+  },
   typography: {
     fontFamily: sans,
     h2: heading({ min: '1.75rem', max: '4.25rem', letterSpacing: '0.01em' }),
@@ -81,10 +101,9 @@ export const theme = createTheme({
       styleOverrides: {
         ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)', '--grain': 0.028 },
         '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)', '--grain': 0.05 },
-        html: {
-          scrollPaddingTop: scrollOffset,
-          scrollBehavior: 'smooth',
-        },
+        // No smooth scroll: it drags the viewport across every section in
+        // between, spending the reveals each was holding for its own arrival.
+        html: { scrollPaddingTop: scrollOffset },
         'body::after': {
           content: '""',
           position: 'fixed',
@@ -103,7 +122,6 @@ export const theme = createTheme({
             transitionDuration: '150ms !important',
             animationDuration: '0.01ms !important',
             animationIterationCount: '1 !important',
-            scrollBehavior: 'auto !important',
           },
         },
       },

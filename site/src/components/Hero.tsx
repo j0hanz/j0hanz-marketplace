@@ -28,16 +28,21 @@ export function Hero() {
       <Grid container spacing={{ xs: 5, md: 6 }} sx={{ alignItems: 'center' }}>
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={{ xs: 3, md: 4 }} sx={{ alignItems: 'flex-start' }}>
-            <Typography variant="h2" component="h1" data-hero>
+            <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
               Skills and agents for Claude Code.
             </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ maxWidth: '48ch' }} data-hero>
+            <Typography
+              variant="body1"
+              color="textSecondary"
+              sx={{ maxWidth: '48ch', '--i': 1 }}
+              data-hero
+            >
               Install one plugin at a time. No build step, no dependencies.
             </Typography>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
-              sx={{ width: 1, '& .MuiButton-root': { minHeight: 44 } }}
+              sx={{ width: 1, '--i': 2, '& .MuiButton-root': { minHeight: 44 } }}
               data-hero
             >
               <Button

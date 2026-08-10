@@ -15,6 +15,7 @@ import { memo, useRef } from 'react';
 import { ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
+import { relay } from '../motion';
 import { countLabel, site, type Plugin } from '../site';
 import { accent, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
@@ -30,6 +31,9 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
+        // Named per plugin so a card surviving the filter travels to its new
+        // cell instead of cross-fading in place.
+        viewTransitionName: `card-${plugin.name}`,
         ...drawable('top', accent),
       }}
     >
@@ -99,7 +103,8 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
   const grid = useRef<HTMLDivElement>(null);
-  // Cards added by a filter change enter the same way they did on first load.
+  // Cards below the fold still reveal on scroll; ones a filter puts back land
+  // without it. See useEnter.
   useEnter(grid, visible);
 
   return (
@@ -145,7 +150,7 @@ export function Catalog() {
           exclusive
           size="small"
           value={category}
-          onChange={(_, next: string | null) => next && setCategory(next)}
+          onChange={(_, next: string | null) => next && relay(() => setCategory(next))}
           aria-label="Filter plugins by category"
           sx={{
             flexWrap: 'wrap',
@@ -168,10 +173,12 @@ export function Catalog() {
       </Stack>
 
       {visible.length === 0 ? (
-        <Stack spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
+        <Stack data-settle spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>
+          {/* Not relayed: `reset` clears the query too, and `visible` reads a
+              deferred copy of it that no synchronous flush can advance. */}
           <Link component="button" variant="body2" color="text.primary" onClick={reset}>
             {query && category !== ALL ? 'Clear search and category' : 'Show all plugins'}
           </Link>
