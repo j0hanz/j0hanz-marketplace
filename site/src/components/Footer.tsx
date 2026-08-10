@@ -4,14 +4,14 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { site } from '../site';
-import { steel } from '../theme/tokens';
+import { rule } from '../theme/tokens';
 
 export function Footer() {
   return (
     <Box
       component="footer"
       sx={{
-        borderTop: `3px solid ${steel}`,
+        borderTop: rule,
         boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
         py: 5,
       }}

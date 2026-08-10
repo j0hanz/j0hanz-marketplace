@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { useReveal } from '../motion';
-import { srOnly, steel } from '../theme/tokens';
+import { rule, srOnly } from '../theme/tokens';
 
 export function Section({
   id,
@@ -38,7 +38,7 @@ export function Section({
           alignItems: 'baseline',
           mb: { xs: 4, md: 5 },
           pb: 1.5,
-          borderBottom: `3px solid ${steel}`,
+          borderBottom: rule,
         }}
       >
         <Typography id={`${id}-title`} variant="h4" component="h2" sx={{ flexGrow: 1 }}>

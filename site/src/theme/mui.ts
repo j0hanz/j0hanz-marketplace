@@ -52,8 +52,8 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        ':root, .light': { '--focus-ring': '#0E1116' },
-        '.dark': { '--focus-ring': '#F5A524' },
+        ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)' },
+        '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)' },
         html: {
           scrollPaddingTop: scrollOffset,
           scrollBehavior: 'smooth',

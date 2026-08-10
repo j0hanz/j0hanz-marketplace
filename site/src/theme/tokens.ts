@@ -5,6 +5,9 @@ export const sans =
 
 export const steel = 'var(--mui-palette-steel)';
 
+/** Structural frame: nav, footer, section headers, skip link, menu paper. */
+export const rule = `3px solid ${steel}`;
+
 export const ground = { light: '#EDF0F3', dark: '#0E1116' } as const;
 
 export const scrollOffset = 80;

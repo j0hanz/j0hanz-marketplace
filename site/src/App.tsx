@@ -5,7 +5,7 @@ import { Hero } from './components/Hero';
 import { Install } from './components/Install';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
-import { steel } from './theme/tokens';
+import { rule } from './theme/tokens';
 
 const skipLink = {
   position: 'fixed',
@@ -16,7 +16,7 @@ const skipLink = {
   py: 1,
   bgcolor: 'background.paper',
   color: 'text.primary',
-  border: `3px solid ${steel}`,
+  border: rule,
   textDecoration: 'none',
   transform: 'translateY(-300%)',
   transition: 'transform 150ms cubic-bezier(0.23, 1, 0.32, 1)',

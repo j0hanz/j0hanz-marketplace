@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
-import { mono, steel } from '../theme/tokens';
+import { mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
@@ -54,7 +54,7 @@ function MobileMenu({ active }: { active: string }) {
         anchorEl={anchor}
         open={open}
         onClose={close}
-        slotProps={{ paper: { sx: { border: `3px solid ${steel}`, borderRadius: 0 } } }}
+        slotProps={{ paper: { sx: { border: rule, borderRadius: 0 } } }}
       >
         {navLinks.map((link) => (
           <MenuItem
@@ -99,7 +99,7 @@ export function Nav() {
       enableColorOnDark
       sx={{
         bgcolor: 'background.paper',
-        borderBottom: `3px solid ${steel}`,
+        borderBottom: rule,
         boxShadow: 'inset 0 -3px 0 0 var(--mui-palette-primary-main)',
       }}
     >
