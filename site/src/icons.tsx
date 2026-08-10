@@ -12,13 +12,29 @@ const icon = (path: string) =>
 export function MarkIcon(props: SvgIconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M0 0h24v24H0zM4 4v16h16V4z" fillRule="evenodd" />
-      <rect x="4" y="14" width="16" height="6" fill="var(--mui-palette-primary-main)" />
+      <path d="M0 0H14V4H4V20H20V10H24V24H0Z" />
+      <rect x="16" y="0" width="8" height="8" fill="var(--mui-palette-primary-main)" />
     </SvgIcon>
   );
 }
 
-export const CheckIcon = icon('M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z');
+// Stroked rather than filled so index.css can draw it on, the same rule idea at
+// icon scale. It mounts only when a copy lands, so the draw is the confirmation.
+export function CheckIcon(props: SvgIconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        data-draw-check
+        d="M5 13l4 4L19 7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.25}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  );
+}
 
 export const ContentCopyIcon = icon(
   'M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z',

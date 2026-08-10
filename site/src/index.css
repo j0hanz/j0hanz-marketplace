@@ -66,6 +66,22 @@
   transition: transform 180ms var(--ease-out);
 }
 
+/*
+ * The same idea at icon scale: a confirmed copy draws its own check. 20 covers
+ * the path's ~19.8 units, so the finished dash leaves no gap. Without
+ * data-motion the dash is never set and the check just appears whole.
+ */
+:root[data-motion] [data-draw-check] {
+  stroke-dasharray: 20;
+  animation: draw-check 260ms var(--ease-out);
+}
+
+@keyframes draw-check {
+  from {
+    stroke-dashoffset: 20;
+  }
+}
+
 /* The authored moment: the pitch rises, then the panel wipes in behind its frame. */
 :root[data-motion] [data-hero] {
   animation: rise 700ms var(--ease-out) both;
@@ -120,7 +136,8 @@
   }
 
   :root[data-motion] [data-hero],
-  :root[data-motion] [data-hero-panel] {
+  :root[data-motion] [data-hero-panel],
+  :root[data-motion] [data-draw-check] {
     animation: none;
   }
 
