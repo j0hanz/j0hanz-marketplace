@@ -3,9 +3,8 @@ import Container from '@mui/material/Container';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { copy } from '../copy';
 import { site } from '../site';
-import { steel } from '../theme';
+import { steel } from '../theme/tokens';
 
 export function Footer() {
   return (
@@ -28,7 +27,7 @@ export function Footer() {
             {site.name}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            {copy.footerNote}
+            MIT licensed.
           </Typography>
           <Link
             href={site.repoUrl}

@@ -25,15 +25,18 @@ test('every catalog entry resolves to a complete plugin', () => {
   }
 });
 
-test('skills carry a description and only invocable ones carry a command', () => {
+test('skills carry a description and any command is namespaced', () => {
   for (const plugin of site.plugins) {
     for (const skill of plugin.skills) {
       assert.ok(skill.description, `${plugin.name}:${skill.name} has no description`);
-      assert.strictEqual(
-        skill.command,
-        skill.invocable ? `/${plugin.name}:${skill.name}` : undefined,
-        `${plugin.name}:${skill.name} has the wrong command`,
-      );
+      // A model-loaded skill has no command at all; the page keys off its absence.
+      if ('command' in skill) {
+        assert.equal(
+          skill.command,
+          `/${plugin.name}:${skill.name}`,
+          `${plugin.name}:${skill.name} has the wrong command`,
+        );
+      }
     }
   }
 });

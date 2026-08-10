@@ -5,8 +5,7 @@ import { Hero } from './components/Hero';
 import { Install } from './components/Install';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
-import { copy } from './copy';
-import { steel } from './theme';
+import { steel } from './theme/tokens';
 
 // Parked off the top edge rather than clipped away, so it animates into the same steel
 // frame the rest of the chassis uses the moment a keyboard reaches it.
@@ -30,7 +29,7 @@ export function App() {
   return (
     <>
       <Box component="a" href="#main" sx={skipLink}>
-        {copy.skipLink}
+        Skip to content
       </Box>
       <Nav />
       <main id="main">

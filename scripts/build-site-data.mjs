@@ -56,15 +56,10 @@ const readSkills = (root, pluginName) =>
   dirsIn(join(root, 'skills')).map((dir) => {
     const fm = frontmatter(readFileSync(join(root, 'skills', dir, 'SKILL.md'), 'utf8'));
     const name = fm.name || dir;
-    // Absent means invocable: only an explicit `false` takes the slash command away.
-    const invocable = fm['user-invocable'] !== 'false';
-    const skill = {
-      name,
-      description: fm.description ?? '',
-      invocable,
-    };
+    const skill = { name, description: fm.description ?? '' };
     if (fm['argument-hint']) skill.argumentHint = fm['argument-hint'];
-    if (invocable) skill.command = `/${pluginName}:${name}`;
+    // Absent means invocable: only an explicit `false` takes the slash command away.
+    if (fm['user-invocable'] !== 'false') skill.command = `/${pluginName}:${name}`;
     return skill;
   });
 
@@ -123,8 +118,6 @@ export function build() {
   return {
     name: catalog.name,
     description: catalog.description,
-    // Owner email stays out: this file ships to a public page.
-    owner: catalog.owner?.name ?? '',
     repo,
     repoUrl: `https://github.com/${repo}`,
     addCommand: `/plugin marketplace add ${repo}`,

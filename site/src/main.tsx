@@ -9,7 +9,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { theme } from './theme';
+import { theme } from './theme/mui';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing from index.html');

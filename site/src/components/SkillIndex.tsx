@@ -1,4 +1,3 @@
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
@@ -10,9 +9,9 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { copy, plural } from '../copy';
-import { site } from '../site';
-import { codeSx } from '../theme';
+import { ExpandMoreIcon } from '../icons';
+import { plural, site } from '../site';
+import { codeSx } from '../theme/tokens';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
@@ -32,7 +31,7 @@ function Entry({
     <ListItem disableGutters divider alignItems="flex-start">
       <ListItemText
         // Skill descriptions are full sentences; at container width they run past 140
-        // characters a line, which is roughly twice a readable measure.
+        // characters a line, roughly twice a readable measure.
         slotProps={{
           primary: { component: 'div' },
           secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
@@ -61,12 +60,12 @@ export function SkillIndex() {
   return (
     <Section
       id="skills"
-      title={copy.skillsTitle}
-      // The chip shows the sum; spelling out both halves is exact at every count, where
-      // "N skills and agents" is only ever right by luck.
+      // The list carries agents as well as skills. The chip shows the sum; spelling out both
+      // halves is exact at every count, where "N skills and agents" is only right by luck.
+      title="Skills and agents"
       count={{
         total: site.totals.skills + site.totals.agents,
-        label: `${plural(site.totals.skills, copy.unit.skill)} and ${plural(site.totals.agents, copy.unit.agent)}`,
+        label: `${plural(site.totals.skills, 'skill')} and ${plural(site.totals.agents, 'agent')}`,
       }}
     >
       {site.plugins.map((plugin, i) => (
@@ -76,9 +75,9 @@ export function SkillIndex() {
           disableGutters
           square
           elevation={0}
-          // Six collapsed rows inside one raised paper slab is a box holding almost
-          // nothing. Dropped to hairline-divided rows on the page ground; the open row
-          // takes the amber edge, which is the same signal the nav and cards use.
+          // Six collapsed rows inside one raised paper slab is a box holding almost nothing.
+          // Hairline-divided rows on the page ground instead; the open row takes the amber
+          // edge, the same signal the nav and cards use.
           sx={{
             bgcolor: 'transparent',
             borderTop: 1,
@@ -91,8 +90,8 @@ export function SkillIndex() {
           }}
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
-            {/* A span, not an h3: AccordionSummary already wraps itself in one, so this
-                was an h3 inside an h3 and every plugin was listed twice in the outline. */}
+            {/* A span, not an h3: AccordionSummary already wraps itself in one, so this was
+                an h3 inside an h3 and every plugin was listed twice in the outline. */}
             <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
               {plugin.displayName}
             </Typography>
@@ -108,14 +107,9 @@ export function SkillIndex() {
                   code={skill.command ?? skill.name}
                   description={skill.description}
                   leading={
-                    !skill.invocable ? (
-                      <Tooltip title={copy.modelLoadedHint}>
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          tabIndex={0}
-                          label={copy.modelLoadedTag}
-                        />
+                    !skill.command ? (
+                      <Tooltip title="Claude auto-loads this skill. It is not a user-facing slash command.">
+                        <Chip size="small" variant="outlined" tabIndex={0} label="model-loaded" />
                       </Tooltip>
                     ) : undefined
                   }
@@ -138,7 +132,7 @@ export function SkillIndex() {
                   key={agent.name}
                   code={agent.name}
                   description={agent.description}
-                  extra={<Chip size="small" variant="outlined" label={copy.agentTag} />}
+                  extra={<Chip size="small" variant="outlined" label="agent" />}
                 />
               ))}
             </List>

@@ -1,54 +1,29 @@
-import CheckIcon from '@mui/icons-material/Check';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useEffect, useRef, useState } from 'react';
-import { copy } from '../copy';
-import { codeSx, srOnly } from '../theme';
-
-type CopyState = 'idle' | 'copied' | 'select';
+import { useEffect, useState } from 'react';
+import { CheckIcon, ContentCopyIcon } from '../icons';
+import { codeSx, srOnly } from '../theme/tokens';
 
 export function Command({ value }: { value: string }) {
-  const [state, setState] = useState<CopyState>('idle');
-  const code = useRef<HTMLElement>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (state === 'idle') return;
-    const timer = setTimeout(() => setState('idle'), 1600);
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1600);
     return () => clearTimeout(timer);
-  }, [state]);
+  }, [copied]);
 
-  const copyOrSelect = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setState('copied');
-    } catch {
-      // Clipboard denied or unavailable (insecure context). Select the command instead,
-      // so the keyboard copy still works rather than the button doing nothing.
-      if (!code.current) return;
-      const range = document.createRange();
-      range.selectNodeContents(code.current);
-      const selection = getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      setState('select');
-    }
-  };
-
-  const tip =
-    state === 'copied' ? copy.copiedLabel : state === 'select' ? copy.selectLabel : copy.copyLabel;
-  const Icon = state === 'copied' ? CheckIcon : ContentCopyIcon;
-  const iconColor = state === 'copied' ? 'primary' : undefined;
+  const tip = copied ? 'Copied' : 'Copy';
+  const Icon = copied ? CheckIcon : ContentCopyIcon;
 
   return (
     <Paper
       variant="outlined"
       // A recessed bar, not another box: every command sits inside something already framed
-      // (a card, the hero bezel, the install rail), and an outlined box inside an outlined
-      // box was the main reason the catalog read as boxes-in-boxes.
+      // (a card, the hero bezel, the install rail).
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -60,12 +35,7 @@ export function Command({ value }: { value: string }) {
         bgcolor: 'background.default',
       }}
     >
-      <Typography
-        ref={code}
-        component="code"
-        variant="body2"
-        sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}
-      >
+      <Typography component="code" variant="body2" sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}>
         {value}
       </Typography>
       {/* The command is in the label. Ten of these render on the page, and named for the
@@ -73,16 +43,19 @@ export function Command({ value }: { value: string }) {
           list with nothing to pick between them. */}
       <Tooltip title={tip}>
         <IconButton
-          onClick={copyOrSelect}
-          aria-label={`${copy.copyLabel} ${value}`}
+          onClick={async () => {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+          }}
+          aria-label={`Copy ${value}`}
           sx={{ p: 1.5 }}
         >
-          <Icon fontSize="small" color={iconColor} />
+          <Icon fontSize="small" color={copied ? 'primary' : undefined} />
         </IconButton>
       </Tooltip>
       {/* Idle says nothing: the button already carries its own label. */}
       <Box component="span" role="status" sx={srOnly}>
-        {state === 'idle' ? '' : tip}
+        {copied ? tip : ''}
       </Box>
     </Paper>
   );

@@ -1,19 +1,18 @@
-import GitHubIcon from '@mui/icons-material/GitHub';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { copy, pluralWord } from '../copy';
-import { site } from '../site';
-import { captionTracking, mono, steel } from '../theme';
+import { GitHubIcon } from '../icons';
+import { pluralWord, site } from '../site';
+import { mono, steel } from '../theme/tokens';
 import { Command } from './Command';
 
 const stats = [
-  { count: site.totals.plugins, unit: copy.unit.plugin },
-  { count: site.totals.skills, unit: copy.unit.skill },
-  { count: site.totals.agents, unit: copy.unit.agent },
+  { count: site.totals.plugins, unit: 'plugin' },
+  { count: site.totals.skills, unit: 'skill' },
+  { count: site.totals.agents, unit: 'agent' },
 ];
 
 export function Hero() {
@@ -27,25 +26,25 @@ export function Hero() {
       sx={{ pt: { xs: 6, md: 11 }, pb: { xs: 4, md: 6 } }}
     >
       <Grid container spacing={{ xs: 5, md: 6 }} sx={{ alignItems: 'center' }}>
-        {/* Left: the claim and the two ways in. Three text elements, nothing under the
-            buttons — the panel opposite carries what the numbers and the jargon mean. */}
+        {/* Left: the claim and the two ways in. The panel opposite carries what the numbers
+            and the jargon mean. */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={{ xs: 3, md: 4 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1">
-              {copy.heroTitle}
+              Skills and agents for Claude Code.
             </Typography>
             <Typography variant="body1" color="textSecondary" sx={{ maxWidth: '48ch' }}>
-              {copy.heroBody}
+              Install one plugin at a time. No build step, no dependencies.
             </Typography>
-            {/* `size="large"` lands at 42px, two short of a thumb, on the two buttons
-                that are the whole point of the first screen. */}
+            {/* `size="large"` lands at 42px, two short of a thumb, on the two buttons that
+                are the whole point of the first screen. */}
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
               sx={{ width: 1, '& .MuiButton-root': { minHeight: 44 } }}
             >
-              <Button variant="contained" size="large" href={copy.heroPrimaryHref} disableElevation>
-                {copy.heroPrimary}
+              <Button variant="contained" size="large" href="#plugins" disableElevation>
+                Browse plugins
               </Button>
               <Button
                 variant="outlined"
@@ -56,14 +55,14 @@ export function Hero() {
                 rel="noreferrer"
                 startIcon={<GitHubIcon />}
               >
-                {copy.heroSecondary}
+                GitHub
               </Button>
             </Stack>
           </Stack>
         </Grid>
 
         {/* Right: the one bezel on the page. The product of this site is a command, so the
-            command is the hero's asset — first move, what it yields, what those words mean. */}
+            command is the hero's asset. */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack
             spacing={2}
@@ -73,9 +72,9 @@ export function Hero() {
               component="p"
               variant="caption"
               color="textSecondary"
-              sx={{ fontFamily: mono, textTransform: 'uppercase', letterSpacing: captionTracking }}
+              sx={{ fontFamily: mono, textTransform: 'uppercase', letterSpacing: '0.12em' }}
             >
-              {copy.installSteps[0]}
+              Add the marketplace
             </Typography>
             <Command value={site.addCommand} />
 
@@ -89,8 +88,8 @@ export function Hero() {
                 pt: 2,
                 borderTop: 1,
                 borderColor: 'divider',
-                // Hairlines between the cells instead of a middle-dot: the same job, and
-                // it survives the wrap to one column on a phone.
+                // Hairlines between the cells instead of a middle-dot: the same job, and it
+                // survives the wrap to one column on a phone.
                 '& > li + li': { pl: 2, borderLeft: 1, borderColor: 'divider' },
                 '& > li': { flex: 1, minWidth: 0 },
               }}
@@ -108,7 +107,7 @@ export function Hero() {
             </Stack>
 
             <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-              {copy.heroExplainer}
+              Plugins bundle skills (slash-commands) and agents (autonomous helpers).
             </Typography>
           </Stack>
         </Grid>

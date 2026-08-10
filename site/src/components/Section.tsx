@@ -4,7 +4,7 @@ import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { srOnly, steel } from '../theme';
+import { srOnly, steel } from '../theme/tokens';
 
 /** The page's one section shell: anchor, heading, optional count, vertical rhythm. */
 export function Section({
@@ -16,9 +16,9 @@ export function Section({
   id: string;
   title: string;
   /**
-   * The count chip: the number shown, and what it counts for anyone who cannot see it.
-   * The label travels with the number because the heading is not a noun it can be derived
-   * from — "Plugins" mis-announces as "1 plugins", and the skills index counts two things.
+   * The number shown, and what it counts for anyone who cannot see it. The label travels
+   * with the number because the heading is not a noun it can be derived from — "Plugins"
+   * mis-announces as "1 plugins", and the skills index counts two things.
    */
   count?: { total: number; label: string };
   children: ReactNode;
@@ -48,10 +48,9 @@ export function Section({
         </Typography>
         {count && (
           <>
-            {/* The chip is a div, and ARIA gives a plain div no name — the label was
-                being dropped and the number announced bare. So the sentence lives in
-                its own element, which is also the live region: filtering the catalog
-                changed this number with nothing to hear it. */}
+            {/* The chip is a div, and ARIA gives a plain div no name, so the sentence lives
+                in its own element — which is also the live region the filtered catalog
+                updates. */}
             <Chip label={count.total} size="small" aria-hidden />
             <Box component="span" role="status" sx={srOnly}>
               {count.label}

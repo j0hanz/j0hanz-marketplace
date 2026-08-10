@@ -1,42 +1,38 @@
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { copy } from '../copy';
 import { site } from '../site';
-import { mono, steel } from '../theme';
+import { mono, steel } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
-// Step 2 and 3 use one real plugin so the visitor sees a worked install trace, not a
-// placeholder they have to substitute themselves. First catalog entry with an invocable
-// skill wins; build-site-data.mjs refuses to emit data without one.
+// Steps 2 and 3 use one real plugin so the visitor sees a worked install trace, not a
+// placeholder they have to substitute. build-site-data.mjs refuses to emit data without one.
 const [example] = site.plugins.flatMap((p) =>
   p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
 );
 
 const steps = [
-  { label: copy.installSteps[0], value: site.addCommand },
-  { label: copy.installSteps[1], value: example.install },
-  { label: copy.installSteps[2], value: example.run },
+  { label: 'Add the marketplace', value: site.addCommand },
+  { label: 'Install a plugin', value: example.install },
+  { label: 'Run it', value: example.run },
 ];
 
-const RAIL = 3;
 const MARKER = 28;
-// Centres the marker on the rail. Absolute offsets are measured from the padding box,
-// which starts inside the border, so half the rail comes back off along with half the marker.
-const markerLeft = `${-(RAIL / 2 + MARKER / 2)}px`;
+// Half the 3px rail plus half the marker: absolute offsets are measured from the padding
+// box, which starts inside the border.
+const MARKER_LEFT = '-15.5px';
 
 export function Install() {
   return (
     /* No paper band. The rail is 620px of a 1200px measure, and a full-bleed ground with
-       steel edges drew a frame around the 580px of nothing beside it. On the page ground
-       the narrow measure reads the way the hero's 48ch paragraph does. */
-    <Section id="install" title={copy.installTitle}>
-      {/* A rail, not a stack of labelled blocks: the numerals are the ordinal, so the
-          heading of each step can be the thing it does rather than the word "Step".
-          Plain Box, not Stack — Stack zeroes its children's margins, and the rail needs
-          the list indented off the measure. `list-style: none` drops list semantics in
-          Safari, so the role puts them back. */}
+       steel edges drew a frame around the 580px of nothing beside it. */
+    <Section id="install" title="Install">
+      {/* A rail, not a stack of labelled blocks: the numerals are the ordinal, so each step's
+          heading can be the thing it does rather than the word "Step". Plain Box, not Stack —
+          Stack zeroes its children's margins, and the rail needs the list indented off the
+          measure. `list-style: none` drops list semantics in Safari, so the role puts them
+          back. */}
       <Box component="ol" role="list" sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 620 }}>
         {steps.map((step, i) => {
           const last = i === steps.length - 1;
@@ -51,7 +47,7 @@ export function Install() {
                 pb: last ? 0 : 5,
                 // The rail runs through the gutter and stops at the last marker, so the
                 // sequence reads as connected without drawing a line into empty space.
-                borderLeft: `${RAIL}px solid`,
+                borderLeft: '3px solid',
                 borderColor: last ? 'transparent' : steel,
               }}
             >
@@ -59,7 +55,7 @@ export function Install() {
                 aria-hidden
                 sx={{
                   position: 'absolute',
-                  left: markerLeft,
+                  left: MARKER_LEFT,
                   top: 0,
                   width: MARKER,
                   height: MARKER,

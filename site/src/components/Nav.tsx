@@ -1,8 +1,3 @@
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import MenuIcon from '@mui/icons-material/Menu';
-import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
 import AppBar from '@mui/material/AppBar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -10,16 +5,26 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import type SvgIcon from '@mui/material/SvgIcon';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
-import { copy } from '../copy';
+import {
+  DarkModeIcon,
+  GitHubIcon,
+  LightModeIcon,
+  MenuIcon,
+  SettingsBrightnessIcon,
+} from '../icons';
 import { site } from '../site';
-import { mono, navTracking, scrollOffset, steel } from '../theme';
+import { mono, scrollOffset, steel } from '../theme/tokens';
 
-const hrefs = copy.navLinks.map((link) => link.href);
+const navLinks = [
+  { label: 'Plugins', href: '#plugins' },
+  { label: 'Skills', href: '#skills' },
+  { label: 'Install', href: '#install' },
+];
+const hrefs = navLinks.map((link) => link.href);
 
 /**
  * Which section the visitor is actually in. The nav is the only wayfinding on a page with
@@ -40,8 +45,8 @@ function useActiveSection() {
         // Document order, so the topmost visible section wins when two overlap.
         setActive(hrefs.find((href) => onScreen.has(href)) ?? '');
       },
-      // Discount the sticky bar at the top and the tail of the viewport, or a section
-      // still counts as current long after it has scrolled past the reading position.
+      // Discount the sticky bar and the tail of the viewport, or a section still counts as
+      // current long after it has scrolled past the reading position.
       { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
     );
 
@@ -55,34 +60,43 @@ function useActiveSection() {
   return active;
 }
 
-// Three modes in a cycle: the pre-paint script in index.html stamps 'system' as the
-// default; the cycle matches MUI's supported modes without inventing a fourth.
 const modeCycle = ['system', 'light', 'dark'] as const;
 type Mode = (typeof modeCycle)[number];
 
-// One icon per state, or two of the three render identically and the button stops
-// reporting which mode is on. The label names the state and the action either way.
-const modeIcons: Record<Mode, typeof SvgIcon> = {
+// One icon per state, or two of the three render identically and the button stops reporting
+// which mode is on.
+const modeIcons = {
   system: SettingsBrightnessIcon,
   light: LightModeIcon,
   dark: DarkModeIcon,
 };
 
-// A 24px icon in MUI's default 8px padding is a 40px target. On a phone the toggle and
-// the burger are the only two controls in the bar, so they are the two that most need
-// the 44px. Shared by all three icon buttons in the bar.
+// Two maps, not one. The label is "<where you are>. <what this does>.", and a single set of
+// strings could only ever be one of those.
+const modeState = {
+  system: 'Theme follows system',
+  light: 'Light theme',
+  dark: 'Dark theme',
+};
+const modeNext = {
+  system: 'Switch to system theme',
+  light: 'Switch to light theme',
+  dark: 'Switch to dark theme',
+};
+
+// A 24px icon in MUI's default 8px padding is a 40px target; on a phone the toggle and the
+// burger are the only two controls in the bar.
 const iconButtonSx = { p: 1.5 };
 
 function ModeToggle() {
   const { mode, setMode } = useColorScheme();
-  // `mode` is undefined before mount and 'system' by default. Map to the cycle index
-  // and rotate.
+  // `mode` is undefined before mount and 'system' by default.
   const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
   const Icon = modeIcons[current];
   // Two sentences, not a dash: screen readers skip a dash silently, so the state and the
   // action ran together into one clause.
-  const label = `${copy.modeState[current]}. ${copy.modeNext[next]}.`;
+  const label = `${modeState[current]}. ${modeNext[next]}.`;
 
   return (
     <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={iconButtonSx}>
@@ -93,13 +107,14 @@ function ModeToggle() {
 
 const mobileMenuId = 'nav-mobile-menu';
 
-// The mobile menu carries the same three links as the bar above it, so it speaks in the
-// same voice. `fontFamily: inherit` resolved to the reading font and put the nav in
-// sentence-case sans on exactly the viewport where it is the only nav there is.
+// The mobile menu carries the same three links as the bar above it, so it speaks in the same
+// voice. `fontFamily: inherit` resolved to the reading font and put the nav in sentence-case
+// sans on exactly the viewport where it is the only nav there is. The tracking matches MUI's
+// own button default (`2 / 70`).
 const menuItemSx = {
   fontFamily: mono,
   textTransform: 'uppercase',
-  letterSpacing: navTracking,
+  letterSpacing: '0.02857em',
 };
 
 /** Below `sm` the inline buttons disappear; the burger is the only way in. */
@@ -112,7 +127,7 @@ function MobileMenu({ active }: { active: string }) {
     <>
       <IconButton
         color="inherit"
-        aria-label={copy.menuLabel}
+        aria-label="Open menu"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
@@ -126,13 +141,9 @@ function MobileMenu({ active }: { active: string }) {
         anchorEl={anchor}
         open={open}
         onClose={close}
-        slotProps={{
-          paper: {
-            sx: { border: `3px solid ${steel}`, borderRadius: 0 },
-          },
-        }}
+        slotProps={{ paper: { sx: { border: `3px solid ${steel}`, borderRadius: 0 } } }}
       >
-        {copy.navLinks.map((link) => (
+        {navLinks.map((link) => (
           <MenuItem
             key={link.href}
             component="a"
@@ -143,7 +154,6 @@ function MobileMenu({ active }: { active: string }) {
               ...menuItemSx,
               // The bar above marks the current section; the menu that replaces it below
               // `sm` marked nothing, on the viewport where the page scrolls longest.
-              // Amber bar and weight, same as the nav and the open accordion row.
               ...(active === link.href && {
                 fontWeight: 700,
                 boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
@@ -161,7 +171,7 @@ function MobileMenu({ active }: { active: string }) {
           onClick={close}
           sx={menuItemSx}
         >
-          {copy.githubLabel}
+          GitHub
         </MenuItem>
       </Menu>
     </>
@@ -201,7 +211,7 @@ export function Nav() {
           {/* 8px between targets, not 4: below `sm` this row is two icon buttons and
               nothing else, and they were close enough to catch the wrong one. */}
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {copy.navLinks.map((link) => (
+            {navLinks.map((link) => (
               <Button
                 key={link.href}
                 href={link.href}
@@ -211,8 +221,7 @@ export function Nav() {
                   display: { xs: 'none', sm: 'inline-flex' },
                   // `sm` starts at 600px, which is still a thumb on a tablet.
                   minHeight: 44,
-                  // The amber underline is the same signal the chassis uses everywhere
-                  // else; reserving its height keeps the row from shifting on scroll.
+                  // Reserving the underline's height keeps the row from shifting on scroll.
                   borderBottom: '2px solid transparent',
                   // Weight and ink carry "you are here"; amber only underlines it. As the
                   // link colour amber was 3.2:1 on paper and failed as text outright.
@@ -233,7 +242,7 @@ export function Nav() {
               href={site.repoUrl}
               target="_blank"
               rel="noreferrer"
-              aria-label={copy.githubLabel}
+              aria-label="GitHub"
               sx={{ display: { xs: 'none', sm: 'inline-flex' }, ...iconButtonSx }}
             >
               <GitHubIcon />

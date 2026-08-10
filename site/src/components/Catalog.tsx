@@ -10,18 +10,15 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { copy, plural } from '../copy';
-import { site } from '../site';
-import type { Plugin } from '../site';
+import { plural, site, type Plugin } from '../site';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
-/**
- * The lit card edge: amber border, amber rule across the top. One object because hover and
- * focus-within reach it through two different selectors.
- */
+const SEARCH_LABEL = 'Search plugins, skills, agents…';
+
+/** The lit card edge, reached through two different selectors. */
 const litEdge = {
   borderColor: 'primary.main',
   boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
@@ -35,20 +32,12 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         height: 1,
         display: 'flex',
         flexDirection: 'column',
-        // Outlined cards give no sign they are anything but a box. The edge lights up amber
-        // under the cursor or when a child has focus, matching the nav and the hero bezel.
-        // :focus-within keeps the affordance for keyboard users without adding a new tab
-        // stop on the card itself. The top rule is an inset shadow, so lighting it costs
-        // no reflow and the card keeps its 1px frame underneath.
-        //
-        // Lighting up is as far as it goes. The card is not a link — the title and the
-        // copy button are — and lifting it off the page said otherwise, then did nothing
-        // when the body was clicked.
-        //
-        // Hover is gated to devices that have one. A tap fires `:hover` and leaves it
-        // fired: on a phone the last card touched kept the amber edge until something
-        // else was tapped, marking a card that had not been selected and is not a link.
+        // Lighting up is as far as it goes: the card is not a link — the title and the copy
+        // button are — and lifting it off the page said otherwise. `:focus-within` keeps the
+        // affordance for keyboards without adding a tab stop on the card itself.
         '&:focus-within': litEdge,
+        // Hover is gated to devices that have one. A tap fires `:hover` and leaves it fired,
+        // marking a card that was not selected and is not a link.
         '@media (hover: hover) and (pointer: fine)': { '&:hover': litEdge },
         transition: 'border-color 200ms ease, box-shadow 200ms ease',
       }}
@@ -86,7 +75,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
                 size="small"
                 variant="outlined"
                 tabIndex={0}
-                label={plural(plugin.hookEvents.length, copy.unit.hook)}
+                label={plural(plugin.hookEvents.length, 'hook')}
               />
             </Tooltip>
           )}
@@ -101,14 +90,13 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 }
 
 export function Catalog() {
-  const { visible, category, setCategory, query, setQuery, reset, announcedCount } =
-    useCatalogFilter();
+  const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
 
   return (
     <Section
       id="plugins"
-      title={copy.catalogTitle}
-      count={{ total: visible.length, label: announcedCount }}
+      title="Plugins"
+      count={{ total: visible.length, label: plural(visible.length, 'plugin') }}
     >
       {/* Search and filter share a row from md up: two controls on one line read as one
           control surface, and the catalog starts a screen higher on a laptop. */}
@@ -128,12 +116,12 @@ export function Catalog() {
               e.preventDefault();
             }
           }}
-          placeholder={copy.catalogSearch}
+          placeholder={SEARCH_LABEL}
           slotProps={{
             // Match the touch target the toggle row below sets for itself.
             input: { sx: { minHeight: 44 } },
             htmlInput: {
-              'aria-label': copy.catalogSearch,
+              'aria-label': SEARCH_LABEL,
               autoComplete: 'off',
               spellCheck: false,
               inputMode: 'search',
@@ -146,10 +134,10 @@ export function Catalog() {
           size="small"
           value={category}
           onChange={(_, next: string | null) => next && setCategory(next)}
-          aria-label={copy.catalogTitle}
+          aria-label="Plugins"
           sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 } }}
         >
-          <ToggleButton value={ALL}>{copy.catalogAll}</ToggleButton>
+          <ToggleButton value={ALL}>All</ToggleButton>
           {site.categories.map((name) => (
             <ToggleButton key={name} value={name}>
               {name}
@@ -161,19 +149,17 @@ export function Catalog() {
       {visible.length === 0 ? (
         <Stack spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
           <Typography variant="body1" color="textSecondary">
-            {copy.catalogEmpty}
+            No plugins match this search.
           </Typography>
-          {/* Ink, not amber. This is the only way out of the empty state, and as the
-              default link colour it was 2.8:1 on paper — the same failure the nav links
-              were already moved off. */}
+          {/* Ink, not amber: this is the only way out of the empty state, and as the default
+              link colour it was 2.8:1 on paper. */}
           <Link component="button" variant="body2" color="text.primary" onClick={reset}>
-            {copy.catalogClear}
+            Clear filters
           </Link>
         </Stack>
       ) : (
-        // Three columns wait for `lg`. At `md` the container is 890px, which made each
-        // card 265px — narrow enough to wrap an install command onto three lines and the
-        // chip row onto two, in a grid that was mostly empty anyway.
+        // Three columns wait for `lg`. At `md` the container is 890px, which made each card
+        // 265px — narrow enough to wrap an install command onto three lines.
         <Grid container spacing={3}>
           {visible.map((plugin) => (
             <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }}>

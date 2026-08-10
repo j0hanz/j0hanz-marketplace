@@ -1,13 +1,11 @@
 import { createTheme } from '@mui/material/styles';
-import { focusRing, grain, heading, mono, sans, scrollOffset, steel } from './tokens';
+import { focusRing, heading, mono, sans, scrollOffset, steel } from './tokens';
 
 /**
- * `edge` is the control boundary, which is a different job from `divider`. A hairline
- * between two surfaces only has to be seen; the edge of a control is the thing that says
- * a control is *there*, and WCAG 1.4.11 puts that at 3:1. Divider is around 2:1 in both
- * schemes — right for a rule, too faint for a field. It lives in the palette rather than
- * as a hand-rolled custom property so MUI emits `--mui-palette-edge` next to every other
- * colour, which is the form the rest of this file already reads from.
+ * `edge` is the control boundary, which is a different job from `divider`. WCAG 1.4.11 puts
+ * the edge of a control at 3:1; divider is around 2:1 in both schemes — right for a rule,
+ * too faint for a field. In the palette rather than a hand-rolled custom property so MUI
+ * emits `--mui-palette-edge` next to every other colour.
  */
 declare module '@mui/material/styles' {
   interface Palette {
@@ -22,9 +20,8 @@ export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
     // Amber at one lightness cannot serve both grounds: the value that survives white is
-    // brown, and the value that glows on graphite is 1.8:1 on paper. So the accent is one
-    // hue at two stops, and in both schemes it is a *fill* wearing an ink label rather
-    // than ink itself. That is the rule the old palette broke, not the colour.
+    // brown, and the value that glows on graphite is 1.8:1 on paper. One hue at two stops,
+    // and in both schemes a *fill* wearing an ink label rather than ink itself.
     light: {
       palette: {
         primary: { main: '#D97706', contrastText: '#0E1116' },
@@ -40,7 +37,6 @@ export const theme = createTheme({
         background: { default: '#0E1116', paper: '#171C23' },
         text: { primary: '#E7EBF0', secondary: '#9BA6B4' },
         // Surfaces sit a tenth of a stop apart, so the hairline is what separates them.
-        // The old #333C48 was 1.7:1 against the page and read as no edge at all.
         divider: '#404A59',
         edge: '#626E80',
       },
@@ -60,40 +56,21 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        // Ink on paper, amber on graphite. Declared per scheme selector so the ring is
-        // resolved in CSS rather than branched in every component that focuses.
+        // Ink on paper, amber on graphite. Resolved in CSS rather than branched per component.
         ':root, .light': { '--focus-ring': '#0E1116' },
         '.dark': { '--focus-ring': '#F5A524' },
         html: {
           scrollPaddingTop: scrollOffset,
           scrollBehavior: 'smooth',
         },
-        body: {
-          '&::before': {
-            content: '""',
-            position: 'fixed',
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: 'none',
-            opacity: 0.035,
-            backgroundImage: grain,
-          },
-        },
         ':focus-visible': focusRing,
-        // One rule for the whole page instead of a guard per component. MUI's own
-        // transitions — accordion collapse, menu grow, tooltip fade — are driven from
-        // JS and write their timings inline, so they never saw the media query and
-        // gating only the hand-written ones left the longest animation on the page
-        // (300ms collapse) running regardless.
+        // One rule for the whole page: MUI's own transitions are driven from JS and write
+        // their timings inline, so they never saw the media query.
         //
-        // Reduced motion means less movement, not no transitions: killing every
-        // duration also took the card's amber edge and the tooltip fade, which carry
-        // meaning and move nothing. So the property list narrows and the clock is
-        // capped rather than zeroed — colour, opacity and the inset bars still
-        // transition; transform, height and inset fall out of the list and snap.
-        // The cap is here because MUI writes its transitions inline as a shorthand
-        // (Grow: `opacity 225ms, transform 149ms`), and a two-value duration list
-        // against a six-value property list cycles into nonsense.
+        // Reduced motion means less movement, not no transitions — colour, opacity and the
+        // inset bars still transition; transform, height and inset fall out of the list and
+        // snap. The duration is capped rather than zeroed because MUI writes shorthands
+        // (Grow: `opacity 225ms, transform 149ms`) that would cycle into nonsense.
         '@media (prefers-reduced-motion: reduce)': {
           '*, *::before, *::after': {
             transitionProperty:
@@ -107,50 +84,42 @@ export const theme = createTheme({
       },
     },
     MuiButtonBase: {
-      // The ripple is Material's press signal: a round shape spreading out of a square
-      // one, on a page with no radius anywhere. `:active` below already answers the
-      // press, so the ripple was a second, off-voice answer to the same event.
+      // A round ripple spreading out of a square control, on a page with no radius
+      // anywhere. `:active` below already answers the press.
       defaultProps: { disableRipple: true },
       styleOverrides: {
         root: {
           // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
           '&.Mui-focusVisible': focusRing,
-          // Presses answer back. Transform only, so it never reflows the row it sits in.
-          // Untransitioned: a `transition` here loses to every component's own at the
-          // same specificity, and at 1px the curve is invisible anyway.
+          // Transform only, so it never reflows the row. Untransitioned: a `transition`
+          // here loses to every component's own at the same specificity.
           '&:active': { transform: 'translateY(1px)' },
         },
       },
     },
-    // Link tracks focus-visible itself and answers with the browser's `outline: auto`,
-    // which outranks the global rule on specificity. Same fix as ButtonBase above.
+    // Link answers focus-visible with the browser's `outline: auto`, which outranks the
+    // global rule on specificity. Same fix as ButtonBase above.
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
-    // Chips default to a 16px pill, which is the one rounded shape on a zero-radius page.
-    // They count things, so they stay in the chassis voice rather than the reading one.
     MuiChip: {
       styleOverrides: {
+        // Chips default to a 16px pill, the one rounded shape on a zero-radius page.
         root: { borderRadius: 0, fontFamily: mono },
         // MUI's outlined chip hardcodes grey.600, a third grey next to the two tokens.
-        // `edge` and not `divider`: a chip is a bounded object with a box drawn round
-        // it, same as a field or a toggle, and two of them are focusable tooltips.
-        // `divider` is for rules between surfaces and sank to 1.9:1 inside a card.
+        // `edge` and not `divider`: a chip is a bounded object, and `divider` sank to
+        // 1.9:1 inside a card.
         outlined: { borderColor: 'var(--mui-palette-edge)' },
       },
     },
-    // The field is a control, so its boundary takes `edge`. Written from the root so
-    // it lands at the same specificity as MUI's own rule and after it; hover and focus
-    // are two classes deep and keep their own colours.
+    // Written from the root so it lands at the same specificity as MUI's own rule and
+    // after it; hover and focus are two classes deep and keep their own colours.
     MuiOutlinedInput: {
       styleOverrides: {
         root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--mui-palette-edge)' } },
       },
     },
-    // The group collapses seams by giving every button after the first a transparent
-    // left border and pulling it back 1px onto its neighbour's right border. That works
-    // along a row and fails at the end of one: the button that starts the second row has
-    // nothing to its left to borrow, so the box sits open. Colouring the border instead
-    // of hiding it closes the wrapped row and changes no geometry — the -1px margin still
-    // lands it on top of the previous right border, so a seam is one pixel either way.
+    // The group hides every non-first left border and pulls the button back 1px onto its
+    // neighbour's. That fails at the end of a row: the button starting the second row has
+    // nothing to borrow and sits open. Colouring the border closes it and moves nothing.
     MuiToggleButtonGroup: {
       styleOverrides: {
         root: {
@@ -164,11 +133,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderColor: 'var(--mui-palette-edge)',
-          // Selected was a 16%-alpha wash and nothing else: 1.5:1, the faintest state
-          // on the page, worn by the one control that says what the catalog is showing.
-          // Ink, weight and an amber bar — the same three the nav uses for "you are
-          // here". Bar as an inset shadow, not a border: the group collapses adjacent
-          // borders to hairlines and would eat one side of it.
+          // Selected was a 16%-alpha wash at 1.5:1 — the faintest state on the page, worn
+          // by the control that says what the catalog is showing. Bar as an inset shadow,
+          // not a border: the group collapses adjacent borders and would eat one side.
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,
@@ -177,20 +144,15 @@ export const theme = createTheme({
         },
       },
     },
-    // Collapse animates `height`, which runs layout, paint and composite on every frame
-    // of the open — the most expensive animation on the page, on the section with the
-    // most content under each row. 300ms is also outside the band for a disclosure.
-    // 200ms is in band and cuts a third of the frames.
+    // Collapse animates `height` — layout, paint and composite every frame — and 300ms is
+    // outside the band for a disclosure.
     // ponytail: height is inherently a layout animation; if it janks on a phone, the fix
     // is a reveal that does not animate height, not a shorter one.
     MuiAccordion: { defaultProps: { slotProps: { transition: { timeout: 200 } } } },
-    // The one widget that defaults to a different chassis — MUI's grey tooltip
-    // surface reads as a foreign object against the amber/steel frame. Match it:
-    // paper background, primary text, 2px primary border, square corners, no arrow
-    // shadow that would imply a non-zero radius elsewhere.
+    // MUI's grey tooltip surface reads as a foreign object against the amber/steel frame.
     MuiTooltip: {
       // Delay the first tip so hover-sweeping the catalog doesn't flash them; once one is
-      // open, peers show instantly while the cursor scans the row. One decision, not four.
+      // open, peers show instantly while the cursor scans the row.
       defaultProps: { enterDelay: 400, enterNextDelay: 0 },
       styleOverrides: {
         tooltip: {
