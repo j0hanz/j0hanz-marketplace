@@ -155,12 +155,12 @@ export function Catalog() {
   // send three announcements for one search. The number on screen still changes per
   // keystroke; only the spoken sentence waits for the typing to stop. Seeded with the
   // first render's label so the settle-on-mount writes the same string and says nothing.
-  const label = plural(visible.length, copy.unit.plugin);
-  const [announced, setAnnounced] = useState(label);
+  const [announced, setAnnounced] = useState(plural(visible.length, copy.unit.plugin));
   useEffect(() => {
-    const timer = setTimeout(() => setAnnounced(label), 400);
+    const next = plural(visible.length, copy.unit.plugin);
+    const timer = setTimeout(() => setAnnounced(next), 400);
     return () => clearTimeout(timer);
-  }, [label]);
+  }, [visible]);
 
   return (
     <Section

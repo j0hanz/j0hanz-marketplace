@@ -19,6 +19,16 @@ export const steel = '#4A5568';
 export const scrollOffset = 80;
 
 /**
+ * Uppercase letter-spacing. Two roles, two values:
+ * - `captionTracking` is the wide gap for a hero caption — a single label that has to read
+ *   as a label, not as part of the paragraph it sits beside.
+ * - `navTracking` matches MUI's default button tracking (`2 / 70`), so the mobile menu
+ *   reads as the nav bar it replaces instead of as a separate list of options.
+ */
+export const captionTracking = '0.12em';
+export const navTracking = '0.02857em';
+
+/**
  * Inline command text. Commands wrap rather than clip: a command the visitor cannot read in
  * full is worse than one on two lines.
  */

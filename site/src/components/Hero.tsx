@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { copy, pluralWord } from '../copy';
 import { site } from '../site';
-import { mono, steel } from '../theme';
+import { captionTracking, mono, steel } from '../theme';
 import { Command } from './Command';
 
 const stats = [
@@ -73,7 +73,7 @@ export function Hero() {
               component="p"
               variant="caption"
               color="textSecondary"
-              sx={{ fontFamily: mono, textTransform: 'uppercase', letterSpacing: '0.12em' }}
+              sx={{ fontFamily: mono, textTransform: 'uppercase', letterSpacing: captionTracking }}
             >
               {copy.installSteps[0]}
             </Typography>

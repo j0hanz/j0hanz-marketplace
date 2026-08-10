@@ -17,7 +17,7 @@ import { useColorScheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { copy } from '../copy';
 import { site } from '../site';
-import { mono, scrollOffset, steel } from '../theme';
+import { mono, navTracking, scrollOffset, steel } from '../theme';
 
 const hrefs = copy.navLinks.map((link) => link.href);
 
@@ -99,7 +99,7 @@ const mobileMenuId = 'nav-mobile-menu';
 const menuItemSx = {
   fontFamily: mono,
   textTransform: 'uppercase',
-  letterSpacing: '0.02857em',
+  letterSpacing: navTracking,
 };
 
 /** Below `sm` the inline buttons disappear; the burger is the only way in. */
