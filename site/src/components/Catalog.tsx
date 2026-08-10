@@ -15,7 +15,6 @@ import { countLabel, site, type Plugin } from '../site';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useGridFlip } from '../hooks/useGridFlip';
 import { Command } from './Command';
-import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 const SEARCH_HINT = 'Search plugins, skills, agents…';
@@ -63,7 +62,20 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
         </Typography>
 
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
-          <PluginCountChips plugin={plugin} />
+          {plugin.skills.length > 0 && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={countLabel(plugin.skills.length, 'skill')}
+            />
+          )}
+          {plugin.agents.length > 0 && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={countLabel(plugin.agents.length, 'agent')}
+            />
+          )}
           {plugin.hookEvents.length > 0 && (
             <Tooltip title={plugin.hookEvents.join(', ')}>
               <Chip

@@ -6,9 +6,11 @@ import { mono, steel } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
-const [example] = site.plugins.flatMap((p) =>
-  p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
-);
+const example = site.plugins
+  .flatMap((p) =>
+    p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
+  )
+  .find(Boolean)!;
 
 const steps = [
   { label: 'Add the marketplace', value: site.addCommand },

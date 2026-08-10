@@ -13,7 +13,6 @@ import { useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { countLabel, site } from '../site';
 import { codeSx } from '../theme/tokens';
-import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 function Entry({
@@ -90,7 +89,20 @@ export function SkillIndex() {
               {plugin.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-              <PluginCountChips plugin={plugin} />
+              {plugin.skills.length > 0 && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={countLabel(plugin.skills.length, 'skill')}
+                />
+              )}
+              {plugin.agents.length > 0 && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={countLabel(plugin.agents.length, 'agent')}
+                />
+              )}
             </Stack>
           </AccordionSummary>
           <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>

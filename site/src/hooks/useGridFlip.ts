@@ -1,42 +1,27 @@
 import { useRef } from 'react';
-import { type FlipClass, ScrollTrigger, gsap, loadFlip, motionOk, useGSAP } from '../motion';
-
-function killGridTriggers(grid: HTMLDivElement) {
-  for (const trigger of ScrollTrigger.getAll()) {
-    if (trigger.trigger === grid) trigger.kill();
-  }
-}
+import Flip from 'gsap/Flip';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 export function useGridFlip(items: readonly unknown[]) {
   const grid = useRef<HTMLDivElement>(null);
-  const previousLayout = useRef<ReturnType<FlipClass['getState']> | null>(null);
-  const flip = useRef<FlipClass | null>(null);
-
-  useGSAP(() => {
-    let active = true;
-    loadFlip().then((F) => {
-      if (!active || !grid.current || !motionOk()) return;
-      flip.current = F;
-      previousLayout.current = F.getState(grid.current.children);
-    });
-    return () => {
-      active = false;
-    };
-  });
+  const previousLayout = useRef<ReturnType<typeof Flip.getState> | null>(null);
 
   useGSAP(
     () => {
-      const F = flip.current;
-      const prev = previousLayout.current;
       const node = grid.current;
-      if (!F || !prev || !node) return;
-      F.from(prev, {
+      if (!node) return;
+      previousLayout.current ??= Flip.getState(node.children);
+      if (!previousLayout.current) return;
+      const prev = previousLayout.current;
+      Flip.from(prev, {
         duration: 0.35,
         ease: 'power2.out',
         onEnter: (cards) => gsap.fromTo(cards, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
       });
-      previousLayout.current = F.getState(node.children);
-      killGridTriggers(node);
+      previousLayout.current = Flip.getState(node.children);
+      for (const trigger of ScrollTrigger.getAll()) if (trigger.trigger === node) trigger.kill();
     },
     { dependencies: [items] },
   );
