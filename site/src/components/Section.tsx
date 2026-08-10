@@ -36,6 +36,7 @@ export function Section({
       <Stack
         direction="row"
         spacing={2}
+        data-reveal
         sx={{
           alignItems: 'baseline',
           mb: { xs: 4, md: 5 },

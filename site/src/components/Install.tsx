@@ -37,6 +37,7 @@ export function Install() {
             <Box
               component="li"
               key={step.label}
+              data-reveal
               sx={{
                 position: 'relative',
                 ml: `${MARKER / 2}px`,

@@ -9,30 +9,12 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { plural, site } from '../site';
 import { codeSx } from '../theme/tokens';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
-
-const useMatchMedia = (query: string) => {
-  // `mounted` gates the read: server renders with `false`, the first client render
-  // matches that, and only after mount does the real media query take effect. Without
-  // it, Accordion's uncontrolled `defaultExpanded` would flip between server HTML and
-  // client hydration on a desktop viewport.
-  const [mounted, setMounted] = useState(false);
-  const [matches, setMatches] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    setMatches(mq.matches);
-    setMounted(true);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [query]);
-  return mounted && matches;
-};
 
 /** One row: the invocation on top, its description below. Same shape for skills and agents. */
 function Entry({
@@ -79,7 +61,13 @@ export function SkillIndex() {
   // First accordion opens by default on desktop, where the visitor is scanning for a
   // specific plugin. On a phone the section starts collapsed so the page does not eat a
   // screen before reaching Install.
-  const isDesktop = useMatchMedia('(min-width: 900px)');
+  //
+  // Read during the first render, not from an effect: `defaultExpanded` is uncontrolled, so
+  // only the value at that first render counts. The effect this replaces necessarily ran
+  // after it, and the row it was written to open never opened.
+  const [isDesktop] = useState(
+    () => typeof window !== 'undefined' && matchMedia('(min-width: 900px)').matches,
+  );
 
   return (
     <Section
@@ -99,6 +87,7 @@ export function SkillIndex() {
           disableGutters
           square
           elevation={0}
+          data-reveal
           // Six collapsed rows inside one raised paper slab is a box holding almost nothing.
           // Hairline-divided rows on the page ground instead; the open row takes the amber
           // edge, the same signal the nav and cards use.

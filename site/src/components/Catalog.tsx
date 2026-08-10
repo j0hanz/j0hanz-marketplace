@@ -10,6 +10,8 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { useRef } from 'react';
+import { Flip, ScrollTrigger, gsap, motionOk, useGSAP } from '../motion';
 import { plural, site, type Plugin } from '../site';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { Command } from './Command';
@@ -90,6 +92,47 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
+  const grid = useRef<HTMLDivElement>(null);
+  const before = useRef<ReturnType<typeof Flip.getState> | null>(null);
+  const shown = useRef(visible);
+
+  // Filtering re-flows the grid, and the cards that survive a filter jump to new cells with
+  // nothing connecting where they were to where they went. FLIP is the one thing on this page
+  // CSS cannot do: it needs the layout as it stood *before* React commits the new one.
+  //
+  // The measurement happens here, in the render body, which is the seam React does give —
+  // `visible` is the new list but the DOM is still showing the old one, and nothing has been
+  // committed yet. Keying it to the list identity rather than to the input handlers means it
+  // reads layout only when the grid is actually about to change: the search field is deferred
+  // (see useCatalogFilter), and measuring on each keystroke would have put a synchronous
+  // layout read back on the path that defers exists to keep clear.
+  if (shown.current !== visible) {
+    shown.current = visible;
+    before.current = grid.current && motionOk() ? Flip.getState(grid.current.children) : null;
+  }
+
+  useGSAP(
+    () => {
+      if (!before.current) return;
+      Flip.from(before.current, {
+        duration: 0.35,
+        ease: 'power2.out',
+        // Cards that leave are unmounted by React, so there is nothing left to animate out.
+        // The survivors slide to their new cell; arrivals fade in where they land — including
+        // a card returning to the grid, which comes back as a new node with no reveal of its
+        // own left on it.
+        onEnter: (cards) => gsap.fromTo(cards, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
+      });
+      before.current = null;
+      // The page-level reveal collected its targets once, at mount. Cards it registered and
+      // React has since unmounted leave triggers pointing at detached nodes, which can never
+      // fire and so are never cleared by their own `once`.
+      for (const trigger of ScrollTrigger.getAll()) {
+        if (trigger.trigger?.isConnected === false) trigger.kill();
+      }
+    },
+    { dependencies: [visible] },
+  );
 
   return (
     <Section
@@ -159,9 +202,9 @@ export function Catalog() {
       ) : (
         // Three columns wait for `lg`. At `md` the container is 890px, which made each card
         // 265px — narrow enough to wrap an install command onto three lines.
-        <Grid container spacing={3}>
+        <Grid container spacing={3} ref={grid}>
           {visible.map((plugin) => (
-            <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }}>
+            <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>
               <PluginCard plugin={plugin} />
             </Grid>
           ))}
