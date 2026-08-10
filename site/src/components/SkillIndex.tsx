@@ -16,7 +16,6 @@ import { codeSx } from '../theme/tokens';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
-/** One row: the invocation on top, its description below. Same shape for skills and agents. */
 function Entry({
   code,
   description,
@@ -31,8 +30,6 @@ function Entry({
   return (
     <ListItem disableGutters divider alignItems="flex-start">
       <ListItemText
-        // Skill descriptions are full sentences; at container width they run past 140
-        // characters a line, roughly twice a readable measure.
         slotProps={{
           primary: { component: 'div' },
           secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
@@ -58,13 +55,6 @@ function Entry({
 }
 
 export function SkillIndex() {
-  // First accordion opens by default on desktop, where the visitor is scanning for a
-  // specific plugin. On a phone the section starts collapsed so the page does not eat a
-  // screen before reaching Install.
-  //
-  // Read during the first render, not from an effect: `defaultExpanded` is uncontrolled, so
-  // only the value at that first render counts. The effect this replaces necessarily ran
-  // after it, and the row it was written to open never opened.
   const [isDesktop] = useState(
     () => typeof window !== 'undefined' && matchMedia('(min-width: 900px)').matches,
   );
@@ -72,8 +62,6 @@ export function SkillIndex() {
   return (
     <Section
       id="skills"
-      // The list carries agents as well as skills. The chip shows the sum; spelling out both
-      // halves is exact at every count, where "N skills and agents" is only right by luck.
       title="Skills and agents"
       count={{
         total: site.totals.skills + site.totals.agents,
@@ -88,9 +76,6 @@ export function SkillIndex() {
           square
           elevation={0}
           data-reveal
-          // Six collapsed rows inside one raised paper slab is a box holding almost nothing.
-          // Hairline-divided rows on the page ground instead; the open row takes the amber
-          // edge, the same signal the nav and cards use.
           sx={{
             bgcolor: 'transparent',
             borderTop: 1,
@@ -103,8 +88,6 @@ export function SkillIndex() {
           }}
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
-            {/* A span, not an h3: AccordionSummary already wraps itself in one, so this was
-                an h3 inside an h3 and every plugin was listed twice in the outline. */}
             <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
               {plugin.displayName}
             </Typography>

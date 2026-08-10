@@ -1,12 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { focusRing, ground, heading, mono, sans, scrollOffset } from './tokens';
 
-/**
- * `edge` is the control boundary, which is a different job from `divider`. WCAG 1.4.11 puts
- * the edge of a control at 3:1; divider is around 2:1 in both schemes — right for a rule,
- * too faint for a field. In the palette rather than a hand-rolled custom property so MUI
- * emits `--mui-palette-edge` next to every other colour.
- */
 declare module '@mui/material/styles' {
   interface Palette {
     edge: string;
@@ -18,30 +12,13 @@ declare module '@mui/material/styles' {
   }
 }
 
-/**
- * One grey doing two jobs on paper: the reading colour for secondary text, and the structural
- * stop the 3px chassis is drawn in. Named once because the two are only equal by measurement —
- * 6.6:1 clears body text and a frame at the same time on this ground — and a hand-edit to one
- * literal would have quietly split them.
- */
 const paperSteel = '#4A5568';
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
-    // Amber at one lightness cannot serve both grounds: the value that survives white is
-    // brown, and the value that glows on graphite is 1.8:1 on paper. One hue at two stops,
-    // and in both schemes a *fill* wearing whichever label reads on it.
-    //
-    // The light stop is the deeper one because amber is the page's only non-text indicator —
-    // the nav underline, the selected filter, the open row, the lit card edge — and every one
-    // of those is a 3px bar that has to clear 3:1 (WCAG 1.4.11) against whatever it sits on.
-    // The old #D97706 was 2.8:1 on the page ground: the footer bar, the accordion spine and
-    // the selected toggle all failed, and they are the marks that say where you are.
     light: {
       palette: {
-        // 4.4:1 on the ground, 5.0:1 on paper, and 5.0:1 under a white label. Ink on this
-        // stop is 3.8:1 — below the 4.5:1 a button label owes — so the light fill wears white.
         primary: { main: '#B45309', contrastText: '#FFFFFF' },
         background: { default: ground.light, paper: '#FFFFFF' },
         text: { primary: '#0E1116', secondary: paperSteel },
@@ -55,11 +32,8 @@ export const theme = createTheme({
         primary: { main: '#F5A524', contrastText: '#0E1116' },
         background: { default: ground.dark, paper: '#171C23' },
         text: { primary: '#E7EBF0', secondary: '#9BA6B4' },
-        // Surfaces sit a tenth of a stop apart, so the hairline is what separates them.
         divider: '#404A59',
         edge: '#626E80',
-        // A stop above `edge`, the way the 3px frame sits above a 1px control boundary:
-        // 4.1:1 on the ground where the light chassis value was 2.5:1 and read as absent.
         steel: '#68758A',
       },
     },
@@ -78,7 +52,6 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        // Ink on paper, amber on graphite. Resolved in CSS rather than branched per component.
         ':root, .light': { '--focus-ring': '#0E1116' },
         '.dark': { '--focus-ring': '#F5A524' },
         html: {
@@ -86,13 +59,6 @@ export const theme = createTheme({
           scrollBehavior: 'smooth',
         },
         ':focus-visible': focusRing,
-        // One rule for the whole page: MUI's own transitions are driven from JS and write
-        // their timings inline, so they never saw the media query.
-        //
-        // Reduced motion means less movement, not no transitions — colour, opacity and the
-        // inset bars still transition; transform, height and inset fall out of the list and
-        // snap. The duration is capped rather than zeroed because MUI writes shorthands
-        // (Grow: `opacity 225ms, transform 149ms`) that would cycle into nonsense.
         '@media (prefers-reduced-motion: reduce)': {
           '*, *::before, *::after': {
             transitionProperty:
@@ -106,42 +72,26 @@ export const theme = createTheme({
       },
     },
     MuiButtonBase: {
-      // A round ripple spreading out of a square control, on a page with no radius
-      // anywhere. `:active` below already answers the press.
       defaultProps: { disableRipple: true },
       styleOverrides: {
         root: {
-          // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
           '&.Mui-focusVisible': focusRing,
-          // Transform only, so it never reflows the row. Untransitioned: a `transition`
-          // here loses to every component's own at the same specificity.
           '&:active': { transform: 'translateY(1px)' },
         },
       },
     },
-    // Link answers focus-visible with the browser's `outline: auto`, which outranks the
-    // global rule on specificity. Same fix as ButtonBase above.
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     MuiChip: {
       styleOverrides: {
-        // Chips default to a 16px pill, the one rounded shape on a zero-radius page.
         root: { borderRadius: 0, fontFamily: mono },
-        // MUI's outlined chip hardcodes grey.600, a third grey next to the two tokens.
-        // `edge` and not `divider`: a chip is a bounded object, and `divider` sank to
-        // 1.9:1 inside a card.
         outlined: { borderColor: 'var(--mui-palette-edge)' },
       },
     },
-    // Written from the root so it lands at the same specificity as MUI's own rule and
-    // after it; hover and focus are two classes deep and keep their own colours.
     MuiOutlinedInput: {
       styleOverrides: {
         root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--mui-palette-edge)' } },
       },
     },
-    // The group hides every non-first left border and pulls the button back 1px onto its
-    // neighbour's. That fails at the end of a row: the button starting the second row has
-    // nothing to borrow and sits open. Colouring the border closes it and moves nothing.
     MuiToggleButtonGroup: {
       styleOverrides: {
         root: {
@@ -155,9 +105,6 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderColor: 'var(--mui-palette-edge)',
-          // Selected was a 16%-alpha wash at 1.5:1 — the faintest state on the page, worn
-          // by the control that says what the catalog is showing. Bar as an inset shadow,
-          // not a border: the group collapses adjacent borders and would eat one side.
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,
@@ -166,15 +113,8 @@ export const theme = createTheme({
         },
       },
     },
-    // Collapse animates `height` — layout, paint and composite every frame — and 300ms is
-    // outside the band for a disclosure.
-    // ponytail: height is inherently a layout animation; if it janks on a phone, the fix
-    // is a reveal that does not animate height, not a shorter one.
     MuiAccordion: { defaultProps: { slotProps: { transition: { timeout: 200 } } } },
-    // MUI's grey tooltip surface reads as a foreign object against the amber/steel frame.
     MuiTooltip: {
-      // Delay the first tip so hover-sweeping the catalog doesn't flash them; once one is
-      // open, peers show instantly while the cursor scans the row.
       defaultProps: { enterDelay: 400, enterNextDelay: 0 },
       styleOverrides: {
         tooltip: {

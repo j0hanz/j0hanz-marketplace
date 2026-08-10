@@ -6,7 +6,6 @@ import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { srOnly, steel } from '../theme/tokens';
 
-/** The page's one section shell: anchor, heading, optional count, vertical rhythm. */
 export function Section({
   id,
   title,
@@ -15,11 +14,6 @@ export function Section({
 }: {
   id: string;
   title: string;
-  /**
-   * The number shown, and what it counts for anyone who cannot see it. The label travels
-   * with the number because the heading is not a noun it can be derived from — "Plugins"
-   * mis-announces as "1 plugins", and the skills index counts two things.
-   */
   count?: { total: number; label: string };
   children: ReactNode;
 }) {
@@ -31,8 +25,6 @@ export function Section({
       maxWidth="lg"
       sx={{ py: { xs: 7, md: 11 } }}
     >
-      {/* The heading sits on a steel rule that spans the measure, so each section opens
-          as a chapter rather than as one more paragraph in the same column. */}
       <Stack
         direction="row"
         spacing={2}
@@ -49,9 +41,6 @@ export function Section({
         </Typography>
         {count && (
           <>
-            {/* The chip is a div, and ARIA gives a plain div no name, so the sentence lives
-                in its own element — which is also the live region the filtered catalog
-                updates. */}
             <Chip label={count.total} size="small" aria-hidden />
             <Box component="span" role="status" sx={srOnly}>
               {count.label}

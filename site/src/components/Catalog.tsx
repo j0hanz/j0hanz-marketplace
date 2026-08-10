@@ -20,7 +20,6 @@ import { Section } from './Section';
 
 const SEARCH_HINT = 'Search plugins, skills, agents…';
 
-/** The lit card edge, reached through two different selectors. */
 const litEdge = {
   boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
 };
@@ -33,12 +32,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         height: 1,
         display: 'flex',
         flexDirection: 'column',
-        // Lighting up is as far as it goes: the card is not a link — the title and the copy
-        // button are — and lifting it off the page said otherwise. `:focus-within` keeps the
-        // affordance for keyboards without adding a tab stop on the card itself.
         '&:focus-within': litEdge,
-        // Hover is gated to devices that have one. A tap fires `:hover` and leaves it fired,
-        // marking a card that was not selected and is not a link.
         '@media (hover: hover) and (pointer: fine)': { '&:hover': litEdge },
         transition: 'box-shadow 200ms ease',
       }}
@@ -96,16 +90,6 @@ export function Catalog() {
   const before = useRef<ReturnType<typeof Flip.getState> | null>(null);
   const shown = useRef(visible);
 
-  // Filtering re-flows the grid, and the cards that survive a filter jump to new cells with
-  // nothing connecting where they were to where they went. FLIP is the one thing on this page
-  // CSS cannot do: it needs the layout as it stood *before* React commits the new one.
-  //
-  // The measurement happens here, in the render body, which is the seam React does give —
-  // `visible` is the new list but the DOM is still showing the old one, and nothing has been
-  // committed yet. Keying it to the list identity rather than to the input handlers means it
-  // reads layout only when the grid is actually about to change: the search field is deferred
-  // (see useCatalogFilter), and measuring on each keystroke would have put a synchronous
-  // layout read back on the path that defers exists to keep clear.
   if (shown.current !== visible) {
     shown.current = visible;
     before.current = grid.current && motionOk() ? Flip.getState(grid.current.children) : null;
@@ -117,16 +101,9 @@ export function Catalog() {
       Flip.from(before.current, {
         duration: 0.35,
         ease: 'power2.out',
-        // Cards that leave are unmounted by React, so there is nothing left to animate out.
-        // The survivors slide to their new cell; arrivals fade in where they land — including
-        // a card returning to the grid, which comes back as a new node with no reveal of its
-        // own left on it.
         onEnter: (cards) => gsap.fromTo(cards, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
       });
       before.current = null;
-      // The page-level reveal collected its targets once, at mount. Cards it registered and
-      // React has since unmounted leave triggers pointing at detached nodes, which can never
-      // fire and so are never cleared by their own `once`.
       for (const trigger of ScrollTrigger.getAll()) {
         if (trigger.trigger?.isConnected === false) trigger.kill();
       }
@@ -140,8 +117,6 @@ export function Catalog() {
       title="Plugins"
       count={{ total: visible.length, label: plural(visible.length, 'plugin') }}
     >
-      {/* Search and filter share a row from md up: two controls on one line read as one
-          control surface, and the catalog starts a screen higher on a laptop. */}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         spacing={2}
@@ -149,10 +124,6 @@ export function Catalog() {
       >
         <TextField
           type="search"
-          // Labelled, not just placeheld: the placeholder is the first thing to leave once
-          // there is a query, and it was the only thing naming the field. Medium rather than
-          // the old small-plus-44px-override — medium is 56px, past a thumb without the hack,
-          // and it makes the search read as the primary control of the section that it is.
           label="Search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -177,8 +148,6 @@ export function Catalog() {
           size="small"
           value={category}
           onChange={(_, next: string | null) => next && setCategory(next)}
-          // Named for what the group does. "Plugins" repeated the section heading, so the
-          // group and the h2 above it announced as the same thing.
           aria-label="Filter plugins by category"
           sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 } }}
         >
@@ -196,15 +165,11 @@ export function Catalog() {
           <Typography variant="body1" color="textSecondary">
             No plugins match this search.
           </Typography>
-          {/* Ink, not amber: this is the only way out of the empty state, and as the default
-              link colour it was 2.8:1 on paper. */}
           <Link component="button" variant="body2" color="text.primary" onClick={reset}>
             Clear filters
           </Link>
         </Stack>
       ) : (
-        // Three columns wait for `lg`. At `md` the container is 890px, which made each card
-        // 265px — narrow enough to wrap an install command onto three lines.
         <Grid container spacing={3} ref={grid}>
           {visible.map((plugin) => (
             <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>

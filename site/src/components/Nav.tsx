@@ -27,10 +27,6 @@ const navLinks = [
 ];
 const hrefs = navLinks.map((link) => link.href);
 
-/**
- * Which section the visitor is actually in. The nav is the only wayfinding on a page with
- * four screens of content, and without this every link looks equally unvisited.
- */
 function useActiveSection() {
   const [active, setActive] = useState('');
 
@@ -43,11 +39,8 @@ function useActiveSection() {
           if (entry.isIntersecting) onScreen.add(href);
           else onScreen.delete(href);
         }
-        // Document order, so the topmost visible section wins when two overlap.
         setActive(hrefs.find((href) => onScreen.has(href)) ?? '');
       },
-      // Discount the sticky bar and the tail of the viewport, or a section still counts as
-      // current long after it has scrolled past the reading position.
       { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
     );
 
@@ -64,16 +57,12 @@ function useActiveSection() {
 const modeCycle = ['system', 'light', 'dark'] as const;
 type Mode = (typeof modeCycle)[number];
 
-// One icon per state, or two of the three render identically and the button stops reporting
-// which mode is on.
 const modeIcons = {
   system: SettingsBrightnessIcon,
   light: LightModeIcon,
   dark: DarkModeIcon,
 };
 
-// Two maps, not one. The label is "<where you are>. <what this does>.", and a single set of
-// strings could only ever be one of those.
 const modeState = {
   system: 'Theme follows system',
   light: 'Light theme',
@@ -85,28 +74,19 @@ const modeNext = {
   dark: 'Switch to dark theme',
 };
 
-// A 24px icon in MUI's default 8px padding is a 40px target; on a phone the toggle and the
-// burger are the only two controls in the bar.
 const iconButtonSx = { p: 1.5 };
 
 function ModeToggle() {
   const { mode, setMode, colorScheme } = useColorScheme();
 
-  // The browser's own chrome, kept on the scheme the page is actually painting. `colorScheme`
-  // and not `mode`: it is the resolved one, so this follows the system too while the toggle
-  // sits on 'system'. Here rather than in App because this is the hook call that already
-  // subscribes — a second one page-level would only re-read the same thing.
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (colorScheme) meta?.setAttribute('content', ground[colorScheme]);
   }, [colorScheme]);
 
-  // `mode` is undefined before mount and 'system' by default.
   const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
   const Icon = modeIcons[current];
-  // Two sentences, not a dash: screen readers skip a dash silently, so the state and the
-  // action ran together into one clause.
   const label = `${modeState[current]}. ${modeNext[next]}.`;
 
   return (
@@ -118,17 +98,12 @@ function ModeToggle() {
 
 const mobileMenuId = 'nav-mobile-menu';
 
-// The mobile menu carries the same three links as the bar above it, so it speaks in the same
-// voice. `fontFamily: inherit` resolved to the reading font and put the nav in sentence-case
-// sans on exactly the viewport where it is the only nav there is. The tracking matches MUI's
-// own button default (`2 / 70`).
 const menuItemSx = {
   fontFamily: mono,
   textTransform: 'uppercase',
   letterSpacing: '0.02857em',
 };
 
-/** Below `sm` the inline buttons disappear; the burger is the only way in. */
 function MobileMenu({ active }: { active: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const open = Boolean(anchor);
@@ -163,8 +138,6 @@ function MobileMenu({ active }: { active: string }) {
             aria-current={active === link.href ? 'page' : undefined}
             sx={{
               ...menuItemSx,
-              // The bar above marks the current section; the menu that replaces it below
-              // `sm` marked nothing, on the viewport where the page scrolls longest.
               ...(active === link.href && {
                 fontWeight: 700,
                 boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
@@ -222,13 +195,9 @@ export function Nav() {
               py: 1,
             }}
           >
-            {/* 20px, not 24: the mark bleeds to its own box edge, so at icon size it stands
-                a stop taller than the cap height it sits beside. */}
             <MarkIcon sx={{ fontSize: 20 }} />
             {site.name}
           </Typography>
-          {/* 8px between targets, not 4: below `sm` this row is two icon buttons and
-              nothing else, and they were close enough to catch the wrong one. */}
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             {navLinks.map((link) => (
               <Button
@@ -238,12 +207,8 @@ export function Nav() {
                 aria-current={active === link.href ? 'page' : undefined}
                 sx={{
                   display: { xs: 'none', sm: 'inline-flex' },
-                  // `sm` starts at 600px, which is still a thumb on a tablet.
                   minHeight: 44,
-                  // Reserving the underline's height keeps the row from shifting on scroll.
                   borderBottom: '2px solid transparent',
-                  // Weight and ink carry "you are here"; amber only underlines it. As the
-                  // link colour amber was 3.2:1 on paper and failed as text outright.
                   color: 'text.secondary',
                   ...(active === link.href && {
                     color: 'text.primary',

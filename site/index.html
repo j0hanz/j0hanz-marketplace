@@ -4,30 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <!-- The page ground, so a mobile browser's own chrome joins the frame instead of capping
-         it with a default bar in the opposite colour. One tag, not the `media` pair: the media
-         form answers the *system* setting, and anyone who picked a scheme here would have got
-         a bar in the colour they turned off. Graphite is only the pre-mount value — Nav sets
-         it from the resolved scheme, and keeps setting it as the toggle runs. -->
     <meta name="theme-color" content="#0E1116" />
     <title>%TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
-    <!-- GitHub renders a card for the repo itself, so the share image needs no asset here. -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="%TITLE%" />
     <meta property="og:description" content="%DESCRIPTION%" />
     <meta property="og:image" content="https://opengraph.githubassets.com/1/%REPO%" />
     <meta name="twitter:card" content="summary_large_image" />
-    <!-- The mark: the zero out of j0hanz as a slot with one module seated. Same proportions
-         as MarkIcon (wall 1/6, void 2/3, seat 1/4), inset so it clears the tab's edge, and
-         on graphite in both schemes because a favicon only gets one. -->
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%230E1116'/><path d='M3 3h18v18H3zM6 6v12h12V6z' fill='%23E7EBF0' fill-rule='evenodd'/><rect x='6' y='13.5' width='12' height='4.5' fill='%23F5A524'/></svg>"
     />
     <script>
-      // Paint the chosen scheme before first paint; MUI only applies the class on mount,
-      // which flashes the wrong theme for anyone who picked one.
       try {
         var mode = localStorage.getItem('mui-mode') || 'system';
         var dark =

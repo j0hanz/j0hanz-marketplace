@@ -9,8 +9,6 @@ import { SkillIndex } from './components/SkillIndex';
 import { MOTION_OK, ScrollTrigger, gsap, useGSAP } from './motion';
 import { steel } from './theme/tokens';
 
-// Parked off the top edge rather than clipped away, so it animates into the same steel
-// frame the rest of the chassis uses the moment a keyboard reaches it.
 const skipLink = {
   position: 'fixed',
   top: 8,
@@ -30,16 +28,6 @@ const skipLink = {
 export function App() {
   const main = useRef<HTMLElement>(null);
 
-  // Everything carrying `data-reveal` — section headings, plugin cards, skill rows, install
-  // steps — rises the last 24px into place as it reaches the fold. Batched rather than one
-  // trigger per element, so a grid row arrives as a row instead of as six unrelated fades,
-  // and `once` because arriving is an event, not a state to replay on the way back up.
-  //
-  // `opacity`, not `autoAlpha`: autoAlpha's `visibility: hidden` takes the subtree out of the
-  // accessibility tree, and what waits below the fold here is every section's h2 and the
-  // `role="status"` count beside it. A screen reader listing the page's headings would have
-  // found none of them. Nothing revealed sits over a control, so there is nothing that needed
-  // its pointer events killed in the first place.
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
@@ -57,10 +45,6 @@ export function App() {
               ease: 'power2.out',
             }),
         });
-        // Start positions are measured against the fallback metrics until JetBrains Mono
-        // lands; a heading that reflows after measurement can end up parked past its own
-        // trigger and never arrive. The flag is the only thing holding this promise to the
-        // lifetime of the block that opened it.
         let live = true;
         document.fonts.ready.then(() => live && ScrollTrigger.refresh());
         return () => {

@@ -10,7 +10,6 @@ export function Footer() {
   return (
     <Box
       component="footer"
-      // Mirrors the nav: steel edge, amber inset. The page closes on the frame it opened on.
       sx={{
         borderTop: `3px solid ${steel}`,
         boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',

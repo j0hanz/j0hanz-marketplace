@@ -1,21 +1,11 @@
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
 
-// Eight icons did not justify @mui/icons-material: 96M on disk and a full npm install of
-// every Material glyph. Paths lifted verbatim from that package (MIT), same 24x24 viewBox.
 const icon = (d: string) => (props: SvgIconProps) => (
   <SvgIcon {...props}>
     <path d={d} />
   </SvgIcon>
 );
 
-/**
- * The brand mark: the zero out of `j0hanz`, drawn as the slot a plugin seats into. Square
- * ring at radius 0 — the same law as every other surface here — with one amber module flush
- * to the inner floor. Not built with `icon()` above: the seat is a second fill.
- *
- * Edge-to-edge in the 24 box, so it reads a size larger than a Material glyph at the same
- * `fontSize`. Correct that at the call site rather than padding the geometry.
- */
 export const MarkIcon = (props: SvgIconProps) => (
   <SvgIcon {...props}>
     <path d="M0 0h24v24H0zM4 4v16h16V4z" fillRule="evenodd" />

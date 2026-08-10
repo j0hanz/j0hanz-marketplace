@@ -3,9 +3,6 @@ import { site } from '../site';
 
 export const ALL = 'all';
 
-// `site` is a static import, so the haystacks are joined and lowercased once at module load
-// rather than on every keystroke. Hook events are in there too, so a visitor searching
-// "PreToolUse" finds the css plugin instead of silence.
 const searchIndex = site.plugins.map((plugin) => ({
   plugin,
   haystack: [
@@ -22,7 +19,6 @@ const searchIndex = site.plugins.map((plugin) => ({
 export function useCatalogFilter() {
   const [category, setCategory] = useState(ALL);
   const [query, setQuery] = useState('');
-  // Defer the keystroke so the TextField stays responsive while the filter catches up.
   const deferred = useDeferredValue(query);
 
   const visible = useMemo(() => {
