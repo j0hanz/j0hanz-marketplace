@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
-import { lit, mono, rule } from '../theme/tokens';
+import { mono, rule, RULE_WIDTH } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
@@ -37,11 +37,12 @@ export function Install() {
           listStyle: 'none',
           p: 0,
           m: 0,
-          bgcolor: 'background.paper',
+          bgcolor: 'steel',
           border: rule,
-          boxShadow: lit('top'),
-          display: 'grid',
-          gridTemplateColumns: { md: `repeat(${steps.length}, 1fr)` },
+          borderTopColor: 'primary.main',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: `${RULE_WIDTH}px`,
         }}
       >
         {steps.map((step, i) => (
@@ -50,12 +51,13 @@ export function Install() {
             key={step.label}
             data-reveal
             sx={{
+              flex: '1 1 320px',
               display: 'flex',
               flexDirection: 'column',
               gap: 1.5,
               minWidth: 0,
+              bgcolor: 'background.paper',
               p: { xs: 2, md: 3 },
-              ...(i > 0 && { borderTop: { xs: rule, md: 0 }, borderLeft: { md: rule } }),
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

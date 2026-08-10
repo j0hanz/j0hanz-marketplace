@@ -75,7 +75,7 @@ export const heading = ({
   textTransform: 'uppercase' as const,
   letterSpacing,
   lineHeight: 1.1,
-  fontSize: `clamp(${min}, 5vw, ${max})`,
+  fontSize: `clamp(${min}, 0.5rem + 4.1vw, ${max})`,
   textWrap: 'balance' as const,
 });
 

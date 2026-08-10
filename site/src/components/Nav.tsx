@@ -44,7 +44,7 @@ function MobileMenu({ active }: { active: string }) {
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
         onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+        sx={{ display: { xs: 'inline-flex', md: 'none' } }}
       >
         <MenuIcon />
       </IconButton>
@@ -120,8 +120,8 @@ export function Nav() {
               color: 'inherit',
               textDecoration: 'none',
               fontWeight: 700,
-              fontSize: '1rem',
-              letterSpacing: '0.05em',
+              fontSize: { xs: '0.8125rem', sm: '1rem' },
+              letterSpacing: { xs: 0, sm: '0.05em' },
               py: 1,
             }}
           >
@@ -136,7 +136,7 @@ export function Nav() {
                 color="inherit"
                 aria-current={active === link.href ? 'true' : undefined}
                 sx={{
-                  display: { xs: 'none', sm: 'inline-flex' },
+                  display: { xs: 'none', md: 'inline-flex' },
                   minHeight: 44,
                   borderBottom: '2px solid transparent',
                   color: 'text.secondary',
@@ -157,7 +157,7 @@ export function Nav() {
               target="_blank"
               rel="noreferrer"
               aria-label="GitHub"
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              sx={{ display: { xs: 'none', md: 'inline-flex' } }}
             >
               <GitHubIcon />
             </IconButton>

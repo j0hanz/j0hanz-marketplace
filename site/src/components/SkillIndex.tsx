@@ -98,10 +98,14 @@ export function SkillIndex() {
             }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
-              <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
+              <Typography
+                component="span"
+                variant="h6"
+                sx={{ flexGrow: 1, minWidth: 0, fontSize: '1rem' }}
+              >
                 {plugin.displayName}
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+              <Stack direction="row" spacing={1} sx={{ mr: 2, flexShrink: 0, alignSelf: 'center' }}>
                 {plugin.skills.length > 0 && (
                   <Chip
                     size="small"
