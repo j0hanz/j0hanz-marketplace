@@ -20,6 +20,15 @@ export function Command({ value }: { value: string }) {
   };
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      announce('Copied');
+    } catch {
+      announce('Copy failed');
+    }
+  };
+
   const copied = status === 'Copied';
   const tip = status || 'Copy';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
@@ -45,18 +54,7 @@ export function Command({ value }: { value: string }) {
         {value}
       </Typography>
       <Tooltip title={tip}>
-        <IconButton
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(value);
-              announce('Copied');
-            } catch {
-              announce('Copy failed');
-            }
-          }}
-          aria-label={`Copy ${value}`}
-          sx={{ p: 1.5 }}
-        >
+        <IconButton onClick={copy} aria-label={`Copy ${value}`} sx={{ p: 1.5 }}>
           <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>

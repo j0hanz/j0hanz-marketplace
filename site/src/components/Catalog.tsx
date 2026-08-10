@@ -10,10 +10,9 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useRef } from 'react';
-import { Flip, ScrollTrigger, gsap, motionOk, useGSAP } from '../motion';
-import { plural, site, type Plugin } from '../site';
+import { countLabel, site, type Plugin } from '../site';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
+import { useGridFlip } from '../hooks/useGridFlip';
 import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
@@ -70,7 +69,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
                 size="small"
                 variant="outlined"
                 tabIndex={0}
-                label={plural(plugin.hookEvents.length, 'hook')}
+                label={countLabel(plugin.hookEvents.length, 'hook')}
               />
             </Tooltip>
           )}
@@ -86,36 +85,13 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
-  const grid = useRef<HTMLDivElement>(null);
-  const before = useRef<ReturnType<typeof Flip.getState> | null>(null);
-  const shown = useRef(visible);
-
-  if (shown.current !== visible) {
-    shown.current = visible;
-    before.current = grid.current && motionOk() ? Flip.getState(grid.current.children) : null;
-  }
-
-  useGSAP(
-    () => {
-      if (!before.current) return;
-      Flip.from(before.current, {
-        duration: 0.35,
-        ease: 'power2.out',
-        onEnter: (cards) => gsap.fromTo(cards, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
-      });
-      before.current = null;
-      for (const trigger of ScrollTrigger.getAll()) {
-        if (trigger.trigger?.isConnected === false) trigger.kill();
-      }
-    },
-    { dependencies: [visible] },
-  );
+  const grid = useGridFlip(visible);
 
   return (
     <Section
       id="plugins"
       title="Plugins"
-      count={{ total: visible.length, label: plural(visible.length, 'plugin') }}
+      count={{ total: visible.length, label: countLabel(visible.length, 'plugin') }}
     >
       <Stack
         direction={{ xs: 'column', md: 'row' }}

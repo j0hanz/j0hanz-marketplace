@@ -6,7 +6,7 @@ import { Hero } from './components/Hero';
 import { Install } from './components/Install';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
-import { MOTION_OK, ScrollTrigger, gsap, useGSAP } from './motion';
+import { MOTION_QUERY, ScrollTrigger, gsap, useGSAP } from './motion';
 import { steel } from './theme/tokens';
 
 const skipLink = {
@@ -30,7 +30,7 @@ export function App() {
 
   useGSAP(
     () => {
-      gsap.matchMedia().add(MOTION_OK, () => {
+      gsap.matchMedia().add(MOTION_QUERY, () => {
         const items = gsap.utils.toArray<HTMLElement>('[data-reveal]', main.current);
         gsap.set(items, { opacity: 0, y: 24 });
         ScrollTrigger.batch(items, {

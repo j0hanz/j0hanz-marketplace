@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { plural, site } from '../site';
+import { countLabel, site } from '../site';
 import { codeSx } from '../theme/tokens';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
@@ -19,13 +19,13 @@ import { Section } from './Section';
 function Entry({
   code,
   description,
-  extra,
   leading,
+  trailing,
 }: {
   code: string;
   description: string;
-  extra?: ReactNode;
   leading?: ReactNode;
+  trailing?: ReactNode;
 }) {
   return (
     <ListItem disableGutters divider alignItems="flex-start">
@@ -45,7 +45,7 @@ function Entry({
             <Typography component="code" variant="body2" sx={codeSx}>
               {code}
             </Typography>
-            {extra}
+            {trailing}
           </Stack>
         }
         secondary={description}
@@ -55,9 +55,7 @@ function Entry({
 }
 
 export function SkillIndex() {
-  const [isDesktop] = useState(
-    () => typeof window !== 'undefined' && matchMedia('(min-width: 900px)').matches,
-  );
+  const [isDesktop] = useState(() => matchMedia('(min-width: 900px)').matches);
 
   return (
     <Section
@@ -65,7 +63,7 @@ export function SkillIndex() {
       title="Skills and agents"
       count={{
         total: site.totals.skills + site.totals.agents,
-        label: `${plural(site.totals.skills, 'skill')} and ${plural(site.totals.agents, 'agent')}`,
+        label: `${countLabel(site.totals.skills, 'skill')} and ${countLabel(site.totals.agents, 'agent')}`,
       }}
     >
       {site.plugins.map((plugin, i) => (
@@ -109,7 +107,7 @@ export function SkillIndex() {
                       </Tooltip>
                     ) : undefined
                   }
-                  extra={
+                  trailing={
                     skill.argumentHint && (
                       <Typography
                         component="code"
@@ -128,7 +126,7 @@ export function SkillIndex() {
                   key={agent.name}
                   code={agent.name}
                   description={agent.description}
-                  extra={<Chip size="small" variant="outlined" label="agent" />}
+                  trailing={<Chip size="small" variant="outlined" label="agent" />}
                 />
               ))}
             </List>

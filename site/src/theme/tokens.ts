@@ -20,7 +20,15 @@ export const srOnly = {
   whiteSpace: 'nowrap',
 } as const;
 
-export const heading = (min: string, max: string, letterSpacing: string) => ({
+export const heading = ({
+  min,
+  max,
+  letterSpacing,
+}: {
+  min: string;
+  max: string;
+  letterSpacing: string;
+}) => ({
   fontFamily: mono,
   fontWeight: 700,
   textTransform: 'uppercase' as const,

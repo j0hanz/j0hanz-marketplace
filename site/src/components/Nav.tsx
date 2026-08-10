@@ -63,12 +63,12 @@ const modeIcons = {
   dark: DarkModeIcon,
 };
 
-const modeState = {
+const modeDescription = {
   system: 'Theme follows system',
   light: 'Light theme',
   dark: 'Dark theme',
 };
-const modeNext = {
+const switchTo = {
   system: 'Switch to system theme',
   light: 'Switch to light theme',
   dark: 'Switch to dark theme',
@@ -76,18 +76,21 @@ const modeNext = {
 
 const iconButtonSx = { p: 1.5 };
 
-function ModeToggle() {
-  const { mode, setMode, colorScheme } = useColorScheme();
-
+function useBrowserChromeColor(colorScheme: keyof typeof ground | undefined) {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (colorScheme) meta?.setAttribute('content', ground[colorScheme]);
   }, [colorScheme]);
+}
+
+function ModeToggle() {
+  const { mode, setMode, colorScheme } = useColorScheme();
+  useBrowserChromeColor(colorScheme);
 
   const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
   const Icon = modeIcons[current];
-  const label = `${modeState[current]}. ${modeNext[next]}.`;
+  const label = `${modeDescription[current]}. ${switchTo[next]}.`;
 
   return (
     <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={iconButtonSx}>

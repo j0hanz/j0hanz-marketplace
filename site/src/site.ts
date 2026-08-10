@@ -38,6 +38,6 @@ export interface Site {
 
 export const site = raw as Site;
 
-export const pluralWord = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`;
+export const pluralize = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`;
 
-export const plural = (count: number, word: string) => `${count} ${pluralWord(count, word)}`;
+export const countLabel = (count: number, word: string) => `${count} ${pluralize(count, word)}`;

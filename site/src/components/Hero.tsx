@@ -6,8 +6,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { GitHubIcon } from '../icons';
-import { MOTION_OK, gsap, useGSAP } from '../motion';
-import { pluralWord, site } from '../site';
+import { MOTION_QUERY, gsap, useGSAP } from '../motion';
+import { pluralize, site } from '../site';
 import { mono } from '../theme/tokens';
 import { Command } from './Command';
 
@@ -22,7 +22,7 @@ export function Hero() {
 
   useGSAP(
     () => {
-      gsap.matchMedia().add(MOTION_OK, () => {
+      gsap.matchMedia().add(MOTION_QUERY, () => {
         gsap.from('[data-hero]', {
           opacity: 0,
           y: 20,
@@ -114,7 +114,7 @@ export function Hero() {
                     {stat.count}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {pluralWord(stat.count, stat.unit)}
+                    {pluralize(stat.count, stat.unit)}
                   </Typography>
                 </Box>
               ))}

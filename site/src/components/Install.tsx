@@ -16,7 +16,8 @@ const steps = [
   { label: 'Run it', value: example.run },
 ];
 
-const MARKER = 28;
+const MARKER_SIZE = 28;
+const RAIL_WIDTH = 3;
 
 export function Install() {
   return (
@@ -31,10 +32,10 @@ export function Install() {
               data-reveal
               sx={{
                 position: 'relative',
-                ml: `${MARKER / 2}px`,
+                ml: `${MARKER_SIZE / 2}px`,
                 pl: { xs: 3, sm: 4 },
                 pb: last ? 0 : 5,
-                borderLeft: '3px solid',
+                borderLeft: `${RAIL_WIDTH}px solid`,
                 borderColor: last ? 'transparent' : steel,
               }}
             >
@@ -44,8 +45,8 @@ export function Install() {
                   position: 'absolute',
                   left: 0,
                   top: 0,
-                  width: MARKER,
-                  height: MARKER,
+                  width: MARKER_SIZE,
+                  height: MARKER_SIZE,
                   display: 'grid',
                   placeItems: 'center',
                   fontFamily: mono,
@@ -53,7 +54,7 @@ export function Install() {
                   fontSize: '0.8125rem',
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
-                  transform: `translate(${-(MARKER / 2 + 1.5)}px, 0)`,
+                  transform: `translate(${-(MARKER_SIZE / 2 + RAIL_WIDTH / 2)}px, 0)`,
                 }}
               >
                 {i + 1}
