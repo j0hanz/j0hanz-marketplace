@@ -36,7 +36,7 @@ export interface Site {
   plugins: Plugin[];
 }
 
-export const site = raw as Site;
+export const site: Site = raw;
 
 export const pluralize = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`;
 
