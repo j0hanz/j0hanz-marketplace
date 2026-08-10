@@ -57,11 +57,14 @@ export function useEnter(scope: React.RefObject<HTMLElement | null>, key?: unkno
           // wait. Draws transition their pseudo-element, which no delay reaches,
           // and never appear as a group anyway.
           if (el.dataset.reveal !== undefined) {
-            frame ||= requestAnimationFrame(() => {
-              queued = 0;
-              frame = 0;
-            });
-            el.style.transitionDelay = `${Math.min(queued++ * 40, 160)}ms`;
+            if (!frame) {
+              frame = requestAnimationFrame(() => {
+                queued = 0;
+                frame = 0;
+              });
+            }
+            el.style.transitionDelay = `${Math.min(queued * 40, 160)}ms`;
+            queued += 1;
             el.addEventListener('transitionend', clearDelay);
           }
           el.dataset.shown = '';

@@ -11,7 +11,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { memo, useRef } from 'react';
+import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
@@ -21,7 +21,7 @@ import { accent, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
-const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
+function PluginCard({ plugin }: { plugin: Plugin }) {
   return (
     <Card
       variant="outlined"
@@ -98,7 +98,7 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
       </CardActions>
     </Card>
   );
-});
+}
 
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();

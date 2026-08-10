@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { type Plugin, site } from '../site';
 
 export const ALL = 'all';
@@ -21,19 +21,16 @@ export function useCatalogFilter() {
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query);
 
-  const visible = useMemo(() => {
-    const needle = deferred.trim().toLowerCase();
-    const result: Plugin[] = [];
-    for (const { plugin, haystack } of searchIndex) {
-      if (
-        (category === ALL || plugin.category === category) &&
-        (!needle || haystack.includes(needle))
-      ) {
-        result.push(plugin);
-      }
+  const needle = deferred.trim().toLowerCase();
+  const visible: Plugin[] = [];
+  for (const { plugin, haystack } of searchIndex) {
+    if (
+      (category === ALL || plugin.category === category) &&
+      (!needle || haystack.includes(needle))
+    ) {
+      visible.push(plugin);
     }
-    return result;
-  }, [category, deferred]);
+  }
 
   return {
     visible,

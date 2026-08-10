@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import react from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 // Extension included: Vite's native config loader strips types rather than
 // bundling, so it resolves the real file rather than guessing at one.
@@ -22,6 +23,13 @@ const paint = {
   '%STEEL_DARK%': steel.dark.slice(1),
 };
 
+const logger = {
+  logEvent(file: string | null, event: { kind: string; detail?: unknown }) {
+    if (event.kind !== 'CompileError' && event.kind !== 'PipelineError') return;
+    throw new Error(`React Compiler bailed on ${file}: ${String(event.detail)}`);
+  },
+};
+
 const siteMeta = (): Plugin => ({
   name: 'site-meta',
   transformIndexHtml: (html) => {
@@ -38,7 +46,7 @@ const siteMeta = (): Plugin => ({
 export default defineConfig({
   root: 'site',
   base: '/',
-  plugins: [react(), siteMeta()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset({ logger })] }), siteMeta()],
   optimizeDeps: {
     include: ['@mui/material', '@emotion/react', '@emotion/styled'],
   },
