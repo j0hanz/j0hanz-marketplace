@@ -7,6 +7,13 @@ export const motionOk = () => matchMedia(MOTION_QUERY).matches;
 
 type TweenVars = Parameters<typeof gsap.to>[1];
 
+let fontsRefreshed = false;
+const refreshAfterFonts = () => {
+  if (fontsRefreshed) return;
+  fontsRefreshed = true;
+  document.fonts.ready.then(() => ScrollTrigger.refresh());
+};
+
 /**
  * Scroll-reveal items matching `selector` inside `scope`. Reduced-motion users
  * see static content immediately. `tween` runs once on first entry.
@@ -27,7 +34,7 @@ export function useReveal(
         onEnter: (batch) =>
           gsap.to(batch, { duration: 0.5, stagger: 0.07, ease: 'power2.out', ...tween }),
       });
-      document.fonts.ready.then(() => ScrollTrigger.refresh());
+      refreshAfterFonts();
     },
     { scope },
   );

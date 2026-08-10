@@ -10,7 +10,7 @@ const example = site.plugins
   .flatMap((p) =>
     p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
   )
-  .find(Boolean)!;
+  .find((x) => x.run)!;
 
 const steps = [
   { label: 'Add the marketplace', value: site.addCommand },

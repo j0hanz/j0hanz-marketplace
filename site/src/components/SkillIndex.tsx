@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { countLabel, site } from '../site';
 import { codeSx } from '../theme/tokens';
@@ -54,7 +54,13 @@ function Entry({
 }
 
 export function SkillIndex() {
-  const [isDesktop] = useState(() => matchMedia('(min-width: 900px)').matches);
+  const [isDesktop, setIsDesktop] = useState(() => matchMedia('(min-width: 900px)').matches);
+  useEffect(() => {
+    const mql = matchMedia('(min-width: 900px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   return (
     <Section
