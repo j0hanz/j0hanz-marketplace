@@ -5,27 +5,17 @@ import { site } from '../site';
 import { Command } from './Command';
 import { Section } from './Section';
 
-// Step 2 and 3 use one real plugin so the visitor sees a worked install trace,
-// not a placeholder they have to substitute themselves. Tutor wins by being
-// first in the catalog with an invocable skill that takes a clear argument.
-const example = (() => {
-  for (const p of site.plugins) {
-    const skill = p.skills.find((s) => s.invocable && s.command);
-    if (skill) return { plugin: p, skill };
-  }
-  return null;
-})();
+// Step 2 and 3 use one real plugin so the visitor sees a worked install trace, not a
+// placeholder they have to substitute themselves. First catalog entry with an invocable
+// skill wins; build-site-data.mjs refuses to emit data without one.
+const [example] = site.plugins.flatMap((p) =>
+  p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
+);
 
 const rows = [
   { label: copy.installSteps[0], value: site.addCommand },
-  {
-    label: copy.installSteps[1],
-    value: example ? example.plugin.installCommand : `/plugin install <plugin>@${site.name}`,
-  },
-  {
-    label: copy.installSteps[2],
-    value: example ? (example.skill.command ?? `/<plugin>:<skill>`) : '/<plugin>:<skill>',
-  },
+  { label: copy.installSteps[1], value: example.install },
+  { label: copy.installSteps[2], value: example.run },
 ];
 
 export function Install() {

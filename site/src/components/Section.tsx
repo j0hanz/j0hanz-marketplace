@@ -13,7 +13,12 @@ export function Section({
 }: {
   id: string;
   title: string;
-  count?: number;
+  /**
+   * The count chip: the number shown, and what it counts for anyone who cannot see it.
+   * The label travels with the number because the heading is not a noun it can be derived
+   * from — "Plugins" mis-announces as "1 plugins", and the skills index counts two things.
+   */
+  count?: { total: number; label: string };
   children: ReactNode;
 }) {
   return (
@@ -28,9 +33,7 @@ export function Section({
         <Typography id={`${id}-title`} variant="h4" component="h2">
           {title}
         </Typography>
-        {count !== undefined && (
-          <Chip label={count} size="small" aria-label={`${count} ${title.toLowerCase()}`} />
-        )}
+        {count && <Chip label={count.total} size="small" aria-label={count.label} />}
       </Stack>
       {children}
     </Container>

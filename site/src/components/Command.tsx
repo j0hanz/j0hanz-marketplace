@@ -58,13 +58,7 @@ export function Command({ value }: { value: string }) {
       >
         {value}
       </Typography>
-      <Tooltip
-        title={tip}
-        // Delay the first tip so hover-sweeping the catalog doesn't flash them; once one
-        // is open, peers show instantly while the cursor scans the row.
-        enterDelay={400}
-        enterNextDelay={0}
-      >
+      <Tooltip title={tip}>
         <IconButton onClick={write} aria-label={copy.copyLabel} sx={{ p: 1.5 }}>
           <Icon fontSize="small" color={iconColor} />
         </IconButton>

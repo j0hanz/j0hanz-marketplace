@@ -111,6 +111,12 @@ export function build() {
     agents: readAgents(root),
   }));
 
+  // The install section walks a real plugin through steps 2 and 3. Fail here rather than
+  // let the page ship with nothing to put in them.
+  if (!plugins.some((p) => p.skills.some((s) => s.command))) {
+    throw new Error('No invocable skill in any plugin: the install steps have no command to show.');
+  }
+
   const total = (fn) => plugins.reduce((n, p) => n + fn(p), 0);
 
   return {

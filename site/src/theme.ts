@@ -6,10 +6,10 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 /** Structural steel: the 3px chassis edges. Deliberately the same in both schemes. */
 export const steel = '#4A5568';
 
-/** Announced, never seen. `width: 1` in sx means 100%, so these stay strings. */
 /** Pinned: AppBar height (Toolbar default 64 + 3px steel chassis + a little slack). */
 export const scrollOffset = 80;
 
+/** Announced, never seen. `width: 1` in sx means 100%, so these stay strings. */
 export const srOnly = {
   position: 'absolute',
   width: '1px',
@@ -108,6 +108,9 @@ export const theme = createTheme({
         },
       },
     },
+    // Link tracks focus-visible itself and answers with the browser's `outline: auto`,
+    // which outranks the global rule on specificity. Same fix as ButtonBase above.
+    MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     // Chips default to a 16px pill, which is the one rounded shape on a zero-radius page.
     MuiChip: { styleOverrides: { root: { borderRadius: 0 } } },
     // The one widget that defaults to a different chassis — MUI's grey tooltip
@@ -115,6 +118,9 @@ export const theme = createTheme({
     // paper background, primary text, 2px primary border, square corners, no arrow
     // shadow that would imply a non-zero radius elsewhere.
     MuiTooltip: {
+      // Delay the first tip so hover-sweeping the catalog doesn't flash them; once one is
+      // open, peers show instantly while the cursor scans the row. One decision, not four.
+      defaultProps: { enterDelay: 400, enterNextDelay: 0 },
       styleOverrides: {
         tooltip: {
           backgroundColor: 'var(--mui-palette-background-paper)',

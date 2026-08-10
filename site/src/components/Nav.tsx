@@ -2,6 +2,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import MenuIcon from '@mui/icons-material/Menu';
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
 import AppBar from '@mui/material/AppBar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -9,13 +10,14 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import type SvgIcon from '@mui/material/SvgIcon';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { copy } from '../copy';
 import { site } from '../site';
-import { steel } from '../theme';
+import { scrollOffset, steel } from '../theme';
 
 const hrefs = copy.navLinks.map((link) => link.href);
 
@@ -40,7 +42,7 @@ function useActiveSection() {
       },
       // Discount the sticky bar at the top and the tail of the viewport, or a section
       // still counts as current long after it has scrolled past the reading position.
-      { rootMargin: '-80px 0px -60% 0px' },
+      { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
     );
 
     for (const href of hrefs) {
@@ -58,14 +60,21 @@ function useActiveSection() {
 const modeCycle = ['system', 'light', 'dark'] as const;
 type Mode = (typeof modeCycle)[number];
 
+// One icon per state, or two of the three render identically and the button stops
+// reporting which mode is on. The label names the state and the action either way.
+const modeIcons: Record<Mode, typeof SvgIcon> = {
+  system: SettingsBrightnessIcon,
+  light: LightModeIcon,
+  dark: DarkModeIcon,
+};
+
 function ModeToggle() {
   const { mode, setMode } = useColorScheme();
   // `mode` is undefined before mount and 'system' by default. Map to the cycle index
-  // and rotate. `system` uses the DarkModeIcon by default (it shows the resolved
-  // theme's opposite, signalling "click to override").
-  const current: Mode = (mode as Mode | undefined) ?? 'system';
+  // and rotate.
+  const current: Mode = mode ?? 'system';
   const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
-  const Icon = next === 'light' ? LightModeIcon : DarkModeIcon;
+  const Icon = modeIcons[current];
   const label = `${copy.modeToggle[current]} — ${copy.modeToggle[next]}`;
 
   return (

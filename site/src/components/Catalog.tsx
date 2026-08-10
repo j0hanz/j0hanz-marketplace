@@ -5,80 +5,79 @@ import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { copy } from '../copy';
-import { site, type Plugin } from '../site';
+import { useEffect, useMemo, useState } from 'react';
+import { copy, plural } from '../copy';
+import { site } from '../site';
 import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 const ALL = 'all';
 
-// Precompute the search haystack once per plugin so a keystroke is O(plugins),
-// not O(plugins × haystack length) for every category change. Hook events are
-// included so a visitor searching "PreToolUse" finds the CSS plugin, not silence.
-const haystackFor = (p: Plugin) =>
-  [
-    p.displayName,
-    p.summary,
-    p.hookEvents.join(' '),
-    ...p.skills.map((s) => s.name + ' ' + s.description),
-    ...p.agents.map((a) => a.name + ' ' + a.description),
+// `site` is a static import, so every haystack is built once at module load and a keystroke
+// is O(plugins) rather than O(plugins × haystack length). Hook events are included so a
+// visitor searching "PreToolUse" finds the CSS plugin, not silence.
+const entries = site.plugins.map((plugin) => ({
+  plugin,
+  haystack: [
+    plugin.displayName,
+    plugin.summary,
+    plugin.hookEvents.join(' '),
+    ...plugin.skills.map((s) => s.name + ' ' + s.description),
+    ...plugin.agents.map((a) => a.name + ' ' + a.description),
   ]
     .join(' ')
-    .toLowerCase();
+    .toLowerCase(),
+}));
 
 export function Catalog() {
-  const [category, setCategory] = useState<string>(ALL);
-  const [query, setQuery] = useState<string>('');
-  const [debounced, setDebounced] = useState<string>('');
+  // ?cat=<name> makes a filtered catalog a shareable link. An unknown category would
+  // otherwise select nothing and render the empty state over a blank search box.
+  const [category, setCategory] = useState(() => {
+    const initial = new URLSearchParams(location.search).get('cat');
+    return initial && site.categories.includes(initial) ? initial : ALL;
+  });
+  const [query, setQuery] = useState('');
 
-  // URL hash sync: ?cat=<name> or #plugins — back/forward restores the filter.
-  const didInit = useRef(false);
+  // Write the filter back so the address bar stays copyable. `replaceState` only, so this
+  // never stacks history entries a visitor has to press back through to leave the page.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const initial = params.get('cat');
-    if (initial) setCategory(initial);
-  }, []);
-
-  useEffect(() => {
-    if (!didInit.current) {
-      didInit.current = true;
-      return;
-    }
-    const params = new URLSearchParams(location.search);
-    if (category === ALL) {
-      params.delete('cat');
-    } else {
-      params.set('cat', category);
-    }
-    const next = `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`;
-    if (next !== location.pathname + location.search + location.hash) {
-      history.replaceState(null, '', next);
-    }
+    if (category === ALL) params.delete('cat');
+    else params.set('cat', category);
+    history.replaceState(
+      null,
+      '',
+      `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`,
+    );
   }, [category]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(query.trim().toLowerCase()), 150);
-    return () => clearTimeout(timer);
-  }, [query]);
-
   const visible = useMemo(() => {
-    const byCategory =
-      category === ALL ? site.plugins : site.plugins.filter((p) => p.category === category);
-    if (!debounced) return byCategory;
-    return byCategory.filter((p) => haystackFor(p).includes(debounced));
-  }, [category, debounced]);
+    const needle = query.trim().toLowerCase();
+    return entries
+      .filter(
+        ({ plugin, haystack }) =>
+          (category === ALL || plugin.category === category) &&
+          (!needle || haystack.includes(needle)),
+      )
+      .map(({ plugin }) => plugin);
+  }, [category, query]);
 
   return (
-    <Section id="plugins" title={copy.catalogTitle} count={visible.length}>
+    <Section
+      id="plugins"
+      title={copy.catalogTitle}
+      count={{ total: visible.length, label: plural(visible.length, copy.unit.plugin) }}
+    >
       <Stack spacing={2} sx={{ mb: 4 }}>
-        <input
+        <TextField
           type="search"
+          size="small"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -88,18 +87,17 @@ export function Catalog() {
             }
           }}
           placeholder={copy.catalogSearch}
-          aria-label={copy.catalogSearch}
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="search"
-          style={{
-            font: 'inherit',
-            padding: '10px 12px',
-            border: '1px solid var(--mui-palette-divider)',
-            background: 'var(--mui-palette-background-paper)',
-            color: 'var(--mui-palette-text-primary)',
-            maxWidth: 360,
+          slotProps={{
+            // Match the touch target the toggle row below sets for itself.
+            input: { sx: { minHeight: 44 } },
+            htmlInput: {
+              'aria-label': copy.catalogSearch,
+              autoComplete: 'off',
+              spellCheck: false,
+              inputMode: 'search',
+            },
           }}
+          sx={{ maxWidth: 360 }}
         />
         <ToggleButtonGroup
           exclusive
@@ -123,25 +121,16 @@ export function Catalog() {
           <Typography variant="body1" color="text.secondary">
             {copy.catalogEmpty}
           </Typography>
-          <Typography
+          <Link
             component="button"
             variant="body2"
             onClick={() => {
               setQuery('');
               setCategory(ALL);
             }}
-            sx={{
-              font: 'inherit',
-              background: 'none',
-              border: 0,
-              color: 'primary.main',
-              cursor: 'pointer',
-              p: 0,
-              textDecoration: 'underline',
-            }}
           >
             {copy.catalogClear}
-          </Typography>
+          </Link>
         </Stack>
       ) : (
         <Grid container spacing={3}>
@@ -199,7 +188,7 @@ export function Catalog() {
                   <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
                     <PluginCountChips plugin={p} />
                     {p.hookEvents.length > 0 && (
-                      <Tooltip title={p.hookEvents.join(', ')} enterDelay={400} enterNextDelay={0}>
+                      <Tooltip title={p.hookEvents.join(', ')}>
                         <Chip
                           size="small"
                           variant="outlined"

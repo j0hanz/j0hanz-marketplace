@@ -10,7 +10,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { copy } from '../copy';
+import { copy, plural } from '../copy';
 import { site } from '../site';
 import { mono } from '../theme';
 import { PluginCountChips } from './PluginCountChips';
@@ -63,7 +63,16 @@ function Entry({
 
 export function SkillIndex() {
   return (
-    <Section id="skills" title={copy.skillsTitle} count={site.totals.skills + site.totals.agents}>
+    <Section
+      id="skills"
+      title={copy.skillsTitle}
+      // The chip shows the sum; spelling out both halves is exact at every count, where
+      // "N skills and agents" is only ever right by luck.
+      count={{
+        total: site.totals.skills + site.totals.agents,
+        label: `${plural(site.totals.skills, copy.unit.skill)} and ${plural(site.totals.agents, copy.unit.agent)}`,
+      }}
+    >
       {site.plugins.map((p, i) => (
         <Accordion key={p.name} defaultExpanded={i === 0} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -83,7 +92,7 @@ export function SkillIndex() {
                   description={skill.description}
                   leading={
                     !skill.invocable ? (
-                      <Tooltip title={copy.modelLoadedHint} enterDelay={400} enterNextDelay={0}>
+                      <Tooltip title={copy.modelLoadedHint}>
                         <Chip
                           size="small"
                           variant="outlined"
