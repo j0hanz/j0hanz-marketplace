@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { type FlipClass, ScrollTrigger, gsap, loadFlip, motionOk, useGSAP } from '../motion';
 
-function killDetachedTriggers() {
+function killGridTriggers(grid: HTMLDivElement) {
   for (const trigger of ScrollTrigger.getAll()) {
-    if (trigger.trigger?.isConnected === false) trigger.kill();
+    if (trigger.trigger === grid) trigger.kill();
   }
 }
 
@@ -12,8 +12,6 @@ export function useGridFlip(items: readonly unknown[]) {
   const previousLayout = useRef<ReturnType<FlipClass['getState']> | null>(null);
   const flip = useRef<FlipClass | null>(null);
 
-  // Prefetch the Flip plugin after first paint so it's ready before the user
-  // filters; it ships in its own chunk instead of the initial bundle.
   useGSAP(() => {
     let active = true;
     loadFlip().then((F) => {
@@ -26,22 +24,19 @@ export function useGridFlip(items: readonly unknown[]) {
     };
   });
 
-  // Animate from the previous grid layout to the current one on filter changes.
-  // Reads the ref captured at the end of the previous run, animates old→live,
-  // then snapshots the live layout for next time. Runs synchronously before
-  // paint so Flip.from interpolates old→new positions rather than snapping.
   useGSAP(
     () => {
       const F = flip.current;
       const prev = previousLayout.current;
-      if (!F || !prev || !grid.current) return;
+      const node = grid.current;
+      if (!F || !prev || !node) return;
       F.from(prev, {
         duration: 0.35,
         ease: 'power2.out',
         onEnter: (cards) => gsap.fromTo(cards, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
       });
-      previousLayout.current = F.getState(grid.current.children);
-      killDetachedTriggers();
+      previousLayout.current = F.getState(node.children);
+      killGridTriggers(node);
     },
     { dependencies: [items] },
   );

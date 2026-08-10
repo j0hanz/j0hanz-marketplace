@@ -58,24 +58,12 @@ export function useReveal(
         onEnter: (batch) =>
           gsap.to(batch, { duration: 0.5, stagger: 0.07, ease: 'power2.out', ...tween }),
       });
-      // fonts.ready resolves after mount; refresh so item offsets match the loaded font.
-      // Guard so the refresh can't fire after the context reverts (StrictMode unmount).
-      let mounted = true;
-      document.fonts.ready.then(() => {
-        if (mounted) ScrollTrigger.refresh();
-      });
-      return () => {
-        mounted = false;
-      };
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
     },
     { scope },
   );
 }
 
-/**
- * Stagger-in items matching `selector` inside `scope` on mount. For hero-style
- * entrances where everything animates immediately rather than on scroll.
- */
 export function useRevealMount(
   selector: string,
   tween: TweenVars,

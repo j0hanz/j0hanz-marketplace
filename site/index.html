@@ -16,14 +16,6 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%230E1116'/><path d='M3 3h18v18H3zM6 6v12h12V6z' fill='%23E7EBF0' fill-rule='evenodd'/><rect x='6' y='13.5' width='12' height='4.5' fill='%23F5A524'/></svg>"
     />
-    <script>
-      try {
-        var mode = localStorage.getItem('mui-mode') || 'system';
-        var dark =
-          mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : mode === 'dark';
-        document.documentElement.classList.add(dark ? 'dark' : 'light');
-      } catch {}
-    </script>
   </head>
   <body>
     <div id="root"></div>
