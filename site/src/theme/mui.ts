@@ -8,8 +8,10 @@ import {
   ink,
   lit,
   mono,
+  paper,
   sans,
   scrollOffset,
+  steel,
 } from './tokens';
 
 declare module '@mui/material/styles' {
@@ -22,8 +24,6 @@ declare module '@mui/material/styles' {
     steel?: string;
   }
 }
-
-const paperSteel = '#4A5568';
 
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E\")";
@@ -46,22 +46,22 @@ export const theme = createTheme({
       palette: {
         primary: { main: brand.light, contrastText: '#FFFFFF' },
         error: { main: '#B42318', contrastText: '#FFFFFF' },
-        background: { default: ground.light, paper: '#FFFFFF' },
-        text: { primary: ink.light, secondary: paperSteel },
+        background: { default: ground.light, paper: paper.light },
+        text: { primary: ink.light, secondary: steel.light },
         divider: '#C3CBD4',
         edge: '#7B8593',
-        steel: paperSteel,
+        steel: steel.light,
       },
     },
     dark: {
       palette: {
         primary: { main: brand.dark, contrastText: '#0E1116' },
         error: { main: '#F97066', contrastText: '#0E1116' },
-        background: { default: ground.dark, paper: '#171C23' },
+        background: { default: ground.dark, paper: paper.dark },
         text: { primary: ink.dark, secondary: '#9BA6B4' },
         divider: '#404A59',
         edge: '#626E80',
-        steel: '#68758A',
+        steel: steel.dark,
       },
     },
   },

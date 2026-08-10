@@ -27,9 +27,135 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><style>.g%7Bfill:%23%GROUND_DARK%%7D.m%7Bfill:%23%INK_DARK%%7D.a%7Bfill:%23%BRAND_DARK%%7D@media(prefers-color-scheme:light)%7B.g%7Bfill:%23%GROUND_LIGHT%%7D.m%7Bfill:%23%INK_LIGHT%%7D.a%7Bfill:%23%BRAND_LIGHT%%7D%7D</style><rect class='g' width='24' height='24'/><path class='m' d='M0 0H14V4H4V20H20V10H24V24H0Z'/><rect class='a' x='16' width='8' height='8'/></svg>"
     />
+    <style>
+      :root,
+      :root.light {
+        --paint-ground: #%GROUND_LIGHT%;
+        --paint-paper: #%PAPER_LIGHT%;
+        --paint-ink: #%INK_LIGHT%;
+        --paint-steel: #%STEEL_LIGHT%;
+        --paint-brand: #%BRAND_LIGHT%;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paint-ground: #%GROUND_DARK%;
+          --paint-paper: #%PAPER_DARK%;
+          --paint-ink: #%INK_DARK%;
+          --paint-steel: #%STEEL_DARK%;
+          --paint-brand: #%BRAND_DARK%;
+        }
+      }
+      :root.dark {
+        --paint-ground: #%GROUND_DARK%;
+        --paint-paper: #%PAPER_DARK%;
+        --paint-ink: #%INK_DARK%;
+        --paint-steel: #%STEEL_DARK%;
+        --paint-brand: #%BRAND_DARK%;
+      }
+      body {
+        margin: 0;
+        background: var(--paint-ground);
+      }
+      .shell {
+        position: relative;
+        overflow: hidden;
+        background: var(--paint-paper);
+        color: var(--paint-ink);
+        border-bottom: 3px solid var(--paint-steel);
+      }
+      .shell::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 30%;
+        height: 3px;
+        background: var(--paint-brand);
+        animation: shell-load 1.4s cubic-bezier(0.4, 0, 0.6, 1) 250ms infinite both;
+      }
+      @keyframes shell-load {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(433%);
+        }
+      }
+      .shell > div {
+        box-sizing: border-box;
+        max-width: 1200px;
+        min-height: 56px;
+        margin: 0 auto;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font:
+          700 1rem/1.6 'JetBrains Mono',
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.05em;
+      }
+      .shell svg {
+        flex: none;
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+      .shell rect {
+        fill: var(--paint-brand);
+      }
+      /* Toolbar's own two steps: 48px on a landscape phone, 64px from sm up. */
+      @media (min-width: 0px) and (orientation: landscape) {
+        .shell > div {
+          min-height: 48px;
+        }
+      }
+      @media (min-width: 600px) {
+        .shell > div {
+          min-height: 64px;
+          padding: 0 24px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .shell::after {
+          width: 100%;
+          animation: none;
+        }
+      }
+    </style>
+    <!--
+      What MUI's InitColorSchemeScript does, for the shell that paints before it:
+      colorSchemeSelector is 'class', so the resolved scheme is a light/dark class
+      on <html> and MUI reads the same stored mode at mount. Without this a
+      returning visitor who chose dark under a light OS gets a light nav bar that
+      flips as React arrives. Storage keys are MUI's defaults; anything other than
+      an explicit choice — 'system', unset, junk — falls back to the OS.
+    -->
+    <script>
+      try {
+        var mode = localStorage.getItem('mui-mode');
+        if (mode !== 'light' && mode !== 'dark')
+          mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.classList.add(mode);
+      } catch (e) {}
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- createRoot empties the container on mount, so the shell is only ever the gap. -->
+    <div id="root">
+      <div class="shell">
+        <div>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M0 0H14V4H4V20H20V10H24V24H0Z" />
+            <rect x="16" width="8" height="8" />
+          </svg>
+          %TITLE%
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

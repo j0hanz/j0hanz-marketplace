@@ -3,14 +3,14 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 export const sans =
   "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-const steel = 'var(--mui-palette-steel)';
+const steelVar = 'var(--mui-palette-steel)';
 export const edge = 'var(--mui-palette-edge)';
 export const accent = 'var(--mui-palette-primary-main)';
 
 export const RULE_WIDTH = 3;
 
 /** Structural frame: nav, footer, section headers, skip link, menu paper, panels. */
-export const rule = `${RULE_WIDTH}px solid ${steel}`;
+export const rule = `${RULE_WIDTH}px solid ${steelVar}`;
 
 /** Object outline: cards, command bars, anything sitting inside a frame. */
 export const outline = `1px solid ${edge}`;
@@ -30,7 +30,7 @@ export const lit = (side: keyof typeof LIT_OFFSET) => `inset ${LIT_OFFSET[side]}
  * reduced-motion keep the frame. The caller owns positioning: the element must
  * establish a containing block.
  */
-export const drawable = (side: 'top' | 'bottom', color = steel) => ({
+export const drawable = (side: 'top' | 'bottom', color = steelVar) => ({
   '&::after': {
     content: '""',
     position: 'absolute',
@@ -42,16 +42,11 @@ export const drawable = (side: 'top' | 'bottom', color = steel) => ({
   },
 });
 
-/**
- * The three palette values the static shell in index.html needs as literals —
- * an inline SVG favicon and a `theme-color` meta can't read a CSS variable.
- * `accent` above is the same colour as `brand` for anything that renders after
- * MUI mounts; these are the build-time copies, and vite.config.mts injects them
- * so the shell and the theme cannot drift apart.
- */
 export const ground = { light: '#EDF0F3', dark: '#0E1116' } as const;
 export const ink = { light: '#0E1116', dark: '#E7EBF0' } as const;
 export const brand = { light: '#B45309', dark: '#F5A524' } as const;
+export const paper = { light: '#FFFFFF', dark: '#171C23' } as const;
+export const steel = { light: '#4A5568', dark: '#68758A' } as const;
 
 export const scrollOffset = 80;
 

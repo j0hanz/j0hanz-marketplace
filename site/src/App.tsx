@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import { useEffect } from 'react';
 import { Catalog } from './components/Catalog';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
@@ -24,6 +25,12 @@ const skipLink = {
 };
 
 export function App() {
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      document.documentElement.dataset.ready = '';
+    });
+  }, []);
+
   return (
     <>
       <Box component="a" href="#main" sx={skipLink}>

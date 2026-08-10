@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 // Extension included: Vite's native config loader strips types rather than
 // bundling, so it resolves the real file rather than guessing at one.
-import { brand, ground, ink } from './site/src/theme/tokens.ts';
+import { brand, ground, ink, paper, steel } from './site/src/theme/tokens.ts';
 
 const DATA = new URL('./site/src/data/marketplace.json', import.meta.url);
 
@@ -16,6 +16,10 @@ const paint = {
   '%INK_DARK%': ink.dark.slice(1),
   '%BRAND_LIGHT%': brand.light.slice(1),
   '%BRAND_DARK%': brand.dark.slice(1),
+  '%PAPER_LIGHT%': paper.light.slice(1),
+  '%PAPER_DARK%': paper.dark.slice(1),
+  '%STEEL_LIGHT%': steel.light.slice(1),
+  '%STEEL_DARK%': steel.dark.slice(1),
 };
 
 const siteMeta = (): Plugin => ({

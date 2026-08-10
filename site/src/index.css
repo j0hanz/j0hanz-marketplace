@@ -44,7 +44,7 @@
 
 /* Already on screen at load, so it draws on its own rather than on entry. */
 :root[data-motion] [data-draw-load]::after {
-  animation: draw 800ms var(--ease-out) both;
+  animation: draw 800ms var(--ease-out) both paused;
 }
 
 /* The same rule as feedback: a card lights its top edge under the pointer. */
@@ -84,7 +84,7 @@
 
 /* The authored moment: the pitch rises, then the panel wipes in behind its frame. */
 :root[data-motion] [data-hero] {
-  animation: rise 700ms var(--ease-out) both;
+  animation: rise 700ms var(--ease-out) both paused;
 }
 
 :root[data-motion] [data-hero]:nth-child(2) {
@@ -96,7 +96,13 @@
 }
 
 :root[data-motion] [data-hero-panel] {
-  animation: wipe 800ms var(--ease-out) 350ms both;
+  animation: wipe 800ms var(--ease-out) 350ms both paused;
+}
+
+:root[data-motion][data-ready] [data-draw-load]::after,
+:root[data-motion][data-ready] [data-hero],
+:root[data-motion][data-ready] [data-hero-panel] {
+  animation-play-state: running;
 }
 
 @keyframes rise {
