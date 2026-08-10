@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { copy, plural } from '../copy';
 import { site } from '../site';
-import { mono } from '../theme';
+import { codeSx } from '../theme';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
@@ -45,11 +45,7 @@ function Entry({
             sx={{ flexWrap: 'wrap', alignItems: 'center' }}
           >
             {leading}
-            <Typography
-              component="code"
-              variant="body2"
-              sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
-            >
+            <Typography component="code" variant="body2" sx={codeSx}>
               {code}
             </Typography>
             {extra}
@@ -73,19 +69,19 @@ export function SkillIndex() {
         label: `${plural(site.totals.skills, copy.unit.skill)} and ${plural(site.totals.agents, copy.unit.agent)}`,
       }}
     >
-      {site.plugins.map((p, i) => (
-        <Accordion key={p.name} defaultExpanded={i === 0} disableGutters>
+      {site.plugins.map((plugin, i) => (
+        <Accordion key={plugin.name} defaultExpanded={i === 0} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography component="h3" sx={{ flexGrow: 1, fontWeight: 500 }}>
-              {p.displayName}
+              {plugin.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-              <PluginCountChips plugin={p} />
+              <PluginCountChips plugin={plugin} />
             </Stack>
           </AccordionSummary>
           <AccordionDetails>
             <List disablePadding>
-              {p.skills.map((skill) => (
+              {plugin.skills.map((skill) => (
                 <Entry
                   key={skill.name}
                   code={skill.command ?? skill.name}
@@ -108,7 +104,7 @@ export function SkillIndex() {
                         component="code"
                         variant="caption"
                         color="text.secondary"
-                        sx={{ fontFamily: mono, overflowWrap: 'anywhere' }}
+                        sx={codeSx}
                       >
                         {skill.argumentHint}
                       </Typography>
@@ -116,7 +112,7 @@ export function SkillIndex() {
                   }
                 />
               ))}
-              {p.agents.map((agent) => (
+              {plugin.agents.map((agent) => (
                 <Entry
                   key={agent.name}
                   code={agent.name}

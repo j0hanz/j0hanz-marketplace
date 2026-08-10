@@ -9,6 +9,12 @@ export const steel = '#4A5568';
 /** Pinned: AppBar height (Toolbar default 64 + 3px steel chassis + a little slack). */
 export const scrollOffset = 80;
 
+/**
+ * Inline command text. Commands wrap rather than clip: a command the visitor cannot read in
+ * full is worse than one on two lines.
+ */
+export const codeSx = { fontFamily: mono, overflowWrap: 'anywhere' } as const;
+
 /** Announced, never seen. `width: 1` in sx means 100%, so these stay strings. */
 export const srOnly = {
   position: 'absolute',

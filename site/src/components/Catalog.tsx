@@ -13,16 +13,17 @@ import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 import { copy, plural } from '../copy';
 import { site } from '../site';
+import type { Plugin } from '../site';
 import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
 
 const ALL = 'all';
 
-// `site` is a static import, so every haystack is built once at module load and a keystroke
-// is O(plugins) rather than O(plugins × haystack length). Hook events are included so a
-// visitor searching "PreToolUse" finds the CSS plugin, not silence.
-const entries = site.plugins.map((plugin) => ({
+// `site` is a static import, so the haystacks are joined and lowercased once at module load
+// rather than on every keystroke. Hook events are in there too, so a visitor searching
+// "PreToolUse" finds the css plugin instead of silence.
+const searchIndex = site.plugins.map((plugin) => ({
   plugin,
   haystack: [
     plugin.displayName,
@@ -34,6 +35,74 @@ const entries = site.plugins.map((plugin) => ({
     .join(' ')
     .toLowerCase(),
 }));
+
+function PluginCard({ plugin }: { plugin: Plugin }) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        height: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        // Outlined cards give no sign they are anything but a box. The edge lights up amber
+        // under the cursor or when a child has focus, matching the nav and the hero bezel.
+        // :focus-within keeps the affordance for keyboard users without adding a new tab
+        // stop on the card itself.
+        '&:hover, &:focus-within': {
+          borderColor: 'primary.main',
+          transform: 'translateY(-2px)',
+        },
+        '@media (prefers-reduced-motion: no-preference)': {
+          transition: 'border-color 200ms ease, transform 200ms ease',
+        },
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
+            <Link
+              href={plugin.homepage}
+              target="_blank"
+              rel="noreferrer"
+              color="inherit"
+              underline="hover"
+              aria-label={`${plugin.displayName} homepage`}
+            >
+              {plugin.displayName}
+            </Link>
+          </Typography>
+          <Chip label={plugin.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
+        </Stack>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {plugin.summary}
+        </Typography>
+
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
+          <PluginCountChips plugin={plugin} />
+          {plugin.hookEvents.length > 0 && (
+            <Tooltip title={plugin.hookEvents.join(', ')}>
+              <Chip
+                size="small"
+                variant="outlined"
+                tabIndex={0}
+                label={plural(plugin.hookEvents.length, copy.unit.hook)}
+              />
+            </Tooltip>
+          )}
+        </Stack>
+      </CardContent>
+
+      <CardActions>
+        <Command value={plugin.installCommand} />
+      </CardActions>
+    </Card>
+  );
+}
 
 export function Catalog() {
   // ?cat=<name> makes a filtered catalog a shareable link. An unknown category would
@@ -59,7 +128,7 @@ export function Catalog() {
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return entries
+    return searchIndex
       .filter(
         ({ plugin, haystack }) =>
           (category === ALL || plugin.category === category) &&
@@ -134,76 +203,9 @@ export function Catalog() {
         </Stack>
       ) : (
         <Grid container spacing={3}>
-          {visible.map((p) => (
-            <Grid key={p.name} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Card
-                variant="outlined"
-                sx={{
-                  height: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  // Outlined cards give no sign they are anything but a box. The edge lights
-                  // up amber under the cursor or when a child has focus, matching the nav and
-                  // the hero bezel. :focus-within keeps the affordance for keyboard users
-                  // without adding a new tab stop on the card itself.
-                  '&:hover, &:focus-within': {
-                    borderColor: 'primary.main',
-                    transform: 'translateY(-2px)',
-                  },
-                  '@media (prefers-reduced-motion: no-preference)': {
-                    transition: 'border-color 200ms ease, transform 200ms ease',
-                  },
-                }}
-              >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-                  >
-                    <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
-                      <Link
-                        href={p.homepage}
-                        target="_blank"
-                        rel="noreferrer"
-                        color="inherit"
-                        underline="hover"
-                        aria-label={`${p.displayName} homepage`}
-                      >
-                        {p.displayName}
-                      </Link>
-                    </Typography>
-                    <Chip
-                      label={p.version}
-                      size="small"
-                      variant="outlined"
-                      sx={{ flexShrink: 0 }}
-                    />
-                  </Stack>
-
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {p.summary}
-                  </Typography>
-
-                  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
-                    <PluginCountChips plugin={p} />
-                    {p.hookEvents.length > 0 && (
-                      <Tooltip title={p.hookEvents.join(', ')}>
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          tabIndex={0}
-                          label={`${p.hookEvents.length} ${p.hookEvents.length === 1 ? 'hook' : 'hooks'}`}
-                        />
-                      </Tooltip>
-                    )}
-                  </Stack>
-                </CardContent>
-
-                <CardActions>
-                  <Command value={p.installCommand} />
-                </CardActions>
-              </Card>
+          {visible.map((plugin) => (
+            <Grid key={plugin.name} size={{ xs: 12, sm: 6, md: 4 }}>
+              <PluginCard plugin={plugin} />
             </Grid>
           ))}
         </Grid>

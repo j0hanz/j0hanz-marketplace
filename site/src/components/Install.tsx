@@ -12,7 +12,7 @@ const [example] = site.plugins.flatMap((p) =>
   p.skills.flatMap((s) => (s.command ? [{ install: p.installCommand, run: s.command }] : [])),
 );
 
-const rows = [
+const steps = [
   { label: copy.installSteps[0], value: site.addCommand },
   { label: copy.installSteps[1], value: example.install },
   { label: copy.installSteps[2], value: example.run },
@@ -22,12 +22,12 @@ export function Install() {
   return (
     <Section id="install" title={copy.installTitle}>
       <Stack component="ol" spacing={3} sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 560 }}>
-        {rows.map((row, i) => (
-          <Stack key={row.label} component="li" spacing={1}>
+        {steps.map((step, i) => (
+          <Stack key={step.label} component="li" spacing={1}>
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-              Step {i + 1} — {row.label}
+              Step {i + 1} — {step.label}
             </Typography>
-            <Command value={row.value} />
+            <Command value={step.value} />
           </Stack>
         ))}
       </Stack>

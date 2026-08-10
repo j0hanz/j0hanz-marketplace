@@ -23,7 +23,7 @@ export const copy = {
   modelLoadedTag: 'model-loaded',
   modelLoadedHint: 'Claude auto-loads this skill. It is not a user-facing slash command.',
   agentTag: 'agent',
-  unit: { plugin: 'plugin', skill: 'skill', agent: 'agent' },
+  unit: { plugin: 'plugin', skill: 'skill', agent: 'agent', hook: 'hook' },
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
   selectLabel: 'Press Ctrl/⌘+C to copy',

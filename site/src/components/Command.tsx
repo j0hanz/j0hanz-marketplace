@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
-import { mono, srOnly } from '../theme';
+import { codeSx, srOnly } from '../theme';
 
 type CopyState = 'idle' | 'copied' | 'select';
 
@@ -21,7 +21,7 @@ export function Command({ value }: { value: string }) {
     return () => clearTimeout(timer);
   }, [state]);
 
-  const write = async () => {
+  const copyOrSelect = async () => {
     try {
       await navigator.clipboard.writeText(value);
       setState('copied');
@@ -52,19 +52,18 @@ export function Command({ value }: { value: string }) {
         ref={code}
         component="code"
         variant="body2"
-        // Commands wrap rather than clip: a command the visitor cannot read in full is
-        // worse than one on two lines.
-        sx={{ flexGrow: 1, minWidth: 0, fontFamily: mono, overflowWrap: 'anywhere' }}
+        sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}
       >
         {value}
       </Typography>
       <Tooltip title={tip}>
-        <IconButton onClick={write} aria-label={copy.copyLabel} sx={{ p: 1.5 }}>
+        <IconButton onClick={copyOrSelect} aria-label={copy.copyLabel} sx={{ p: 1.5 }}>
           <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>
+      {/* Idle says nothing: the button already carries its own label. */}
       <Box component="span" role="status" sx={srOnly}>
-        {state === 'copied' ? copy.copiedLabel : state === 'select' ? copy.selectLabel : ''}
+        {state === 'idle' ? '' : tip}
       </Box>
     </Paper>
   );
