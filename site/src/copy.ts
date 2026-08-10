@@ -27,12 +27,18 @@ export const copy = {
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
   selectLabel: 'Press Ctrl/⌘+C to copy',
-  // Names the outcome of pressing it, which is what the toggle's label has to say.
-  // Three modes, one per system state; the toggle composes a "<current>. <next>." label.
-  modeToggle: {
-    system: 'Follow system theme',
-    light: 'Use light theme',
-    dark: 'Use dark theme',
+  // Two maps, not one. The label is "<where you are>. <what this does>.", and a single
+  // set of strings could only ever be one of those: phrased as actions, both halves read
+  // as commands and the current mode is unrecoverable from the label.
+  modeState: {
+    system: 'Theme follows system',
+    light: 'Light theme',
+    dark: 'Dark theme',
+  },
+  modeNext: {
+    system: 'Switch to system theme',
+    light: 'Switch to light theme',
+    dark: 'Switch to dark theme',
   },
   menuLabel: 'Open menu',
   catalogEmpty: 'No plugins match this search.',

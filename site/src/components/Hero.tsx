@@ -37,7 +37,13 @@ export function Hero() {
             <Typography variant="body1" color="textSecondary" sx={{ maxWidth: '48ch' }}>
               {copy.heroBody}
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: 1 }}>
+            {/* `size="large"` lands at 42px, two short of a thumb, on the two buttons
+                that are the whole point of the first screen. */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ width: 1, '& .MuiButton-root': { minHeight: 44 } }}
+            >
               <Button variant="contained" size="large" href={copy.heroPrimaryHref} disableElevation>
                 {copy.heroPrimary}
               </Button>

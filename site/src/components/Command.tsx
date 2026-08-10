@@ -68,8 +68,15 @@ export function Command({ value }: { value: string }) {
       >
         {value}
       </Typography>
+      {/* The command is in the label. Ten of these render on the page, and named for the
+          verb alone they were ten identical "Copy" entries in a screen reader's button
+          list with nothing to pick between them. */}
       <Tooltip title={tip}>
-        <IconButton onClick={copyOrSelect} aria-label={copy.copyLabel} sx={{ p: 1.5 }}>
+        <IconButton
+          onClick={copyOrSelect}
+          aria-label={`${copy.copyLabel} ${value}`}
+          sx={{ p: 1.5 }}
+        >
           <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>

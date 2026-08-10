@@ -17,7 +17,7 @@ import { useColorScheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { copy } from '../copy';
 import { site } from '../site';
-import { scrollOffset, steel } from '../theme';
+import { mono, scrollOffset, steel } from '../theme';
 
 const hrefs = copy.navLinks.map((link) => link.href);
 
@@ -68,6 +68,11 @@ const modeIcons: Record<Mode, typeof SvgIcon> = {
   dark: DarkModeIcon,
 };
 
+// A 24px icon in MUI's default 8px padding is a 40px target. On a phone the toggle and
+// the burger are the only two controls in the bar, so they are the two that most need
+// the 44px. Shared by all three icon buttons in the bar.
+const iconButtonSx = { p: 1.5 };
+
 function ModeToggle() {
   const { mode, setMode } = useColorScheme();
   // `mode` is undefined before mount and 'system' by default. Map to the cycle index
@@ -77,10 +82,10 @@ function ModeToggle() {
   const Icon = modeIcons[current];
   // Two sentences, not a dash: screen readers skip a dash silently, so the state and the
   // action ran together into one clause.
-  const label = `${copy.modeToggle[current]}. ${copy.modeToggle[next]}.`;
+  const label = `${copy.modeState[current]}. ${copy.modeNext[next]}.`;
 
   return (
-    <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={{ p: 1 }}>
+    <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={iconButtonSx}>
       <Icon />
     </IconButton>
   );
@@ -88,8 +93,17 @@ function ModeToggle() {
 
 const mobileMenuId = 'nav-mobile-menu';
 
+// The mobile menu carries the same three links as the bar above it, so it speaks in the
+// same voice. `fontFamily: inherit` resolved to the reading font and put the nav in
+// sentence-case sans on exactly the viewport where it is the only nav there is.
+const menuItemSx = {
+  fontFamily: mono,
+  textTransform: 'uppercase',
+  letterSpacing: '0.02857em',
+};
+
 /** Below `sm` the inline buttons disappear; the burger is the only way in. */
-function MobileMenu() {
+function MobileMenu({ active }: { active: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const open = Boolean(anchor);
   const close = () => setAnchor(null);
@@ -103,7 +117,7 @@ function MobileMenu() {
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
         onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{ display: { xs: 'inline-flex', sm: 'none' }, p: 1 }}
+        sx={{ display: { xs: 'inline-flex', sm: 'none' }, ...iconButtonSx }}
       >
         <MenuIcon />
       </IconButton>
@@ -124,7 +138,17 @@ function MobileMenu() {
             component="a"
             href={link.href}
             onClick={close}
-            sx={{ fontFamily: 'inherit' }}
+            aria-current={active === link.href ? 'page' : undefined}
+            sx={{
+              ...menuItemSx,
+              // The bar above marks the current section; the menu that replaces it below
+              // `sm` marked nothing, on the viewport where the page scrolls longest.
+              // Amber bar and weight, same as the nav and the open accordion row.
+              ...(active === link.href && {
+                fontWeight: 700,
+                boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
+              }),
+            }}
           >
             {link.label}
           </MenuItem>
@@ -135,7 +159,7 @@ function MobileMenu() {
           target="_blank"
           rel="noreferrer"
           onClick={close}
-          sx={{ fontFamily: 'inherit' }}
+          sx={menuItemSx}
         >
           {copy.githubLabel}
         </MenuItem>
@@ -174,7 +198,9 @@ export function Nav() {
           >
             {site.name}
           </Typography>
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          {/* 8px between targets, not 4: below `sm` this row is two icon buttons and
+              nothing else, and they were close enough to catch the wrong one. */}
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             {copy.navLinks.map((link) => (
               <Button
                 key={link.href}
@@ -183,6 +209,8 @@ export function Nav() {
                 aria-current={active === link.href ? 'page' : undefined}
                 sx={{
                   display: { xs: 'none', sm: 'inline-flex' },
+                  // `sm` starts at 600px, which is still a thumb on a tablet.
+                  minHeight: 44,
                   // The amber underline is the same signal the chassis uses everywhere
                   // else; reserving its height keeps the row from shifting on scroll.
                   borderBottom: '2px solid transparent',
@@ -206,11 +234,11 @@ export function Nav() {
               target="_blank"
               rel="noreferrer"
               aria-label={copy.githubLabel}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' }, p: 1 }}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' }, ...iconButtonSx }}
             >
               <GitHubIcon />
             </IconButton>
-            <MobileMenu />
+            <MobileMenu active={active} />
           </Stack>
         </Toolbar>
       </Container>

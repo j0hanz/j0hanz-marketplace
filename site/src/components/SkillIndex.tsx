@@ -91,7 +91,9 @@ export function SkillIndex() {
           }}
         >
           <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
-            <Typography component="h3" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
+            {/* A span, not an h3: AccordionSummary already wraps itself in one, so this
+                was an h3 inside an h3 and every plugin was listed twice in the outline. */}
+            <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
               {plugin.displayName}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>

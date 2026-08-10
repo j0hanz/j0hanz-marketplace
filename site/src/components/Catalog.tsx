@@ -49,14 +49,15 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         // :focus-within keeps the affordance for keyboard users without adding a new tab
         // stop on the card itself. The top rule is an inset shadow, so lighting it costs
         // no reflow and the card keeps its 1px frame underneath.
+        //
+        // Lighting up is as far as it goes. The card is not a link — the title and the
+        // copy button are — and lifting it off the page said otherwise, then did nothing
+        // when the body was clicked.
         '&:hover, &:focus-within': {
           borderColor: 'primary.main',
           boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
-          transform: 'translateY(-2px)',
         },
-        '@media (prefers-reduced-motion: no-preference)': {
-          transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
-        },
+        transition: 'border-color 200ms ease, box-shadow 200ms ease',
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>
@@ -139,11 +140,22 @@ export function Catalog() {
       .map(({ plugin }) => plugin);
   }, [category, query]);
 
+  // The count is a live region, and filtering runs on every keystroke: typing "mcp" would
+  // send three announcements for one search. The number on screen still changes per
+  // keystroke; only the spoken sentence waits for the typing to stop. Seeded with the
+  // first render's label so the settle-on-mount writes the same string and says nothing.
+  const label = plural(visible.length, copy.unit.plugin);
+  const [announced, setAnnounced] = useState(label);
+  useEffect(() => {
+    const timer = setTimeout(() => setAnnounced(label), 400);
+    return () => clearTimeout(timer);
+  }, [label]);
+
   return (
     <Section
       id="plugins"
       title={copy.catalogTitle}
-      count={{ total: visible.length, label: plural(visible.length, copy.unit.plugin) }}
+      count={{ total: visible.length, label: announced }}
     >
       {/* Search and filter share a row from md up: two controls on one line read as one
           control surface, and the catalog starts a screen higher on a laptop. */}
@@ -198,9 +210,13 @@ export function Catalog() {
           <Typography variant="body1" color="textSecondary">
             {copy.catalogEmpty}
           </Typography>
+          {/* Ink, not amber. This is the only way out of the empty state, and as the
+              default link colour it was 2.8:1 on paper — the same failure the nav links
+              were already moved off. */}
           <Link
             component="button"
             variant="body2"
+            color="text.primary"
             onClick={() => {
               setQuery('');
               setCategory(ALL);
@@ -210,9 +226,12 @@ export function Catalog() {
           </Link>
         </Stack>
       ) : (
+        // Three columns wait for `lg`. At `md` the container is 890px, which made each
+        // card 265px — narrow enough to wrap an install command onto three lines and the
+        // chip row onto two, in a grid that was mostly empty anyway.
         <Grid container spacing={3}>
           {visible.map((plugin) => (
-            <Grid key={plugin.name} size={{ xs: 12, sm: 6, md: 4 }}>
+            <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }}>
               <PluginCard plugin={plugin} />
             </Grid>
           ))}

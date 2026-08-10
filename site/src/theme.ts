@@ -65,6 +65,23 @@ const focusRing = {
 const grain =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
+/**
+ * `edge` is the control boundary, which is a different job from `divider`. A hairline
+ * between two surfaces only has to be seen; the edge of a control is the thing that says
+ * a control is *there*, and WCAG 1.4.11 puts that at 3:1. Divider is around 2:1 in both
+ * schemes — right for a rule, too faint for a field. It lives in the palette rather than
+ * as a hand-rolled custom property so MUI emits `--mui-palette-edge` next to every other
+ * colour, which is the form the rest of this file already reads from.
+ */
+declare module '@mui/material/styles' {
+  interface Palette {
+    edge: string;
+  }
+  interface PaletteOptions {
+    edge?: string;
+  }
+}
+
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
@@ -78,6 +95,7 @@ export const theme = createTheme({
         background: { default: '#EDF0F3', paper: '#FFFFFF' },
         text: { primary: '#0E1116', secondary: steel },
         divider: '#C3CBD4',
+        edge: '#7B8593',
       },
     },
     dark: {
@@ -88,6 +106,7 @@ export const theme = createTheme({
         // Surfaces sit a tenth of a stop apart, so the hairline is what separates them.
         // The old #333C48 was 1.7:1 against the page and read as no edge at all.
         divider: '#404A59',
+        edge: '#626E80',
       },
     },
   },
@@ -111,7 +130,7 @@ export const theme = createTheme({
         '.dark': { '--focus-ring': '#F5A524' },
         html: {
           scrollPaddingTop: scrollOffset,
-          '@media (prefers-reduced-motion: no-preference)': { scrollBehavior: 'smooth' },
+          scrollBehavior: 'smooth',
         },
         body: {
           '&::before': {
@@ -125,18 +144,32 @@ export const theme = createTheme({
           },
         },
         ':focus-visible': focusRing,
+        // One rule for the whole page instead of a guard per component. MUI's own
+        // transitions — accordion collapse, menu grow, tooltip fade — are driven from
+        // JS and never saw the media query, so gating only the hand-written ones left
+        // the longest animation on the page (300ms collapse) running regardless.
+        '@media (prefers-reduced-motion: reduce)': {
+          '*, *::before, *::after': {
+            animationDuration: '0.01ms !important',
+            animationIterationCount: '1 !important',
+            transitionDuration: '0.01ms !important',
+            scrollBehavior: 'auto !important',
+          },
+        },
       },
     },
     MuiButtonBase: {
+      // The ripple is Material's press signal: a round shape spreading out of a square
+      // one, on a page with no radius anywhere. `:active` below already answers the
+      // press, so the ripple was a second, off-voice answer to the same event.
+      defaultProps: { disableRipple: true },
       styleOverrides: {
         root: {
           // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
           '&.Mui-focusVisible': focusRing,
           // Presses answer back. Transform only, so it never reflows the row it sits in.
           '&:active': { transform: 'translateY(1px)' },
-          '@media (prefers-reduced-motion: no-preference)': {
-            transition: 'transform 120ms ease',
-          },
+          transition: 'transform 120ms ease',
         },
       },
     },
@@ -145,7 +178,56 @@ export const theme = createTheme({
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     // Chips default to a 16px pill, which is the one rounded shape on a zero-radius page.
     // They count things, so they stay in the chassis voice rather than the reading one.
-    MuiChip: { styleOverrides: { root: { borderRadius: 0, fontFamily: mono } } },
+    MuiChip: {
+      styleOverrides: {
+        root: { borderRadius: 0, fontFamily: mono },
+        // MUI's outlined chip hardcodes grey.600, a third grey next to the two tokens.
+        // `edge` and not `divider`: a chip is a bounded object with a box drawn round
+        // it, same as a field or a toggle, and two of them are focusable tooltips.
+        // `divider` is for rules between surfaces and sank to 1.9:1 inside a card.
+        outlined: { borderColor: 'var(--mui-palette-edge)' },
+      },
+    },
+    // The field is a control, so its boundary takes `edge`. Written from the root so
+    // it lands at the same specificity as MUI's own rule and after it; hover and focus
+    // are two classes deep and keep their own colours.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--mui-palette-edge)' } },
+      },
+    },
+    // The group collapses seams by giving every button after the first a transparent
+    // left border and pulling it back 1px onto its neighbour's right border. That works
+    // along a row and fails at the end of one: the button that starts the second row has
+    // nothing to its left to borrow, so the box sits open. Colouring the border instead
+    // of hiding it closes the wrapped row and changes no geometry — the -1px margin still
+    // lands it on top of the previous right border, so a seam is one pixel either way.
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: {
+          '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
+            borderLeftColor: 'var(--mui-palette-edge)',
+          },
+        },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          borderColor: 'var(--mui-palette-edge)',
+          // Selected was a 16%-alpha wash and nothing else: 1.5:1, the faintest state
+          // on the page, worn by the one control that says what the catalog is showing.
+          // Ink, weight and an amber bar — the same three the nav uses for "you are
+          // here". Bar as an inset shadow, not a border: the group collapses adjacent
+          // borders to hairlines and would eat one side of it.
+          '&.Mui-selected': {
+            color: 'var(--mui-palette-text-primary)',
+            fontWeight: 700,
+            boxShadow: 'inset 0 -3px 0 0 var(--mui-palette-primary-main)',
+          },
+        },
+      },
+    },
     // The one widget that defaults to a different chassis — MUI's grey tooltip
     // surface reads as a foreign object against the amber/steel frame. Match it:
     // paper background, primary text, 2px primary border, square corners, no arrow

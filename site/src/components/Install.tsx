@@ -28,7 +28,10 @@ const markerLeft = `${-(RAIL / 2 + MARKER / 2)}px`;
 
 export function Install() {
   return (
-    <Section id="install" title={copy.installTitle} band>
+    /* No paper band. The rail is 620px of a 1200px measure, and a full-bleed ground with
+       steel edges drew a frame around the 580px of nothing beside it. On the page ground
+       the narrow measure reads the way the hero's 48ch paragraph does. */
+    <Section id="install" title={copy.installTitle}>
       {/* A rail, not a stack of labelled blocks: the numerals are the ordinal, so the
           heading of each step can be the thing it does rather than the word "Step".
           Plain Box, not Stack — Stack zeroes its children's margins, and the rail needs
