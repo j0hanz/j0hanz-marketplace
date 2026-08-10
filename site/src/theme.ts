@@ -146,13 +146,25 @@ export const theme = createTheme({
         ':focus-visible': focusRing,
         // One rule for the whole page instead of a guard per component. MUI's own
         // transitions — accordion collapse, menu grow, tooltip fade — are driven from
-        // JS and never saw the media query, so gating only the hand-written ones left
-        // the longest animation on the page (300ms collapse) running regardless.
+        // JS and write their timings inline, so they never saw the media query and
+        // gating only the hand-written ones left the longest animation on the page
+        // (300ms collapse) running regardless.
+        //
+        // Reduced motion means less movement, not no transitions: killing every
+        // duration also took the card's amber edge and the tooltip fade, which carry
+        // meaning and move nothing. So the property list narrows and the clock is
+        // capped rather than zeroed — colour, opacity and the inset bars still
+        // transition; transform, height and inset fall out of the list and snap.
+        // The cap is here because MUI writes its transitions inline as a shorthand
+        // (Grow: `opacity 225ms, transform 149ms`), and a two-value duration list
+        // against a six-value property list cycles into nonsense.
         '@media (prefers-reduced-motion: reduce)': {
           '*, *::before, *::after': {
+            transitionProperty:
+              'opacity, color, background-color, border-color, box-shadow, fill !important',
+            transitionDuration: '150ms !important',
             animationDuration: '0.01ms !important',
             animationIterationCount: '1 !important',
-            transitionDuration: '0.01ms !important',
             scrollBehavior: 'auto !important',
           },
         },
@@ -168,8 +180,9 @@ export const theme = createTheme({
           // ButtonBase clears the outline for its own 8%-alpha tint, which barely registers.
           '&.Mui-focusVisible': focusRing,
           // Presses answer back. Transform only, so it never reflows the row it sits in.
+          // Untransitioned: a `transition` here loses to every component's own at the
+          // same specificity, and at 1px the curve is invisible anyway.
           '&:active': { transform: 'translateY(1px)' },
-          transition: 'transform 120ms ease',
         },
       },
     },
@@ -228,6 +241,13 @@ export const theme = createTheme({
         },
       },
     },
+    // Collapse animates `height`, which runs layout, paint and composite on every frame
+    // of the open — the most expensive animation on the page, on the section with the
+    // most content under each row. 300ms is also outside the band for a disclosure.
+    // 200ms is in band and cuts a third of the frames.
+    // ponytail: height is inherently a layout animation; if it janks on a phone, the fix
+    // is a reveal that does not animate height, not a shorter one.
+    MuiAccordion: { defaultProps: { slotProps: { transition: { timeout: 200 } } } },
     // The one widget that defaults to a different chassis — MUI's grey tooltip
     // surface reads as a foreign object against the amber/steel frame. Match it:
     // paper background, primary text, 2px primary border, square corners, no arrow

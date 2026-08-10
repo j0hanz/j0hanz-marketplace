@@ -20,6 +20,15 @@ import { Section } from './Section';
 
 const ALL = 'all';
 
+/**
+ * The lit card edge: amber border, amber rule across the top. One object because hover and
+ * focus-within reach it through two different selectors.
+ */
+const litEdge = {
+  borderColor: 'primary.main',
+  boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
+};
+
 // `site` is a static import, so the haystacks are joined and lowercased once at module load
 // rather than on every keystroke. Hook events are in there too, so a visitor searching
 // "PreToolUse" finds the css plugin instead of silence.
@@ -53,10 +62,12 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         // Lighting up is as far as it goes. The card is not a link — the title and the
         // copy button are — and lifting it off the page said otherwise, then did nothing
         // when the body was clicked.
-        '&:hover, &:focus-within': {
-          borderColor: 'primary.main',
-          boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
-        },
+        //
+        // Hover is gated to devices that have one. A tap fires `:hover` and leaves it
+        // fired: on a phone the last card touched kept the amber edge until something
+        // else was tapped, marking a card that had not been selected and is not a link.
+        '&:focus-within': litEdge,
+        '@media (hover: hover) and (pointer: fine)': { '&:hover': litEdge },
         transition: 'border-color 200ms ease, box-shadow 200ms ease',
       }}
     >

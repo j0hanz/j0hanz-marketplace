@@ -22,6 +22,7 @@ const skipLink = {
   border: `3px solid ${steel}`,
   textDecoration: 'none',
   transform: 'translateY(-300%)',
+  transition: 'transform 150ms cubic-bezier(0.23, 1, 0.32, 1)',
   '&:focus-visible': { transform: 'none' },
 };
 
