@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { ExpandMoreIcon } from '../icons';
+import { ExpandMoreIcon, InfoIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site } from '../site';
 import { codeSx, lit, outline } from '../theme/tokens';
@@ -128,7 +128,13 @@ export function SkillIndex() {
                     leading={
                       !skill.command ? (
                         <Tooltip title="Claude auto-loads this skill. It is not a user-facing slash command.">
-                          <Chip size="small" variant="outlined" tabIndex={0} label="model-loaded" />
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            tabIndex={0}
+                            icon={<InfoIcon />}
+                            label="model-loaded"
+                          />
                         </Tooltip>
                       ) : undefined
                     }

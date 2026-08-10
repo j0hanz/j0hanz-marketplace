@@ -1,5 +1,16 @@
 import { createTheme } from '@mui/material/styles';
-import { edge, focusRing, ground, heading, lit, mono, sans, scrollOffset } from './tokens';
+import {
+  brand,
+  edge,
+  focusRing,
+  ground,
+  heading,
+  ink,
+  lit,
+  mono,
+  sans,
+  scrollOffset,
+} from './tokens';
 
 declare module '@mui/material/styles' {
   interface Palette {
@@ -36,10 +47,10 @@ export const theme = createTheme({
   colorSchemes: {
     light: {
       palette: {
-        primary: { main: '#B45309', contrastText: '#FFFFFF' },
+        primary: { main: brand.light, contrastText: '#FFFFFF' },
         error: { main: '#B42318', contrastText: '#FFFFFF' },
         background: { default: ground.light, paper: '#FFFFFF' },
-        text: { primary: '#0E1116', secondary: paperSteel },
+        text: { primary: ink.light, secondary: paperSteel },
         divider: '#C3CBD4',
         edge: '#7B8593',
         steel: paperSteel,
@@ -47,10 +58,10 @@ export const theme = createTheme({
     },
     dark: {
       palette: {
-        primary: { main: '#F5A524', contrastText: '#0E1116' },
+        primary: { main: brand.dark, contrastText: '#0E1116' },
         error: { main: '#F97066', contrastText: '#0E1116' },
         background: { default: ground.dark, paper: '#171C23' },
-        text: { primary: '#E7EBF0', secondary: '#9BA6B4' },
+        text: { primary: ink.dark, secondary: '#9BA6B4' },
         divider: '#404A59',
         edge: '#626E80',
         steel: '#68758A',

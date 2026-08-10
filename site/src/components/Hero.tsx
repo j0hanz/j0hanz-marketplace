@@ -4,7 +4,7 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { GitHubIcon } from '../icons';
+import { ArrowDownwardIcon, GitHubIcon } from '../icons';
 import { pluralize, site } from '../site';
 import { lit, mono, rule } from '../theme/tokens';
 import { Command } from './Command';
@@ -40,7 +40,13 @@ export function Hero() {
               sx={{ width: 1, '& .MuiButton-root': { minHeight: 44 } }}
               data-hero
             >
-              <Button variant="contained" size="large" href="#plugins" disableElevation>
+              <Button
+                variant="contained"
+                size="large"
+                href="#plugins"
+                disableElevation
+                endIcon={<ArrowDownwardIcon />}
+              >
                 Browse plugins
               </Button>
               <Button

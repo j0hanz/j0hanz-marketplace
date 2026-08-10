@@ -8,7 +8,7 @@ import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import { GitHubIcon, MarkIcon, MenuIcon } from '../icons';
+import { ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
 import { accent, drawable, lit, mono, rule } from '../theme/tokens';
@@ -77,7 +77,9 @@ function MobileMenu({ active }: { active: string }) {
           onClick={close}
           sx={menuItemSx}
         >
+          {/* The one row in this menu that leaves the page. */}
           GitHub
+          <ExternalIcon />
         </MenuItem>
       </Menu>
     </>

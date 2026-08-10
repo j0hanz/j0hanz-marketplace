@@ -1,16 +1,16 @@
 import IconButton from '@mui/material/IconButton';
 import { useColorScheme } from '@mui/material/styles';
 import { useEffect } from 'react';
-import { DarkModeIcon, LightModeIcon, SettingsBrightnessIcon } from '../icons';
+import { ContrastIcon, DarkModeIcon, LightModeIcon } from '../icons';
 import { ground } from '../theme/tokens';
 
 type Mode = 'system' | 'light' | 'dark';
 
 // `label` names the mode while it is current, `target` names it as a destination.
-const modes: { key: Mode; Icon: typeof SettingsBrightnessIcon; label: string; target: string }[] = [
+const modes: { key: Mode; Icon: typeof ContrastIcon; label: string; target: string }[] = [
   {
     key: 'system',
-    Icon: SettingsBrightnessIcon,
+    Icon: ContrastIcon,
     label: 'Theme follows system',
     target: 'system theme',
   },
@@ -25,11 +25,14 @@ export function ModeToggle() {
   const current = modes.find((m) => m.key === mode) ?? modes[0];
   const next = modes[(modes.indexOf(current) + 1) % modes.length];
 
+  // index.html ships one meta per scheme so the first paint is right. A manual
+  // choice outranks the OS, so both are pinned to whichever scheme resolved —
+  // updating only the matching one would leave the other to win after a switch.
   useEffect(() => {
     if (colorScheme)
       document
-        .querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', ground[colorScheme]);
+        .querySelectorAll('meta[name="theme-color"]')
+        .forEach((meta) => meta.setAttribute('content', ground[colorScheme]));
   }, [colorScheme]);
 
   return (

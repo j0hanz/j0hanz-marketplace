@@ -42,7 +42,16 @@ export const drawable = (side: 'top' | 'bottom', color = steel) => ({
   },
 });
 
+/**
+ * The three palette values the static shell in index.html needs as literals —
+ * an inline SVG favicon and a `theme-color` meta can't read a CSS variable.
+ * `accent` above is the same colour as `brand` for anything that renders after
+ * MUI mounts; these are the build-time copies, and vite.config.mts injects them
+ * so the shell and the theme cannot drift apart.
+ */
 export const ground = { light: '#EDF0F3', dark: '#0E1116' } as const;
+export const ink = { light: '#0E1116', dark: '#E7EBF0' } as const;
+export const brand = { light: '#B45309', dark: '#F5A524' } as const;
 
 export const scrollOffset = 80;
 

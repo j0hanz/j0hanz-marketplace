@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0E1116" />
+    <!-- Right on the first paint, before ModeToggle's effect can correct it. It
+         pins both to the resolved scheme once mounted, so a manual theme choice
+         still overrules the OS. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#%GROUND_LIGHT%" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#%GROUND_DARK%" />
     <title>%TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
     <meta property="og:type" content="website" />
@@ -12,9 +16,16 @@
     <meta property="og:description" content="%DESCRIPTION%" />
     <meta property="og:image" content="https://opengraph.githubassets.com/1/%REPO%" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!--
+      MarkIcon's own geometry, not a second drawing of it. It keeps a ground of
+      its own because a browser that ignores prefers-color-scheme inside an SVG
+      favicon gets the unprefixed rules and nothing else: those are the dark tile
+      this has always been, legible on any tab strip. The light scheme is the
+      enhancement, not the fallback. Colours are injected by vite.config.mts.
+    -->
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%230E1116'/><path d='M3 3H13.5V6H6V18H18V10.5H21V21H3Z' fill='%23E7EBF0'/><rect x='15' y='3' width='6' height='6' fill='%23F5A524'/></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><style>.g%7Bfill:%23%GROUND_DARK%%7D.m%7Bfill:%23%INK_DARK%%7D.a%7Bfill:%23%BRAND_DARK%%7D@media(prefers-color-scheme:light)%7B.g%7Bfill:%23%GROUND_LIGHT%%7D.m%7Bfill:%23%INK_LIGHT%%7D.a%7Bfill:%23%BRAND_LIGHT%%7D%7D</style><rect class='g' width='24' height='24'/><path class='m' d='M0 0H14V4H4V20H20V10H24V24H0Z'/><rect class='a' x='16' width='8' height='8'/></svg>"
     />
   </head>
   <body>

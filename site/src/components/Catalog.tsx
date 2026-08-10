@@ -3,6 +3,7 @@ import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
+import InputAdornment from '@mui/material/InputAdornment';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -11,6 +12,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { memo, useRef } from 'react';
+import { ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
@@ -44,9 +46,11 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
               rel="noreferrer"
               color="inherit"
               underline="hover"
-              aria-label={`${plugin.displayName} homepage`}
+              // Overrides ExternalIcon's own phrasing, so it repeats the warning.
+              aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
             >
               {plugin.displayName}
+              <ExternalIcon />
             </Link>
           </Typography>
           <Chip label={plugin.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
@@ -77,6 +81,7 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
                 size="small"
                 variant="outlined"
                 tabIndex={0}
+                icon={<InfoIcon />}
                 label={countLabel(plugin.hookEvents.length, 'hook')}
               />
             </Tooltip>
@@ -121,6 +126,13 @@ export function Catalog() {
           }}
           placeholder="skill, agent, or hook name"
           slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
             htmlInput: {
               autoComplete: 'off',
               spellCheck: false,

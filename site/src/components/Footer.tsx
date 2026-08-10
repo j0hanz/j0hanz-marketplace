@@ -4,6 +4,7 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
+import { ExternalIcon, MarkIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
 import { accent, drawable, rule } from '../theme/tokens';
@@ -26,7 +27,10 @@ export function Footer() {
           sx={{ justifyContent: 'space-between', alignItems: { sm: 'baseline' } }}
         >
           <Stack direction="row" spacing={2} sx={{ alignItems: 'baseline' }}>
+            {/* Inline rather than a flex row: the Stack aligns on baselines, and
+                a flex Typography would hand it the icon's instead. */}
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              <MarkIcon sx={{ fontSize: '1.15em', mr: 0.75, verticalAlign: '-0.2em' }} />
               {site.name}
             </Typography>
             <Link
@@ -38,6 +42,7 @@ export function Footer() {
               underline="hover"
             >
               MIT license
+              <ExternalIcon />
             </Link>
           </Stack>
           <Link
@@ -49,6 +54,7 @@ export function Footer() {
             underline="hover"
           >
             {site.repo}
+            <ExternalIcon />
           </Link>
         </Stack>
       </Container>
