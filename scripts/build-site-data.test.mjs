@@ -29,9 +29,9 @@ test('skills carry a description and only invocable ones carry a command', () =>
   for (const plugin of site.plugins) {
     for (const skill of plugin.skills) {
       assert.ok(skill.description, `${plugin.name}:${skill.name} has no description`);
-      assert.equal(
+      assert.strictEqual(
         skill.command,
-        skill.invocable ? `/${plugin.name}:${skill.name}` : null,
+        skill.invocable ? `/${plugin.name}:${skill.name}` : undefined,
         `${plugin.name}:${skill.name} has the wrong command`,
       );
     }

@@ -10,15 +10,13 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useEffect, useMemo, useState } from 'react';
 import { copy, plural } from '../copy';
 import { site } from '../site';
 import type { Plugin } from '../site';
+import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { Command } from './Command';
 import { PluginCountChips } from './PluginCountChips';
 import { Section } from './Section';
-
-const ALL = 'all';
 
 /**
  * The lit card edge: amber border, amber rule across the top. One object because hover and
@@ -28,22 +26,6 @@ const litEdge = {
   borderColor: 'primary.main',
   boxShadow: 'inset 0 3px 0 0 var(--mui-palette-primary-main)',
 };
-
-// `site` is a static import, so the haystacks are joined and lowercased once at module load
-// rather than on every keystroke. Hook events are in there too, so a visitor searching
-// "PreToolUse" finds the css plugin instead of silence.
-const searchIndex = site.plugins.map((plugin) => ({
-  plugin,
-  haystack: [
-    plugin.displayName,
-    plugin.summary,
-    plugin.hookEvents.join(' '),
-    ...plugin.skills.map((s) => s.name + ' ' + s.description),
-    ...plugin.agents.map((a) => a.name + ' ' + a.description),
-  ]
-    .join(' ')
-    .toLowerCase(),
-}));
 
 function PluginCard({ plugin }: { plugin: Plugin }) {
   return (
@@ -119,54 +101,14 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 }
 
 export function Catalog() {
-  // ?cat=<name> makes a filtered catalog a shareable link. An unknown category would
-  // otherwise select nothing and render the empty state over a blank search box.
-  const [category, setCategory] = useState(() => {
-    const initial = new URLSearchParams(location.search).get('cat');
-    return initial && site.categories.includes(initial) ? initial : ALL;
-  });
-  const [query, setQuery] = useState('');
-
-  // Write the filter back so the address bar stays copyable. `replaceState` only, so this
-  // never stacks history entries a visitor has to press back through to leave the page.
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (category === ALL) params.delete('cat');
-    else params.set('cat', category);
-    history.replaceState(
-      null,
-      '',
-      `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`,
-    );
-  }, [category]);
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return searchIndex
-      .filter(
-        ({ plugin, haystack }) =>
-          (category === ALL || plugin.category === category) &&
-          (!needle || haystack.includes(needle)),
-      )
-      .map(({ plugin }) => plugin);
-  }, [category, query]);
-
-  // The count is a live region, and filtering runs on every keystroke: typing "mcp" would
-  // send three announcements for one search. The number on screen still changes per
-  // keystroke; only the spoken sentence waits for the typing to stop. Seeded with the
-  // first render's label so the settle-on-mount writes the same string and says nothing.
-  const [announced, setAnnounced] = useState(plural(visible.length, copy.unit.plugin));
-  useEffect(() => {
-    const next = plural(visible.length, copy.unit.plugin);
-    const timer = setTimeout(() => setAnnounced(next), 400);
-    return () => clearTimeout(timer);
-  }, [visible]);
+  const { visible, category, setCategory, query, setQuery, reset, announcedCount } =
+    useCatalogFilter();
 
   return (
     <Section
       id="plugins"
       title={copy.catalogTitle}
-      count={{ total: visible.length, label: announced }}
+      count={{ total: visible.length, label: announcedCount }}
     >
       {/* Search and filter share a row from md up: two controls on one line read as one
           control surface, and the catalog starts a screen higher on a laptop. */}
@@ -224,15 +166,7 @@ export function Catalog() {
           {/* Ink, not amber. This is the only way out of the empty state, and as the
               default link colour it was 2.8:1 on paper — the same failure the nav links
               were already moved off. */}
-          <Link
-            component="button"
-            variant="body2"
-            color="text.primary"
-            onClick={() => {
-              setQuery('');
-              setCategory(ALL);
-            }}
-          >
+          <Link component="button" variant="body2" color="text.primary" onClick={reset}>
             {copy.catalogClear}
           </Link>
         </Stack>

@@ -3,10 +3,11 @@ import raw from './data/marketplace.json';
 export interface Skill {
   name: string;
   description: string;
-  argumentHint: string | null;
+  /** Omitted when the frontmatter has no `argument-hint`. */
+  argumentHint?: string;
   invocable: boolean;
-  /** Namespaced slash command, or null when the skill is model-loaded only. */
-  command: string | null;
+  /** Namespaced slash command. Omitted when the skill is model-loaded only. */
+  command?: string;
 }
 
 export interface Agent {

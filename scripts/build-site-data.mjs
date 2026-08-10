@@ -58,13 +58,14 @@ const readSkills = (root, pluginName) =>
     const name = fm.name || dir;
     // Absent means invocable: only an explicit `false` takes the slash command away.
     const invocable = fm['user-invocable'] !== 'false';
-    return {
+    const skill = {
       name,
       description: fm.description ?? '',
-      argumentHint: fm['argument-hint'] || null,
       invocable,
-      command: invocable ? `/${pluginName}:${name}` : null,
     };
+    if (fm['argument-hint']) skill.argumentHint = fm['argument-hint'];
+    if (invocable) skill.command = `/${pluginName}:${name}`;
+    return skill;
   });
 
 const readAgents = (root) =>
