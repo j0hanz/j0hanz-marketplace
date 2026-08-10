@@ -13,11 +13,18 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { ExternalIcon, InfoIcon, SearchIcon } from '../icons';
+import {
+  CategoryIconFor,
+  ExternalIcon,
+  InfoIcon,
+  SearchIcon,
+  SearchOffIcon,
+  type CategoryName,
+} from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
-import { accent, drawable, outline } from '../theme/tokens';
+import { accent, cssVars, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
@@ -43,20 +50,27 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
           spacing={1}
           sx={{ alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
-            <Link
-              href={plugin.homepage}
-              target="_blank"
-              rel="noreferrer"
-              color="inherit"
-              underline="hover"
-              // Overrides ExternalIcon's own phrasing, so it repeats the warning.
-              aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
-            >
-              {plugin.displayName}
-              <ExternalIcon />
-            </Link>
-          </Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+            <CategoryIconFor
+              name={plugin.category as CategoryName}
+              fontSize="small"
+              sx={{ color: 'text.secondary', flexShrink: 0 }}
+            />
+            <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
+              <Link
+                href={plugin.homepage}
+                target="_blank"
+                rel="noreferrer"
+                color="inherit"
+                underline="hover"
+                // Overrides ExternalIcon's own phrasing, so it repeats the warning.
+                aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
+              >
+                {plugin.displayName}
+                <ExternalIcon />
+              </Link>
+            </Typography>
+          </Stack>
           <Chip label={plugin.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
         </Stack>
 
@@ -182,7 +196,13 @@ export function Catalog() {
       </Stack>
 
       {visible.length === 0 ? (
-        <Stack data-settle spacing={1} sx={{ py: 6, alignItems: 'flex-start' }}>
+        <Stack data-settle spacing={2} sx={{ py: 6, alignItems: 'flex-start' }}>
+          <SearchOffIcon
+            fontSize="large"
+            sx={{ color: 'text.secondary' }}
+            aria-hidden
+            style={cssVars({ '--draw-delay': 80 })}
+          />
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>

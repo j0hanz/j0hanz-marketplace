@@ -159,6 +159,11 @@ export const theme = createTheme({
         root: {
           ...press,
           borderColor: edge,
+          // A transparent 3px shadow in the resting state, so the selected
+          // shadow interpolates instead of snapping. The brand says selected is
+          // a 3px inset bar in primary, never a filled background — the
+          // transparent twin keeps the geometry while the value swaps.
+          boxShadow: 'inset 0 -3px 0 transparent',
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,

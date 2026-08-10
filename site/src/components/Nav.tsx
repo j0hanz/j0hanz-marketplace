@@ -1,4 +1,5 @@
 import AppBar from '@mui/material/AppBar';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Fade from '@mui/material/Fade';
@@ -9,7 +10,7 @@ import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import { ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
+import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
 import { accent, drawable, lit, mono, rule } from '../theme/tokens';
@@ -46,7 +47,7 @@ function MobileMenu({ active }: { active: string }) {
         onClick={(e) => setAnchor(e.currentTarget)}
         sx={{ display: { xs: 'inline-flex', md: 'none' } }}
       >
-        <MenuIcon />
+        {open ? <CloseIcon /> : <MenuIcon />}
       </IconButton>
       <Menu
         id={mobileMenuId}
@@ -107,6 +108,19 @@ export function Nav() {
       }}
     >
       <Container maxWidth="lg">
+        <Box
+          aria-hidden
+          data-scroll-progress
+          sx={{
+            position: 'absolute',
+            left: 0,
+            bottom: 0,
+            height: 3,
+            width: 1,
+            transformOrigin: 'left',
+            bgcolor: 'primary.main',
+          }}
+        />
         <Toolbar disableGutters>
           <Typography
             variant="h6"

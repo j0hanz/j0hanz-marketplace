@@ -4,6 +4,7 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useCountUp } from '../hooks/useCountUp';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
 import { pluralize, site } from '../site';
 import { lit, mono, rule } from '../theme/tokens';
@@ -14,6 +15,24 @@ const stats = [
   { count: site.totals.skills, unit: 'skill' },
   { count: site.totals.agents, unit: 'agent' },
 ];
+
+// Reads the same flag main.tsx sets — `true` only when JS runs and the visitor
+// allows motion. The panel wipe takes 520ms with a 220ms delay, so the count
+// starts on the wipe's last frame and reads as a settling into the number.
+const COUNT_DELAY = 740;
+
+function StatNumber({ value }: { value: number }) {
+  const motion =
+    typeof document !== 'undefined' && document.documentElement.dataset.motion !== undefined;
+  const reduced =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const n = useCountUp(value, COUNT_DELAY, motion && !reduced);
+  return (
+    <Typography sx={{ fontFamily: mono, fontWeight: 700, lineHeight: 1.2, fontSize: '1.75rem' }}>
+      {n}
+    </Typography>
+  );
+}
 
 // The one authored moment (index.css): the pitch rises, then the marketplace
 // panel wipes in behind its own frame. Everything after it is quieter by design.
@@ -51,6 +70,7 @@ export function Hero() {
                 href="#plugins"
                 disableElevation
                 endIcon={<ArrowDownwardIcon />}
+                data-arrow-nudge=""
               >
                 Browse plugins
               </Button>
@@ -101,11 +121,7 @@ export function Hero() {
             >
               {stats.map((stat) => (
                 <Box component="li" key={stat.unit}>
-                  <Typography
-                    sx={{ fontFamily: mono, fontWeight: 700, lineHeight: 1.2, fontSize: '1.75rem' }}
-                  >
-                    {stat.count}
-                  </Typography>
+                  <StatNumber value={stat.count} />
                   <Typography variant="caption" color="textSecondary">
                     {pluralize(stat.count, stat.unit)}
                   </Typography>

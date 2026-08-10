@@ -84,3 +84,10 @@ export const focusRing = {
   outline: '2px solid var(--focus-ring)',
   outlineOffset: '2px',
 };
+
+// ponytail: typed escape hatch for callers that set CSS custom properties on a
+// MUI component's `style` prop. MUI's `Properties` rejects `--foo` keys; the
+// real DOM accepts them. Cast to the React.CSSProperties alias without losing
+// type checking on the rest of the object.
+export const cssVars = (vars: Record<`--${string}`, number | string>): React.CSSProperties =>
+  vars as unknown as React.CSSProperties;

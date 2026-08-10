@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { ExpandMoreIcon, InfoIcon } from '../icons';
+import { BotIcon, ExpandMoreIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site } from '../site';
 import { codeSx, lit, outline } from '../theme/tokens';
@@ -136,7 +136,7 @@ export function SkillIndex() {
                             size="small"
                             variant="outlined"
                             tabIndex={0}
-                            icon={<InfoIcon />}
+                            icon={<BotIcon />}
                             label="model-loaded"
                           />
                         </Tooltip>

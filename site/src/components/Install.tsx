@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
+import { DownloadIcon, PluginIcon, TerminalIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
 import { mono, rule, RULE_WIDTH } from '../theme/tokens';
@@ -14,9 +15,9 @@ const example = site.plugins.flatMap((plugin) =>
 )[0];
 
 const steps = [
-  { label: 'Add the marketplace', value: site.addCommand },
-  { label: 'Install a plugin', value: example.install },
-  { label: 'Run it', value: example.run },
+  { label: 'Add the marketplace', value: site.addCommand, Icon: PluginIcon },
+  { label: 'Install a plugin', value: example.install, Icon: DownloadIcon },
+  { label: 'Run it', value: example.run, Icon: TerminalIcon },
 ];
 
 export function Install() {
@@ -41,7 +42,7 @@ export function Install() {
           gap: `${RULE_WIDTH}px`,
         }}
       >
-        {steps.map((step, i) => (
+        {steps.map((step) => (
           <Box
             component="li"
             key={step.label}
@@ -72,7 +73,7 @@ export function Install() {
                   color: 'primary.contrastText',
                 }}
               >
-                {i + 1}
+                <step.Icon sx={{ fontSize: 18 }} />
               </Box>
               <Typography component="h3" variant="body2" sx={{ fontWeight: 600 }}>
                 {step.label}

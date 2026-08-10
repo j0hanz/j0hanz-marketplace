@@ -14,11 +14,15 @@ import { srOnly } from './theme/tokens';
  * Amber is spent only where the page already spends it — the mark, and a copy
  * that landed — because it is the palette's signal for live, not a highlight.
  */
-const icon = (path: string) =>
+const icon = (path: string, drawable = false) =>
   function Icon(props: SvgIconProps) {
     return (
       <SvgIcon {...props}>
-        <path d={path} />
+        <path
+          d={path}
+          pathLength={drawable ? 100 : undefined}
+          data-draw-icon={drawable || undefined}
+        />
       </SvgIcon>
     );
   };
@@ -110,3 +114,60 @@ export const MenuIcon = icon('M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z');
 // The magnifier archetype on a square lens, so it frames the field it sits in
 // rather than floating a circle inside a rectangle.
 export const SearchIcon = icon('M3 3h14v14H3zm2 2v10h10V5zm11.71 10.29 5 5-1.42 1.42-5-5z');
+
+// Same lens as SearchIcon with a diagonal slash through the handle — the empty
+// state of the catalog search. The slash stops short of the glass so the lens
+// still reads as the focal point.
+export const SearchOffIcon = icon(
+  'M3 3h14v14H3zm2 2v10h10V5zm4.59 3L5 7.41 6.41 6 11 10.59 13.59 8 15 9.41 12.41 12 15 14.59 13.59 16 11 13.41 8.41 16 7 14.59 9.59 12zm8.12 7.29 1.42-1.42-3-3-1.42 1.42z',
+);
+
+// Two crossed bars: the same weight as the menu but flipped to an X, so the
+// mobile menu has a clean close. Sized to match MenuIcon's 18-unit span.
+export const CloseIcon = icon(
+  'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+);
+
+// Three stacked square tiles offset like a stack of cards — the unit the
+// marketplace trades in. Drawn in pairs of strokes so the offsets read at
+// 16px without aliasing to a solid block.
+export const PluginIcon = icon('M3 3h12v12H3zm2 2v8h8V5zm4 12h12v4H9zm6-6h6v4h-6zm0 2v-2h2v2z');
+
+// A square chest with a downward arrow through its lid — the install step.
+// Lid is a 2u stroke on top of the chest, arrow a chevron with square cap so
+// the corners stay 90 or 45.
+export const DownloadIcon = icon(
+  'M4 4h16v3H4zm2 2v1h12V6zM3 9h18v3h-2v-1H5v1H3zm8 1h2v6h-2zm-3 3 4 4 4-4-1.41-1.41L13 12.17l.59.59L12 14.17l-1.59-1.41L11 12.17l-1.59 1.42zm-1 7h12v1H7z',
+);
+
+// A square frame with `>` and an underscore cursor — the run-the-skill step.
+// The chevron is two strokes; the cursor a 2u square on the baseline.
+export const TerminalIcon = icon('M3 3h18v18H3zm2 2v14h14V5zm3 4 4 3-4 3v-2l2-1-2-1zm6 5h4v2h-4z');
+
+// A square robot face — the model-loaded chip. Two square eyes and a square
+// mouth, antenna as a 2u stroke up. Distinguishes from InfoIcon at a glance.
+export const BotIcon = icon(
+  'M4 8h16v12H4zm2 2v8h12v-8zm2 2h2v2H8zm6 0h2v2h-2zM7 14h10v2H7zM11 4h2v3h-2z',
+);
+
+// The catalog categories share a frame, then differ in a single 4-unit mark
+// inside it. Reading them in order: authoring (pen nib = 45° triangle),
+// development (chevron pair = code), frontend (bracket = `< >`), learning
+// (book spine = center bar), productivity (bolt = two diagonals), quality
+// (check = the live tick in miniature, drawn on currentColor, not amber).
+export const CategoryIcon = {
+  authoring: 'M3 3h18v18H3zm2 2v14h14V5zm10 4-6 6-2-2 6-6zM7 17l4-4 1 1-4 4z',
+  development: 'M3 3h18v18H3zm2 2v14h14V5zm2 4 4 3-4 3v-2l2-1-2-1zm5 5h5v2h-5z',
+  frontend: 'M3 3h18v18H3zm2 2v14h14V5zM7 7l-2 5 2 5h2L7 12l2-5zm10 0h-2l-2 5 2 5h2l-2-5z',
+  learning: 'M3 3h18v18H3zm2 2v14h14V5zm0 0v14m14-14v14M5 6h14M5 18h14',
+  productivity: 'M3 3h18v18H3zm2 2v14h14V5zm10 1-7 8h4l-1 5 7-8h-4z',
+  quality: 'M3 3h18v18H3zm2 2v14h14V5zm2 5 4 4 8-8-2-2-6 6-2-2z',
+} as const;
+export type CategoryName = keyof typeof CategoryIcon;
+export function CategoryIconFor({ name, ...props }: SvgIconProps & { name: CategoryName }) {
+  return (
+    <SvgIcon {...props}>
+      <path d={CategoryIcon[name]} />
+    </SvgIcon>
+  );
+}
