@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { site } from '../site';
 
 export const ALL = 'all';
@@ -22,9 +22,11 @@ const searchIndex = site.plugins.map((plugin) => ({
 export function useCatalogFilter() {
   const [category, setCategory] = useState(ALL);
   const [query, setQuery] = useState('');
+  // Defer the keystroke so the TextField stays responsive while the filter catches up.
+  const deferred = useDeferredValue(query);
 
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = deferred.trim().toLowerCase();
     return searchIndex
       .filter(
         ({ plugin, haystack }) =>
@@ -32,7 +34,7 @@ export function useCatalogFilter() {
           (!needle || haystack.includes(needle)),
       )
       .map(({ plugin }) => plugin);
-  }, [category, query]);
+  }, [category, deferred]);
 
   return {
     visible,

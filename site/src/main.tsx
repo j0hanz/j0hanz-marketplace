@@ -1,7 +1,6 @@
 // Latin only, and every weight the theme actually asks for: the bare package ships 400
 // alone, so headings and buttons were rendering as synthesised bold.
 import '@fontsource/jetbrains-mono/latin-400.css';
-import '@fontsource/jetbrains-mono/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-700.css';
 
 import CssBaseline from '@mui/material/CssBaseline';
