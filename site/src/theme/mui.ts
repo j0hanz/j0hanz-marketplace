@@ -97,7 +97,9 @@ export const theme = createTheme({
       },
     },
     MuiButton: { styleOverrides: { root: press } },
-    MuiIconButton: { styleOverrides: { root: press } },
+    // 12px around a 24px icon clears the 44px touch target. Scoped to the default
+    // size: a `root` padding would outrank MUI's own small and large variants.
+    MuiIconButton: { styleOverrides: { root: press, sizeMedium: { padding: 12 } } },
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     MuiCard: { styleOverrides: { root: { borderColor: edge } } },
     MuiChip: {

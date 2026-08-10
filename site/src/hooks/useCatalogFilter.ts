@@ -9,8 +9,8 @@ const searchIndex = site.plugins.map((plugin) => ({
     plugin.displayName,
     plugin.summary,
     plugin.hookEvents.join(' '),
-    ...plugin.skills.map((s) => s.name + ' ' + s.description),
-    ...plugin.agents.map((a) => a.name + ' ' + a.description),
+    ...plugin.skills.map((skill) => skill.name + ' ' + skill.description),
+    ...plugin.agents.map((agent) => agent.name + ' ' + agent.description),
   ]
     .join(' ')
     .toLowerCase(),

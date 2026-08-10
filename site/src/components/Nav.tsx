@@ -21,8 +21,6 @@ const navLinks = [
 ];
 const hrefs = navLinks.map((link) => link.href);
 
-const iconButtonSx = { p: 1.5 };
-
 const menuItemSx = {
   fontFamily: mono,
   textTransform: 'uppercase' as const,
@@ -45,7 +43,7 @@ function MobileMenu({ active }: { active: string }) {
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
         onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{ display: { xs: 'inline-flex', sm: 'none' }, ...iconButtonSx }}
+        sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
       >
         <MenuIcon />
       </IconButton>
@@ -153,7 +151,7 @@ export function Nav() {
               target="_blank"
               rel="noreferrer"
               aria-label="GitHub"
-              sx={{ display: { xs: 'none', sm: 'inline-flex' }, ...iconButtonSx }}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <GitHubIcon />
             </IconButton>

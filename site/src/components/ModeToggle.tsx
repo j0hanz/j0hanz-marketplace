@@ -6,22 +6,24 @@ import { ground } from '../theme/tokens';
 
 type Mode = 'system' | 'light' | 'dark';
 
-const modes: { key: Mode; Icon: typeof SettingsBrightnessIcon; desc: string; aria: string }[] = [
+// `label` names the mode while it is current, `target` names it as a destination.
+const modes: { key: Mode; Icon: typeof SettingsBrightnessIcon; label: string; target: string }[] = [
   {
     key: 'system',
     Icon: SettingsBrightnessIcon,
-    desc: 'Theme follows system',
-    aria: 'system theme',
+    label: 'Theme follows system',
+    target: 'system theme',
   },
-  { key: 'light', Icon: LightModeIcon, desc: 'Light theme', aria: 'light theme' },
-  { key: 'dark', Icon: DarkModeIcon, desc: 'Dark theme', aria: 'dark theme' },
+  { key: 'light', Icon: LightModeIcon, label: 'Light theme', target: 'light theme' },
+  { key: 'dark', Icon: DarkModeIcon, label: 'Dark theme', target: 'dark theme' },
 ];
 
 export function ModeToggle() {
   const { mode, setMode, colorScheme } = useColorScheme();
-  const i = modes.findIndex((m) => m.key === mode);
-  const current = modes[i < 0 ? 0 : i];
-  const next = modes[(i + 1) % modes.length];
+  // `mode` is undefined until MUI mounts, so `current` falls back to the first
+  // row and `next` reads off it — the first paint never offers the mode showing.
+  const current = modes.find((m) => m.key === mode) ?? modes[0];
+  const next = modes[(modes.indexOf(current) + 1) % modes.length];
 
   useEffect(() => {
     if (colorScheme)
@@ -33,9 +35,8 @@ export function ModeToggle() {
   return (
     <IconButton
       color="inherit"
-      aria-label={`${current.desc}. Switch to ${next.aria}.`}
+      aria-label={`${current.label}. Switch to ${next.target}.`}
       onClick={() => setMode(next.key)}
-      sx={{ p: 1.5 }}
     >
       <current.Icon />
     </IconButton>

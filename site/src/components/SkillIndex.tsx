@@ -12,7 +12,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { useEnter } from '../motion';
+import { useEnter } from '../hooks/useEnter';
 import { countLabel, site } from '../site';
 import { codeSx, lit, outline } from '../theme/tokens';
 import { Section } from './Section';

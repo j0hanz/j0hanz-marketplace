@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
-import { useEnter } from '../motion';
+import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
 import { lit, mono, rule } from '../theme/tokens';
 import { Command } from './Command';

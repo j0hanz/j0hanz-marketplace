@@ -4,18 +4,18 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
-import { useEnter } from '../motion';
+import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
 import { accent, drawable, rule } from '../theme/tokens';
 
 export function Footer() {
-  const foot = useRef<HTMLElement>(null);
-  useEnter(foot);
+  const footer = useRef<HTMLElement>(null);
+  useEnter(footer);
 
   return (
     <Box
       component="footer"
-      ref={foot}
+      ref={footer}
       data-draw
       sx={{ borderTop: rule, py: 5, position: 'relative', ...drawable('top', accent) }}
     >

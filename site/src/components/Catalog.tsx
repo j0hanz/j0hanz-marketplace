@@ -12,13 +12,11 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { memo, useRef } from 'react';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
-import { useEnter } from '../motion';
+import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
 import { accent, drawable, outline } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
-
-const SEARCH_HINT = 'skill, agent, or hook name';
 
 const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
   return (
@@ -121,7 +119,7 @@ export function Catalog() {
               e.preventDefault();
             }
           }}
-          placeholder={SEARCH_HINT}
+          placeholder="skill, agent, or hook name"
           slotProps={{
             htmlInput: {
               autoComplete: 'off',

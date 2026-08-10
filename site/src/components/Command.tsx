@@ -7,7 +7,11 @@ import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, ContentCopyIcon } from '../icons';
 import { codeSx, outline, srOnly } from '../theme/tokens';
 
-type Status = '' | 'Copied' | 'Copy failed — select the text and copy it';
+// Both strings are read aloud and branched on, so they are named once.
+const COPIED = 'Copied';
+const FAILED = 'Copy failed — select the text and copy it';
+
+type Status = '' | typeof COPIED | typeof FAILED;
 
 export function Command({ value }: { value: string }) {
   const [status, setStatus] = useState<Status>('');
@@ -23,13 +27,13 @@ export function Command({ value }: { value: string }) {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      announce('Copied');
+      announce(COPIED);
     } catch {
-      announce('Copy failed — select the text and copy it');
+      announce(FAILED);
     }
   };
 
-  const copied = status === 'Copied';
+  const copied = status === COPIED;
   const tip = status || 'Copy';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
   const iconColor = copied ? 'primary' : status ? 'error' : undefined;
@@ -53,7 +57,7 @@ export function Command({ value }: { value: string }) {
         {value}
       </Typography>
       <Tooltip title={tip}>
-        <IconButton onClick={copy} aria-label={`Copy ${value}`} sx={{ p: 1.5 }}>
+        <IconButton onClick={copy} aria-label={`Copy ${value}`}>
           <Icon fontSize="small" color={iconColor} />
         </IconButton>
       </Tooltip>

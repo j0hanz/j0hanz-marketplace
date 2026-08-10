@@ -5,7 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
-import { useEnter } from '../motion';
+import { useEnter } from '../hooks/useEnter';
 import { drawable, srOnly } from '../theme/tokens';
 
 export function Section({

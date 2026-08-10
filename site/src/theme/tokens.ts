@@ -3,7 +3,7 @@ export const mono = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, mono
 export const sans =
   "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-export const steel = 'var(--mui-palette-steel)';
+const steel = 'var(--mui-palette-steel)';
 export const edge = 'var(--mui-palette-edge)';
 export const accent = 'var(--mui-palette-primary-main)';
 

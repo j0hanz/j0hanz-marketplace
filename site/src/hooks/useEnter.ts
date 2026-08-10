@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 
 const SELECTOR = '[data-reveal],[data-draw]';
 
-export const motionOk = () => matchMedia('(prefers-reduced-motion: no-preference)').matches;
-
 /**
  * Marks reveals and rule draws as they enter view, once each. The start and end
  * states live in index.css; this only decides when. `key` re-runs the pass when
