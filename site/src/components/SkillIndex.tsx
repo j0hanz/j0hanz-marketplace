@@ -9,8 +9,9 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
+import { useReveal } from '../motion';
 import { countLabel, site } from '../site';
 import { codeSx } from '../theme/tokens';
 import { Section } from './Section';
@@ -62,6 +63,38 @@ export function SkillIndex() {
     return () => mql.removeEventListener('change', onChange);
   }, []);
 
+  // User-controlled overrides: names the user explicitly toggled away from the
+  // viewport default. Stored so resize doesn't undo a deliberate collapse.
+  const [userCollapsed, setUserCollapsed] = useState<Set<string>>(() => new Set());
+  const [userExpanded, setUserExpanded] = useState<Set<string>>(() => new Set());
+  const firstName = site.plugins[0]?.name;
+  const isOpen = (name: string) => {
+    if (userExpanded.has(name)) return true;
+    if (userCollapsed.has(name)) return false;
+    return Boolean(firstName) && name === firstName && isDesktop;
+  };
+  const toggle = (name: string) => {
+    if (isOpen(name)) {
+      setUserCollapsed((prev) => new Set(prev).add(name));
+      setUserExpanded((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    } else {
+      setUserExpanded((prev) => new Set(prev).add(name));
+      setUserCollapsed((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    }
+  };
+  const listRef = useRef<HTMLDivElement>(null);
+  // Structural wrapper: gives `useReveal` a single scope to query descendants
+  // from, so per-Accordion refs aren't needed.
+  useReveal('[data-reveal]', {}, listRef);
+
   return (
     <Section
       id="skills"
@@ -71,86 +104,89 @@ export function SkillIndex() {
         label: `${countLabel(site.totals.skills, 'skill')} and ${countLabel(site.totals.agents, 'agent')}`,
       }}
     >
-      {site.plugins.map((plugin, i) => (
-        <Accordion
-          key={plugin.name}
-          defaultExpanded={isDesktop && i === 0}
-          disableGutters
-          square
-          elevation={0}
-          data-reveal
-          sx={{
-            bgcolor: 'transparent',
-            borderTop: 1,
-            borderColor: 'divider',
-            '&:last-of-type': { borderBottom: 1, borderColor: 'divider' },
-            '&::before': { display: 'none' },
-            '&.Mui-expanded': {
-              boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
-            },
-          }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
-            <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
-              {plugin.displayName}
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-              {plugin.skills.length > 0 && (
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label={countLabel(plugin.skills.length, 'skill')}
-                />
-              )}
-              {plugin.agents.length > 0 && (
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label={countLabel(plugin.agents.length, 'agent')}
-                />
-              )}
-            </Stack>
-          </AccordionSummary>
-          <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
-            <List disablePadding>
-              {plugin.skills.map((skill) => (
-                <Entry
-                  key={skill.name}
-                  code={skill.command ?? skill.name}
-                  description={skill.description}
-                  leading={
-                    !skill.command ? (
-                      <Tooltip title="Claude auto-loads this skill. It is not a user-facing slash command.">
-                        <Chip size="small" variant="outlined" tabIndex={0} label="model-loaded" />
-                      </Tooltip>
-                    ) : undefined
-                  }
-                  trailing={
-                    skill.argumentHint && (
-                      <Typography
-                        component="code"
-                        variant="caption"
-                        color="textSecondary"
-                        sx={codeSx}
-                      >
-                        {skill.argumentHint}
-                      </Typography>
-                    )
-                  }
-                />
-              ))}
-              {plugin.agents.map((agent) => (
-                <Entry
-                  key={agent.name}
-                  code={agent.name}
-                  description={agent.description}
-                  trailing={<Chip size="small" variant="outlined" label="agent" />}
-                />
-              ))}
-            </List>
-          </AccordionDetails>
-        </Accordion>
-      ))}
+      <div ref={listRef}>
+        {site.plugins.map((plugin) => (
+          <Accordion
+            key={plugin.name}
+            expanded={isOpen(plugin.name)}
+            onChange={() => toggle(plugin.name)}
+            disableGutters
+            square
+            elevation={0}
+            data-reveal
+            sx={{
+              bgcolor: 'transparent',
+              borderTop: 1,
+              borderColor: 'divider',
+              '&:last-of-type': { borderBottom: 1, borderColor: 'divider' },
+              '&::before': { display: 'none' },
+              '&.Mui-expanded': {
+                boxShadow: 'inset 3px 0 0 0 var(--mui-palette-primary-main)',
+              },
+            }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 1.5, sm: 2 } }}>
+              <Typography component="span" variant="h6" sx={{ flexGrow: 1, fontSize: '1rem' }}>
+                {plugin.displayName}
+              </Typography>
+              <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+                {plugin.skills.length > 0 && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={countLabel(plugin.skills.length, 'skill')}
+                  />
+                )}
+                {plugin.agents.length > 0 && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={countLabel(plugin.agents.length, 'agent')}
+                  />
+                )}
+              </Stack>
+            </AccordionSummary>
+            <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
+              <List disablePadding>
+                {plugin.skills.map((skill) => (
+                  <Entry
+                    key={skill.name}
+                    code={skill.command ?? skill.name}
+                    description={skill.description}
+                    leading={
+                      !skill.command ? (
+                        <Tooltip title="Claude auto-loads this skill. It is not a user-facing slash command.">
+                          <Chip size="small" variant="outlined" tabIndex={0} label="model-loaded" />
+                        </Tooltip>
+                      ) : undefined
+                    }
+                    trailing={
+                      skill.argumentHint && (
+                        <Typography
+                          component="code"
+                          variant="caption"
+                          color="textSecondary"
+                          sx={codeSx}
+                        >
+                          {skill.argumentHint}
+                        </Typography>
+                      )
+                    }
+                  />
+                ))}
+                {plugin.agents.map((agent) => (
+                  <Entry
+                    key={agent.name}
+                    code={agent.name}
+                    description={agent.description}
+                    trailing={<Chip size="small" variant="outlined" label="agent" />}
+                  />
+                ))}
+              </List>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+      </div>
     </Section>
   );
 }

@@ -1,12 +1,10 @@
 import Box from '@mui/material/Box';
-import { useRef } from 'react';
 import { Catalog } from './components/Catalog';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
 import { Install } from './components/Install';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
-import { useReveal } from './motion';
 import { steel } from './theme/tokens';
 
 const skipLink = {
@@ -26,16 +24,13 @@ const skipLink = {
 };
 
 export function App() {
-  const main = useRef<HTMLElement>(null);
-  useReveal('[data-reveal]', {}, main);
-
   return (
     <>
       <Box component="a" href="#main" sx={skipLink}>
         Skip to content
       </Box>
       <Nav />
-      <main id="main" ref={main}>
+      <main id="main">
         <Hero />
         <Catalog />
         <SkillIndex />

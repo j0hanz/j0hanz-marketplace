@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useRef } from 'react';
+import { useReveal } from '../motion';
 import { site } from '../site';
 import { mono, steel } from '../theme/tokens';
 import { Command } from './Command';
@@ -22,9 +24,16 @@ const MARKER_SIZE = 28;
 const RAIL_WIDTH = 3;
 
 export function Install() {
+  const listRef = useRef<HTMLOListElement>(null);
+  useReveal('[data-reveal]', {}, listRef);
   return (
     <Section id="install" title="Install">
-      <Box component="ol" role="list" sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 620 }}>
+      <Box
+        component="ol"
+        role="list"
+        ref={listRef}
+        sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 620 }}
+      >
         {steps.map((step, i) => {
           const last = i === steps.length - 1;
           return (

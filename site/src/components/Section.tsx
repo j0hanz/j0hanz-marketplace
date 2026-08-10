@@ -4,6 +4,8 @@ import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
+import { useRef } from 'react';
+import { useReveal } from '../motion';
 import { srOnly, steel } from '../theme/tokens';
 
 export function Section({
@@ -17,11 +19,14 @@ export function Section({
   count?: { total: number; label: string };
   children: ReactNode;
 }) {
+  const scope = useRef<HTMLElement>(null);
+  useReveal(':scope > [data-reveal]', {}, scope);
   return (
     <Container
       component="section"
       id={id}
       aria-labelledby={`${id}-title`}
+      ref={scope}
       maxWidth="lg"
       sx={{ py: { xs: 7, md: 11 } }}
     >

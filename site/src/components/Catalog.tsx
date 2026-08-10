@@ -11,9 +11,10 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { memo } from 'react';
-import { countLabel, site, type Plugin } from '../site';
-import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useGridFlip } from '../hooks/useGridFlip';
+import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
+import { useReveal } from '../motion';
+import { countLabel, site, type Plugin } from '../site';
 import { Command } from './Command';
 import { Section } from './Section';
 
@@ -99,6 +100,7 @@ const PluginCard = memo(function PluginCard({ plugin }: { plugin: Plugin }) {
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
   const grid = useGridFlip(visible);
+  useReveal('[data-reveal]', {}, grid);
 
   return (
     <Section

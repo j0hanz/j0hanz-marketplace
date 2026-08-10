@@ -16,11 +16,12 @@ const refreshAfterFonts = () => {
 
 /**
  * Scroll-reveal items matching `selector` inside `scope`. Reduced-motion users
- * see static content immediately. `tween` runs once on first entry.
+ * see static content immediately. Defaults to `opacity: 1, y: 0` on entry;
+ * `toVars` lets callers override or extend the to-state.
  */
 export function useReveal(
   selector: string,
-  tween: TweenVars = {},
+  toVars: TweenVars = {},
   scope?: React.RefObject<HTMLElement | null>,
 ) {
   useGSAP(
@@ -32,7 +33,14 @@ export function useReveal(
         start: 'top 88%',
         once: true,
         onEnter: (batch) =>
-          gsap.to(batch, { duration: 0.5, stagger: 0.07, ease: 'power2.out', ...tween }),
+          gsap.to(batch, {
+            duration: 0.5,
+            opacity: 1,
+            y: 0,
+            stagger: 0.07,
+            ease: 'power2.out',
+            ...toVars,
+          }),
       });
       refreshAfterFonts();
     },
