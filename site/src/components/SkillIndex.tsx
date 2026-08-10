@@ -29,7 +29,7 @@ function Entry({
   trailing?: ReactNode;
 }) {
   return (
-    <ListItem disableGutters divider alignItems="flex-start">
+    <ListItem disableGutters alignItems="flex-start">
       <ListItemText
         slotProps={{
           primary: { component: 'div' },
