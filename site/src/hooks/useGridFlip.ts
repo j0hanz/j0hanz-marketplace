@@ -13,6 +13,8 @@ export function useGridFlip(items: readonly unknown[]) {
   const rendered = useRef(items);
 
   if (rendered.current !== items) {
+    // During render, DOM still holds the previous commit's children — capture them
+    // before React commits the new items.
     rendered.current = items;
     previousLayout.current =
       grid.current && motionOk() ? Flip.getState(grid.current.children) : null;

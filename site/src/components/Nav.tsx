@@ -7,18 +7,12 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import { useColorScheme } from '@mui/material/styles';
-import { useEffect, useState } from 'react';
-import {
-  DarkModeIcon,
-  GitHubIcon,
-  LightModeIcon,
-  MarkIcon,
-  MenuIcon,
-  SettingsBrightnessIcon,
-} from '../icons';
+import { useState } from 'react';
+import { GitHubIcon, MarkIcon, MenuIcon } from '../icons';
+import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
-import { ground, mono, scrollOffset, steel } from '../theme/tokens';
+import { mono, steel } from '../theme/tokens';
+import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
   { label: 'Plugins', href: '#plugins' },
@@ -27,85 +21,15 @@ const navLinks = [
 ];
 const hrefs = navLinks.map((link) => link.href);
 
-function useActiveSection() {
-  const [active, setActive] = useState('');
-
-  useEffect(() => {
-    const onScreen = new Set<string>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const href = `#${entry.target.id}`;
-          if (entry.isIntersecting) onScreen.add(href);
-          else onScreen.delete(href);
-        }
-        setActive(hrefs.find((href) => onScreen.has(href)) ?? '');
-      },
-      { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
-    );
-
-    for (const href of hrefs) {
-      const section = document.querySelector(href);
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  return active;
-}
-
-const modeCycle = ['system', 'light', 'dark'] as const;
-type Mode = (typeof modeCycle)[number];
-
-const modeIcons = {
-  system: SettingsBrightnessIcon,
-  light: LightModeIcon,
-  dark: DarkModeIcon,
-};
-
-const modeDescription = {
-  system: 'Theme follows system',
-  light: 'Light theme',
-  dark: 'Dark theme',
-};
-const switchTo = {
-  system: 'Switch to system theme',
-  light: 'Switch to light theme',
-  dark: 'Switch to dark theme',
-};
-
 const iconButtonSx = { p: 1.5 };
-
-function useBrowserChromeColor(colorScheme: keyof typeof ground | undefined) {
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (colorScheme) meta?.setAttribute('content', ground[colorScheme]);
-  }, [colorScheme]);
-}
-
-function ModeToggle() {
-  const { mode, setMode, colorScheme } = useColorScheme();
-  useBrowserChromeColor(colorScheme);
-
-  const current: Mode = mode ?? 'system';
-  const next: Mode = modeCycle[(modeCycle.indexOf(current) + 1) % modeCycle.length];
-  const Icon = modeIcons[current];
-  const label = `${modeDescription[current]}. ${switchTo[next]}.`;
-
-  return (
-    <IconButton color="inherit" aria-label={label} onClick={() => setMode(next)} sx={iconButtonSx}>
-      <Icon />
-    </IconButton>
-  );
-}
-
-const mobileMenuId = 'nav-mobile-menu';
 
 const menuItemSx = {
   fontFamily: mono,
-  textTransform: 'uppercase',
+  textTransform: 'uppercase' as const,
   letterSpacing: '0.02857em',
 };
+
+const mobileMenuId = 'nav-mobile-menu';
 
 function MobileMenu({ active }: { active: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -166,7 +90,7 @@ function MobileMenu({ active }: { active: string }) {
 }
 
 export function Nav() {
-  const active = useActiveSection();
+  const active = useActiveSection(hrefs);
 
   return (
     <AppBar

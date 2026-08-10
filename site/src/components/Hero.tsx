@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { GitHubIcon } from '../icons';
-import { MOTION_QUERY, gsap, useGSAP } from '../motion';
+import { useRevealMount } from '../motion';
 import { pluralize, site } from '../site';
 import { mono } from '../theme/tokens';
 import { Command } from './Command';
@@ -19,20 +19,10 @@ const stats = [
 
 export function Hero() {
   const scope = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      gsap.matchMedia().add(MOTION_QUERY, () => {
-        gsap.from('[data-hero]', {
-          opacity: 0,
-          y: 20,
-          duration: 0.5,
-          stagger: 0.09,
-          ease: 'power2.out',
-        });
-      });
-    },
-    { scope },
+  useRevealMount(
+    '[data-hero]',
+    { opacity: 0, y: 20, duration: 0.5, stagger: 0.09, ease: 'power2.out' },
+    scope,
   );
 
   return (
