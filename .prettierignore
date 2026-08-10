@@ -5,3 +5,6 @@ package-lock.json
 # Generated
 site/src/data
 dist
+
+# Tooling
+.eslintcache

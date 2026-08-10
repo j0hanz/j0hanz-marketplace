@@ -1,10 +1,14 @@
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
 
-const icon = (d: string) => (props: SvgIconProps) => (
-  <SvgIcon {...props}>
-    <path d={d} />
-  </SvgIcon>
-);
+const icon = (d: string) => {
+  const Icon = (props: SvgIconProps) => (
+    <SvgIcon {...props}>
+      <path d={d} />
+    </SvgIcon>
+  );
+  Icon.displayName = 'Icon';
+  return Icon;
+};
 
 export const MarkIcon = (props: SvgIconProps) => (
   <SvgIcon {...props}>
