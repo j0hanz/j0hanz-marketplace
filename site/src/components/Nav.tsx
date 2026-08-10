@@ -13,6 +13,7 @@ import {
   DarkModeIcon,
   GitHubIcon,
   LightModeIcon,
+  MarkIcon,
   MenuIcon,
   SettingsBrightnessIcon,
 } from '../icons';
@@ -200,6 +201,9 @@ export function Nav() {
             href="#top"
             sx={{
               flexGrow: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
               color: 'inherit',
               textDecoration: 'none',
               fontWeight: 700,
@@ -208,6 +212,9 @@ export function Nav() {
               py: 1,
             }}
           >
+            {/* 20px, not 24: the mark bleeds to its own box edge, so at icon size it stands
+                a stop taller than the cap height it sits beside. */}
+            <MarkIcon sx={{ fontSize: 20 }} />
             {site.name}
           </Typography>
           {/* 8px between targets, not 4: below `sm` this row is two icon buttons and

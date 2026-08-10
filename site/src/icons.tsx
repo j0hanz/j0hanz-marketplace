@@ -8,6 +8,21 @@ const icon = (d: string) => (props: SvgIconProps) => (
   </SvgIcon>
 );
 
+/**
+ * The brand mark: the zero out of `j0hanz`, drawn as the slot a plugin seats into. Square
+ * ring at radius 0 — the same law as every other surface here — with one amber module flush
+ * to the inner floor. Not built with `icon()` above: the seat is a second fill.
+ *
+ * Edge-to-edge in the 24 box, so it reads a size larger than a Material glyph at the same
+ * `fontSize`. Correct that at the call site rather than padding the geometry.
+ */
+export const MarkIcon = (props: SvgIconProps) => (
+  <SvgIcon {...props}>
+    <path d="M0 0h24v24H0zM4 4v16h16V4z" fillRule="evenodd" />
+    <rect x="4" y="14" width="16" height="6" fill="var(--mui-palette-primary-main)" />
+  </SvgIcon>
+);
+
 export const CheckIcon = icon('M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z');
 
 export const ContentCopyIcon = icon(
