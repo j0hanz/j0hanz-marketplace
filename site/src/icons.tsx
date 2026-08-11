@@ -135,15 +135,14 @@ export const BotIcon = icon(
 // development (chevron pair = code), frontend (bracket = `< >`), learning
 // (book spine = center bar), productivity (bolt = two diagonals), quality
 // (check = the live tick in miniature, drawn on currentColor, not amber).
-export const CategoryIcon = {
+const CategoryIcon: Record<string, string | undefined> = {
   authoring: 'M3 3h18v18H3zm2 2v14h14V5zm10 4-6 6-2-2 6-6zM7 17l4-4 1 1-4 4z',
   development: 'M3 3h18v18H3zm2 2v14h14V5zm2 4 4 3-4 3v-2l2-1-2-1zm5 5h5v2h-5z',
   frontend: 'M3 3h18v18H3zm2 2v14h14V5zM7 7l-2 5 2 5h2L7 12l2-5zm10 0h-2l-2 5 2 5h2l-2-5z',
   learning: 'M3 3h18v18H3zm2 2v14h14V5zm0 0v14m14-14v14M5 6h14M5 18h14',
   productivity: 'M3 3h18v18H3zm2 2v14h14V5zm10 1-7 8h4l-1 5 7-8h-4z',
   quality: 'M3 3h18v18H3zm2 2v14h14V5zm2 5 4 4 8-8-2-2-6 6-2-2z',
-} as const;
-export type CategoryName = keyof typeof CategoryIcon;
+};
 
 // The shared frame with no mark: a category the map predates still renders as
 // the same object, instead of an empty path that disappears silently.
@@ -152,7 +151,7 @@ const CategoryIconFallback = 'M3 3h18v18H3zm2 2v14h14V5z';
 export function CategoryIconFor({ name, ...props }: SvgIconProps & { name: string }) {
   return (
     <SvgIcon {...props}>
-      <path d={CategoryIcon[name as CategoryName] ?? CategoryIconFallback} />
+      <path d={CategoryIcon[name] ?? CategoryIconFallback} />
     </SvgIcon>
   );
 }
