@@ -96,8 +96,9 @@
   }
 }
 
-/* One glyph replacing another in place. Callers set it only after a press. */
 :root[data-motion] [data-swap-in] {
+  transform-box: fill-box;
+  transform-origin: center;
   animation: swap-in var(--dur-swap) var(--ease-out) both;
 }
 
