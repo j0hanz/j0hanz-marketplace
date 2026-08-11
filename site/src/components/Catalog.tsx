@@ -195,19 +195,21 @@ export function Catalog() {
           }}
           sx={{ width: 1, maxWidth: { md: 320 } }}
         />
-        {/* Seven exclusive options wrap to three rows on a phone — 138px of
-            control above a six-card list. The platform already has a one-of-many
-            control for a narrow column, and it opens as the OS picker. The row
-            of buttons returns as soon as there is width to lay it out in. */}
         <TextField
           select
           label="Category"
           value={category}
           onChange={(e) => pickCategory(e.target.value)}
           slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
-          // Mono, like the row of buttons it stands in for — it is the same
-          // control, and the value it shows reads as a filter, not as prose.
-          sx={{ display: { xs: 'flex', sm: 'none' }, width: 1, '& select': { fontFamily: mono } }}
+          sx={{
+            display: { xs: 'flex', sm: 'none' },
+            width: 1,
+            '& select': {
+              fontFamily: mono,
+              backgroundColor: 'var(--mui-palette-background-default)',
+              color: 'var(--mui-palette-text-primary)',
+            },
+          }}
         >
           <option value={ALL}>All</option>
           {site.categories.map((name) => (

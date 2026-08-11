@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { type Plugin, site } from '../site';
 
 export const ALL = 'all';
@@ -17,9 +17,20 @@ const searchIndex = site.plugins.map((plugin) => ({
 }));
 
 export function useCatalogFilter() {
-  const [category, setCategory] = useState(ALL);
-  const [query, setQuery] = useState('');
+  const initial = new URLSearchParams(location.search);
+  const [category, setCategory] = useState(() => initial.get('category') ?? ALL);
+  const [query, setQuery] = useState(() => initial.get('q') ?? '');
   const deferred = useDeferredValue(query);
+
+  useEffect(() => {
+    const next = new URLSearchParams(location.search);
+    if (category === ALL) next.delete('category');
+    else next.set('category', category);
+    if (deferred) next.set('q', deferred);
+    else next.delete('q');
+    const search = next.toString();
+    history.replaceState(null, '', `${location.pathname}${search && '?'}${search}${location.hash}`);
+  }, [category, deferred]);
 
   const needle = deferred.trim().toLowerCase();
   const visible: Plugin[] = [];

@@ -40,7 +40,7 @@ function MobileMenu({ active }: { active: string }) {
     <>
       <IconButton
         color="inherit"
-        aria-label="Open menu"
+        aria-label={open ? 'Close menu' : 'Open menu'}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
