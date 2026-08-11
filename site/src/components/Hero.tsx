@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
 import { site } from '../site';
-import { lit, mono, rule } from '../theme/tokens';
+import { mono, rule } from '../theme/tokens';
 import { Command } from './Command';
 
 // The three lines a visitor actually types, in the order they type them. The
@@ -55,23 +55,15 @@ export function Hero() {
     <Container component="section" id="top" maxWidth="lg" sx={{ pt: { xs: 5, md: 6 }, pb: 4 }}>
       {/* Both columns start on the same line, so the panel's lit top rule sits
           with the headline's first cap rather than floating against its middle. */}
-      <Grid container spacing={{ xs: 5, md: 6 }} sx={{ alignItems: 'start' }}>
+      <Grid container spacing={{ xs: 5, md: 2 }} sx={{ alignItems: 'start' }}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <Stack spacing={{ xs: 3, md: 4 }} sx={{ alignItems: 'flex-start' }}>
+          <Stack spacing={{ xs: 2, md: 6 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
-              Skills and agents for Claude Code.
+              Skills and agents for Claude Code
             </Typography>
-            <Stack spacing={1.5} data-hero sx={{ maxWidth: '48ch', '--i': 1 }}>
-              <Typography variant="body1">
-                Skills are slash commands you run. Agents are helpers Claude delegates work to.
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Install one plugin at a time. No build step, no dependencies.
-              </Typography>
-            </Stack>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
+              spacing={{ xs: 1.5, sm: 2 }}
               sx={{ width: 1, '--i': 2, '& .MuiButton-root': { minHeight: 44 } }}
               data-hero
             >
@@ -102,9 +94,6 @@ export function Hero() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack
             component="ol"
-            // list-style: none drops the list role in Safari, and with it the
-            // count these steps are read by. The marker carries the ordinal for
-            // anyone looking; the role keeps it for anyone listening.
             role="list"
             spacing={2.5}
             sx={{
@@ -113,7 +102,6 @@ export function Hero() {
               p: 2,
               bgcolor: 'background.paper',
               border: rule,
-              boxShadow: lit('top'),
             }}
           >
             {steps.map((step, i) => (

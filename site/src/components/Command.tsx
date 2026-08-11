@@ -51,14 +51,11 @@ export function Command({ value }: { value: string }) {
         alignItems: 'center',
         gap: 1,
         pl: 1.5,
-        pr: 0.5,
         py: 0.5,
-        width: 1,
         bgcolor: 'background.default',
-        border: outline,
       }}
     >
-      <Typography component="code" variant="body2" sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}>
+      <Typography component="code" variant="caption" sx={{ flexGrow: 1, minWidth: 0, ...codeSx }}>
         {value}
       </Typography>
       <Tooltip title={tip}>
