@@ -147,7 +147,7 @@ export const theme = createTheme({
     MuiCard: { styleOverrides: { root: { borderColor: edge } } },
     MuiChip: {
       styleOverrides: {
-        root: { borderRadius: 0, fontFamily: mono },
+        root: { borderRadius: 0, fontFamily: mono, '&:focus-visible': focusRing },
         outlined: { borderColor: edge },
       },
     },

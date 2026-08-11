@@ -17,6 +17,8 @@ import { countLabel, site } from '../site';
 import { codeSx, lit, outline } from '../theme/tokens';
 import { Section } from './Section';
 
+const MODEL_LOADED = 'Claude auto-loads this skill. It is not a user-facing slash command.';
+
 function Entry({
   code,
   description,
@@ -131,13 +133,14 @@ export function SkillIndex() {
                     description={skill.description}
                     leading={
                       !skill.command ? (
-                        <Tooltip title="Claude auto-loads this skill. It is not a user-facing slash command.">
+                        <Tooltip title={MODEL_LOADED}>
                           <Chip
                             size="small"
                             variant="outlined"
                             tabIndex={0}
                             icon={<BotIcon />}
                             label="model-loaded"
+                            aria-label={`model-loaded. ${MODEL_LOADED}`}
                           />
                         </Tooltip>
                       ) : undefined

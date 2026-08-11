@@ -31,6 +31,7 @@ import { Command } from './Command';
 import { Section } from './Section';
 
 function PluginCard({ plugin }: { plugin: Plugin }) {
+  const hooks = plugin.hookEvents.join(', ');
   return (
     <Card
       variant="outlined"
@@ -102,13 +103,14 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
             />
           )}
           {plugin.hookEvents.length > 0 && (
-            <Tooltip title={plugin.hookEvents.join(', ')}>
+            <Tooltip title={hooks}>
               <Chip
                 size="small"
                 variant="outlined"
                 tabIndex={0}
                 icon={<InfoIcon />}
                 label={countLabel(plugin.hookEvents.length, 'hook')}
+                aria-label={`${countLabel(plugin.hookEvents.length, 'hook')}: ${hooks}`}
               />
             </Tooltip>
           )}
