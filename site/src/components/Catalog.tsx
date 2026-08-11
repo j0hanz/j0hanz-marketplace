@@ -21,7 +21,6 @@ import {
   InfoIcon,
   SearchIcon,
   SearchOffIcon,
-  type CategoryName,
 } from '../icons';
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
@@ -55,7 +54,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         >
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
             <CategoryIconFor
-              name={plugin.category as CategoryName}
+              name={plugin.category}
               fontSize="small"
               sx={{ color: 'text.secondary', flexShrink: 0 }}
             />

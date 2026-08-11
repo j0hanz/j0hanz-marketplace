@@ -5,11 +5,11 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, ContentCopyIcon } from '../icons';
-import { codeSx, outline, srOnly } from '../theme/tokens';
+import { codeSx, srOnly } from '../theme/tokens';
 
 // Both strings are read aloud and branched on, so they are named once.
 const COPIED = 'Copied';
-const FAILED = 'Copy failed — select the text and copy it';
+const FAILED = 'Copy failed. Select the text and copy it';
 
 type Status = '' | typeof COPIED | typeof FAILED;
 
