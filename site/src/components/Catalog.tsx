@@ -259,7 +259,13 @@ export function Catalog() {
           </Typography>
           {/* Not relayed: `reset` clears the query too, and `visible` reads a
               deferred copy of it that no synchronous flush can advance. */}
-          <Link component="button" variant="body2" color="text.primary" onClick={reset}>
+          <Link
+            component="button"
+            variant="body2"
+            color="text.primary"
+            onClick={reset}
+            sx={{ py: 0.5 }}
+          >
             {query && category !== ALL ? 'Clear search and category' : 'Show all plugins'}
           </Link>
         </Stack>
