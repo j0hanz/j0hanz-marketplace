@@ -27,6 +27,7 @@ export interface Plugin {
 
 export interface Site {
   name: string;
+  pageTitle: string;
   description: string;
   repo: string;
   repoUrl: string;

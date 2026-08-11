@@ -10,6 +10,10 @@ const OUT = 'site/src/data/marketplace.json';
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
+// site.ts carries the same rule for the page. Not shared: importing across the
+// build/runtime line to save one line costs more than the line.
+const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 // ponytail: regex frontmatter reader, scalar keys at column 0 only. Indented keys
 // (metadata.category) are skipped on purpose. Swap for a YAML parser if a SKILL.md ever
 // needs block scalars.
@@ -114,19 +118,32 @@ export function build() {
   }
 
   const total = (fn) => plugins.reduce((n, p) => n + fn(p), 0);
+  const categories = [...new Set(plugins.map((p) => p.category))].sort();
+  const totals = {
+    plugins: plugins.length,
+    skills: total((p) => p.skills.length),
+    agents: total((p) => p.agents.length),
+  };
 
   return {
     name: catalog.name,
-    description: catalog.description,
+    // The catalog line names the marketplace; a <title> has to name what the page
+    // is about first. Same words the hero opens with, so the tab and the headline
+    // agree. Marketplace name trails it as the brand.
+    pageTitle: `Skills and agents for Claude Code · ${catalog.name}`,
+    // Counted rather than authored: the catalog is the description, and one that
+    // is written by hand goes stale the first time a plugin ships a skill. Front
+    // sentence carries the pitch, so a search engine clipping the tail only ever
+    // loses the category list.
+    description:
+      `${count(totals.skills, 'skill')} and ${count(totals.agents, 'agent')} across ` +
+      `${count(totals.plugins, 'Claude Code plugin')}. Install one at a time, no build step. ` +
+      `Categories: ${categories.join(', ')}.`,
     repo,
     repoUrl: `https://github.com/${repo}`,
     addCommand: `/plugin marketplace add ${repo}`,
-    categories: [...new Set(plugins.map((p) => p.category))].sort(),
-    totals: {
-      plugins: plugins.length,
-      skills: total((p) => p.skills.length),
-      agents: total((p) => p.agents.length),
-    },
+    categories,
+    totals,
     plugins,
   };
 }

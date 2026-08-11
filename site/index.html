@@ -9,10 +9,13 @@
          still overrules the OS. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#%GROUND_LIGHT%" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#%GROUND_DARK%" />
-    <title>%TITLE%</title>
+    <!-- %PAGE_TITLE% names the page, %TITLE% names the marketplace. The shell
+         below wears the second one, because that is what Nav renders in its
+         place a moment later. -->
+    <title>%PAGE_TITLE%</title>
     <meta name="description" content="%DESCRIPTION%" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="%TITLE%" />
+    <meta property="og:title" content="%PAGE_TITLE%" />
     <meta property="og:description" content="%DESCRIPTION%" />
     <meta property="og:image" content="https://opengraph.githubassets.com/1/%REPO%" />
     <meta name="twitter:card" content="summary_large_image" />

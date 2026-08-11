@@ -42,7 +42,7 @@ export function App() {
         Skip to content
       </Box>
       <Nav />
-      <main id="main">
+      <main id="main" tabIndex={-1}>
         <Hero />
         <Catalog />
         <SkillIndex />

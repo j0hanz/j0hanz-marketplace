@@ -60,6 +60,29 @@ test('install commands use the real repo slug and marketplace name', () => {
   }
 });
 
+test('the page title and meta description count the real catalog', () => {
+  assert.ok(site.pageTitle.includes(site.name), 'the title drops the marketplace name');
+  assert.ok(
+    site.pageTitle.length <= 60,
+    `title is ${site.pageTitle.length} chars; a search result shows about 60`,
+  );
+  // A lost interpolation reads as a sentence right up until someone looks at it,
+  // and the blank check below passes it: "undefined skills" is not a blank field.
+  assert.doesNotMatch(`${site.pageTitle} ${site.description}`, /undefined|NaN|%\w+%/);
+  const counts = [
+    [site.totals.skills, 'skill'],
+    [site.totals.agents, 'agent'],
+    [site.totals.plugins, 'Claude Code plugin'],
+  ];
+  for (const [n, word] of counts) {
+    const phrase = `${n} ${word}${n === 1 ? '' : 's'}`;
+    assert.ok(site.description.includes(phrase), `description does not say "${phrase}"`);
+  }
+  for (const category of site.categories) {
+    assert.ok(site.description.includes(category), `description omits the ${category} category`);
+  }
+});
+
 test('no field is blank', () => {
   const blanks = (value, path) => {
     if (typeof value === 'string') return value.trim() ? [] : [path];

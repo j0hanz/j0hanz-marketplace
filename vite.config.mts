@@ -1,7 +1,8 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import babel from '@rolldown/plugin-babel';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite';
 // Extension included: Vite's native config loader strips types rather than
 // bundling, so it resolves the real file rather than guessing at one.
 import { brand, ground, ink, paper, steel } from './site/src/theme/tokens.ts';
@@ -30,33 +31,103 @@ const logger = {
   },
 };
 
+const ORIGIN = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/`
+  : '';
+
+const THEME_SCRIPT_HASH = 'sha256-mr5w0PfwtqX+AzOutYW6156IpnwUWi121zAijce5DIs=';
+
+interface Entry {
+  displayName: string;
+  version: string;
+  summary: string;
+  homepage: string;
+}
+
+interface SiteData {
+  name: string;
+  pageTitle: string;
+  description: string;
+  repo: string;
+  repoUrl: string;
+  plugins: Entry[];
+}
+
+const jsonLd = (site: SiteData) =>
+  JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: site.pageTitle,
+    description: site.description,
+    numberOfItems: site.plugins.length,
+    itemListElement: site.plugins.map((plugin, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'SoftwareApplication',
+        name: plugin.displayName,
+        description: plugin.summary,
+        softwareVersion: plugin.version,
+        url: plugin.homepage,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Any',
+        license: `${site.repoUrl}/blob/main/LICENSE`,
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      },
+    })),
+  });
+
 const siteMeta = (): Plugin => ({
   name: 'site-meta',
   transformIndexHtml(html, ctx) {
-    const { name, description, repo } = JSON.parse(readFileSync(DATA, 'utf8'));
+    const site: SiteData = JSON.parse(readFileSync(DATA, 'utf8'));
     let out = html
-      .replaceAll('%TITLE%', name)
-      .replaceAll('%DESCRIPTION%', description)
-      .replaceAll('%REPO%', repo);
+      .replaceAll('%PAGE_TITLE%', site.pageTitle)
+      .replaceAll('%TITLE%', site.name)
+      .replaceAll('%DESCRIPTION%', site.description)
+      .replaceAll('%REPO%', site.repo);
     for (const [token, hex] of Object.entries(paint)) out = out.replaceAll(token, hex);
+    if (ctx.bundle) {
+      const inline = out.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
+      const hash = `sha256-${createHash('sha256').update(inline).digest('base64')}`;
+      if (hash !== THEME_SCRIPT_HASH) {
+        throw new Error(
+          `index.html's inline theme script changed. Set script-src in vercel.json and ` +
+            `THEME_SCRIPT_HASH here to '${hash}', or the CSP will block it in production.`,
+        );
+      }
+    }
+    const tags: HtmlTagDescriptor[] = [
+      {
+        tag: 'script',
+        attrs: { type: 'application/ld+json' },
+        children: jsonLd(site),
+        injectTo: 'body',
+      },
+    ];
+    if (ORIGIN) {
+      tags.push(
+        { tag: 'link', attrs: { rel: 'canonical', href: ORIGIN }, injectTo: 'head' },
+        { tag: 'meta', attrs: { property: 'og:url', content: ORIGIN }, injectTo: 'head' },
+      );
+    }
+
     const font = Object.keys(ctx.bundle ?? {}).find((file) => file.includes('latin-wght'));
-    if (!font) return out;
-    return {
-      html: out,
-      tags: [
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'preload',
-            as: 'font',
-            type: 'font/woff2',
-            href: `/${font}`,
-            crossorigin: '',
-          },
-          injectTo: 'head-prepend' as const,
+    if (font) {
+      tags.push({
+        tag: 'link',
+        attrs: {
+          rel: 'preload',
+          as: 'font',
+          type: 'font/woff2',
+          href: `/${font}`,
+          crossorigin: '',
         },
-      ],
-    };
+        injectTo: 'head',
+      });
+    }
+
+    return { html: out, tags };
   },
 });
 
@@ -70,6 +141,7 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         manualChunks(id) {

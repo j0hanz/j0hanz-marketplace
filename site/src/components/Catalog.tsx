@@ -73,7 +73,13 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
               </Link>
             </Typography>
           </Stack>
-          <Chip label={plugin.version} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
+          <Chip
+            label={plugin.version}
+            aria-label={`version ${plugin.version}`}
+            size="small"
+            variant="outlined"
+            sx={{ flexShrink: 0 }}
+          />
         </Stack>
 
         <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
