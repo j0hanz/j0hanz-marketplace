@@ -41,6 +41,7 @@ export function Command({ value }: { value: string }) {
   const tip = status || 'Copy';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
   const iconColor = copied ? 'primary' : status ? 'error' : undefined;
+  const swap = presses && !copied ? presses : undefined;
 
   return (
     <Paper
@@ -62,12 +63,7 @@ export function Command({ value }: { value: string }) {
       </Typography>
       <Tooltip title={tip}>
         <IconButton onClick={copy} aria-label={`Copy ${value}`}>
-          <Icon
-            key={presses}
-            fontSize="small"
-            color={iconColor}
-            data-swap-in={presses || undefined}
-          />
+          <Icon key={presses} fontSize="small" color={iconColor} data-swap-in={swap} />
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" sx={srOnly}>

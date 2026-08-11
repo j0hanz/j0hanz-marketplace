@@ -11,7 +11,7 @@
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --dur-reveal: 280ms;
-  --dur-draw: 600ms;
+  --dur-draw: 320ms;
   --dur-swap: 160ms;
 }
 
@@ -48,9 +48,17 @@
   transform: scaleX(1);
 }
 
-/* Already on screen at load, so it draws on its own rather than on entry. */
+/*
+ * The nav's rule is the page's read-progress. It draws across as the document
+ * scrolls rather than once on load: one rule doing one job, instead of a load
+ * animation and a progress bar sharing 3px. Driven by the browser's scroll
+ * timeline, so the value tracks without JS and stops at the document end
+ * without an observer. A browser with no scroll timeline drops the declaration
+ * and keeps the rule whole — the same thing no-JS and reduced-motion get.
+ */
 :root[data-motion] [data-draw-load]::after {
-  animation: draw 800ms var(--ease-out) both paused;
+  animation: draw linear;
+  animation-timeline: scroll();
 }
 
 /* The same rule as feedback: a card lights its top edge under the pointer. */
@@ -88,52 +96,6 @@
   }
 }
 
-/*
- * Idle nudge on the hero CTA's arrow. A 2u drop-and-return, run once after
- * the hero settles — enough to be read as a cue without the page ever having
- * a loop running in the corner of a visitor's eye. Hover, focus and pointer
- * press stop it sooner.
- */
-:root[data-motion][data-ready] [data-arrow-nudge] .MuiButton-endIcon svg {
-  animation: nudge 1.4s var(--ease-out) 600ms 1;
-  transform-origin: center;
-}
-
-:root[data-motion] [data-arrow-nudge]:hover .MuiButton-endIcon svg,
-:root[data-motion] [data-arrow-nudge]:focus-visible .MuiButton-endIcon svg,
-:root[data-motion] [data-arrow-nudge]:active .MuiButton-endIcon svg {
-  animation: none;
-}
-
-@keyframes nudge {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(2px);
-  }
-}
-
-/*
- * Scroll progress: a 3u brand-coloured bar pinned to the bottom of the AppBar
- * that scales horizontally as the document scrolls. Driven by the browser's
- * scroll timeline, so the value tracks without JS and stops at the document
- * end without an observer. Reduced-motion visitors hit the data-motion gate
- * upstream and never see the bar; no fallback needed.
- */
-:root[data-motion] [data-scroll-progress] {
-  animation: scroll-progress linear;
-  animation-timeline: scroll();
-  transform: scaleX(0);
-}
-
-@keyframes scroll-progress {
-  to {
-    transform: scaleX(1);
-  }
-}
-
 /* One glyph replacing another in place. Callers set it only after a press. */
 :root[data-motion] [data-swap-in] {
   animation: swap-in var(--dur-swap) var(--ease-out) both;
@@ -146,17 +108,9 @@
   }
 }
 
-/* Grid giving way to a message. Under 150ms, so it softens the cut without
-   reading as motion on a search. */
-:root[data-motion] [data-settle] {
-  animation: settle 140ms var(--ease-out) both;
-}
-
-@keyframes settle {
-  from {
-    opacity: 0;
-  }
-}
+/* The grid giving way to a message is not animated on either side. A search
+   result changes per keystroke, and the message arriving 140ms after the cards
+   left made one direction motion and the other a cut. */
 
 /* Catalog's filter change. Off the UA's 250ms default, onto the site's curve. */
 ::view-transition-group(*),
@@ -166,20 +120,24 @@
   animation-timing-function: var(--ease-out);
 }
 
-/* The authored moment: the pitch rises, then the panel wipes in behind its frame. */
-/* Cadence comes from --i on each element, so reordering the pitch carries it. */
+/* The authored moment: the pitch rises, then the install steps wipe in behind
+   the panel's frame, in the order they are typed. */
+/* Cadence comes from --i on each element, so reordering either carries it. */
 :root[data-motion] [data-hero] {
-  animation: rise 700ms var(--ease-out) both paused;
+  animation: rise 320ms var(--ease-out) both paused;
   animation-delay: calc(var(--i, 0) * 90ms);
 }
 
-/* Completes at 740ms, with the pitch. It holds the install command; clipping it
-   longer withholds the one thing the page is asking for. */
+/* The frame is there from the start, so the column never reflows; the steps it
+   holds arrive one at a time, because they are a sequence and step 2 does not
+   work before step 1. The last one lands at 520ms, with the pitch — the panel
+   holds the install command, and clipping it longer withholds the one thing
+   the page is asking for. */
 :root[data-motion] [data-hero-panel] {
-  animation: wipe 520ms var(--ease-out) 220ms both paused;
+  animation: wipe 260ms var(--ease-out) both paused;
+  animation-delay: calc(100ms + var(--i, 0) * 80ms);
 }
 
-:root[data-motion][data-ready] [data-draw-load]::after,
 :root[data-motion][data-ready] [data-hero],
 :root[data-motion][data-ready] [data-hero-panel] {
   animation-play-state: running;
@@ -224,12 +182,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-motion] [data-draw-check],
-  :root[data-motion] [data-swap-in],
-  :root[data-motion] [data-settle] {
-    animation: none;
-  }
-
-  :root[data-motion] [data-arrow-nudge] .MuiButton-endIcon svg {
+  :root[data-motion] [data-swap-in] {
     animation: none;
   }
 

@@ -1,5 +1,4 @@
 import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Fade from '@mui/material/Fade';
@@ -32,8 +31,10 @@ const mobileMenuId = 'nav-mobile-menu';
 
 function MobileMenu({ active }: { active: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [pressed, setPressed] = useState(false);
   const open = Boolean(anchor);
   const close = () => setAnchor(null);
+  const Glyph = open ? CloseIcon : MenuIcon;
 
   return (
     <>
@@ -43,10 +44,13 @@ function MobileMenu({ active }: { active: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
-        onClick={(e) => setAnchor(e.currentTarget)}
+        onClick={(e) => {
+          setPressed(true);
+          setAnchor(e.currentTarget);
+        }}
         sx={{ display: { xs: 'inline-flex', md: 'none' } }}
       >
-        {open ? <CloseIcon /> : <MenuIcon />}
+        <Glyph data-swap-in={pressed || undefined} />
       </IconButton>
       <Menu
         id={mobileMenuId}
@@ -107,19 +111,6 @@ export function Nav() {
       }}
     >
       <Container maxWidth="lg">
-        <Box
-          aria-hidden
-          data-scroll-progress
-          sx={{
-            position: 'absolute',
-            left: 0,
-            bottom: 0,
-            height: 3,
-            width: 1,
-            transformOrigin: 'left',
-            bgcolor: 'primary.main',
-          }}
-        />
         <Toolbar disableGutters>
           <Typography
             variant="h6"

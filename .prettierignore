@@ -5,6 +5,7 @@ package-lock.json
 # Generated
 site/src/data
 dist
+motion-audits
 
 # Tooling
 .eslintcache

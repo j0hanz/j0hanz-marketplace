@@ -182,7 +182,7 @@ export function Catalog() {
                       searchInput.current?.focus();
                     }}
                   >
-                    <CloseIcon fontSize="small" />
+                    <CloseIcon fontSize="small" data-swap-in="" />
                   </IconButton>
                 </InputAdornment>
               ) : undefined,
@@ -244,13 +244,7 @@ export function Catalog() {
       </Stack>
 
       {visible.length === 0 ? (
-        // Empty keeps the frame. A miss used to drop the section's one structural
-        // device and leave the message loose in the gap the grid had held.
-        <Stack
-          data-settle
-          spacing={2}
-          sx={{ py: 6, px: 3, alignItems: 'flex-start', border: outline }}
-        >
+        <Stack spacing={2} sx={{ py: 6, px: 3, alignItems: 'flex-start', border: outline }}>
           <SearchOffIcon fontSize="large" sx={{ color: 'text.secondary' }} aria-hidden />
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}

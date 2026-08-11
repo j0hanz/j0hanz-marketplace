@@ -50,8 +50,6 @@ const marker = {
   color: 'primary.contrastText',
 };
 
-// The one authored moment (index.css): the pitch rises, then the panel holding
-// the commands wipes in behind its own frame. Everything after is quieter.
 export function Hero() {
   return (
     <Container component="section" id="top" maxWidth="lg" sx={{ pt: { xs: 5, md: 6 }, pb: 4 }}>
@@ -83,7 +81,6 @@ export function Hero() {
                 href="#plugins"
                 disableElevation
                 endIcon={<ArrowDownwardIcon />}
-                data-arrow-nudge=""
               >
                 Browse plugins
               </Button>
@@ -110,7 +107,6 @@ export function Hero() {
             // anyone looking; the role keeps it for anyone listening.
             role="list"
             spacing={2.5}
-            data-hero-panel
             sx={{
               listStyle: 'none',
               m: 0,
@@ -121,7 +117,7 @@ export function Hero() {
             }}
           >
             {steps.map((step, i) => (
-              <Box component="li" key={step.label}>
+              <Box component="li" key={step.label} data-hero-panel sx={{ '--i': i }}>
                 <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
                   <Box aria-hidden sx={marker}>
                     {i + 1}
