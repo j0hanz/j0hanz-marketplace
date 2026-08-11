@@ -32,14 +32,31 @@ const logger = {
 
 const siteMeta = (): Plugin => ({
   name: 'site-meta',
-  transformIndexHtml: (html) => {
+  transformIndexHtml(html, ctx) {
     const { name, description, repo } = JSON.parse(readFileSync(DATA, 'utf8'));
     let out = html
       .replaceAll('%TITLE%', name)
       .replaceAll('%DESCRIPTION%', description)
       .replaceAll('%REPO%', repo);
     for (const [token, hex] of Object.entries(paint)) out = out.replaceAll(token, hex);
-    return out;
+    const font = Object.keys(ctx.bundle ?? {}).find((file) => file.includes('latin-wght'));
+    if (!font) return out;
+    return {
+      html: out,
+      tags: [
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'preload',
+            as: 'font',
+            type: 'font/woff2',
+            href: `/${font}`,
+            crossorigin: '',
+          },
+          injectTo: 'head-prepend' as const,
+        },
+      ],
+    };
   },
 });
 
