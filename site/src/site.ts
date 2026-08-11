@@ -39,6 +39,5 @@ export interface Site {
 
 export const site: Site = raw;
 
-export const pluralize = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`;
-
-export const countLabel = (count: number, word: string) => `${count} ${pluralize(count, word)}`;
+export const countLabel = (count: number, word: string) =>
+  `${count} ${word}${count === 1 ? '' : 's'}`;

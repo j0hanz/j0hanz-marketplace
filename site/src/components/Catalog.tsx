@@ -27,6 +27,7 @@ import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
 import { accent, drawable, mono, outline } from '../theme/tokens';
 import { Command } from './Command';
+import { CountChips } from './CountChips';
 import { Section } from './Section';
 
 function PluginCard({ plugin }: { plugin: Plugin }) {
@@ -87,20 +88,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         </Typography>
 
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
-          {plugin.skills.length > 0 && (
-            <Chip
-              size="small"
-              variant="outlined"
-              label={countLabel(plugin.skills.length, 'skill')}
-            />
-          )}
-          {plugin.agents.length > 0 && (
-            <Chip
-              size="small"
-              variant="outlined"
-              label={countLabel(plugin.agents.length, 'agent')}
-            />
-          )}
+          <CountChips plugin={plugin} />
           {plugin.hookEvents.length > 0 && (
             <Tooltip title={hooks}>
               <Chip

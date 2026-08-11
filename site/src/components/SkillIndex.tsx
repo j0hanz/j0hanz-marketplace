@@ -15,6 +15,7 @@ import { BotIcon, ExpandMoreIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site } from '../site';
 import { codeSx, lit, outline } from '../theme/tokens';
+import { CountChips } from './CountChips';
 import { Section } from './Section';
 
 const MODEL_LOADED = 'Claude auto-loads this skill. It is not a user-facing slash command.';
@@ -108,20 +109,7 @@ export function SkillIndex() {
                 {plugin.displayName}
               </Typography>
               <Stack direction="row" spacing={1} sx={{ mr: 2, flexShrink: 0, alignSelf: 'center' }}>
-                {plugin.skills.length > 0 && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={countLabel(plugin.skills.length, 'skill')}
-                  />
-                )}
-                {plugin.agents.length > 0 && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={countLabel(plugin.agents.length, 'agent')}
-                  />
-                )}
+                <CountChips plugin={plugin} />
               </Stack>
             </AccordionSummary>
             <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
