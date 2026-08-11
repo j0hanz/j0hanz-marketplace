@@ -16,10 +16,11 @@ const searchIndex = site.plugins.map((plugin) => ({
     .toLowerCase(),
 }));
 
+const param = (key: string) => new URLSearchParams(location.search).get(key);
+
 export function useCatalogFilter() {
-  const initial = new URLSearchParams(location.search);
-  const [category, setCategory] = useState(() => initial.get('category') ?? ALL);
-  const [query, setQuery] = useState(() => initial.get('q') ?? '');
+  const [category, setCategory] = useState(() => param('category') ?? ALL);
+  const [query, setQuery] = useState(() => param('q') ?? '');
   const deferred = useDeferredValue(query);
 
   useEffect(() => {
