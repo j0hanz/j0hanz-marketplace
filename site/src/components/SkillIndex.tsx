@@ -60,17 +60,14 @@ function Entry({
 
 export function SkillIndex() {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
-
-  // Rows the user explicitly toggled away from the viewport default. Kept so a
-  // resize doesn't undo a deliberate collapse.
   const [overrides, setOverrides] = useState<Partial<Record<string, boolean>>>({});
-  const firstName = site.plugins[0]?.name;
-  const isOpen = (name: string) => overrides[name] ?? (isDesktop && name === firstName);
-  const toggle = (name: string) => setOverrides((prev) => ({ ...prev, [name]: !isOpen(name) }));
+  const firstPluginName = site.plugins[0]?.name;
+  const isOpen = (name: string, map = overrides) =>
+    map[name] ?? (isDesktop && name === firstPluginName);
+  const toggle = (name: string) =>
+    setOverrides((prev) => ({ ...prev, [name]: !isOpen(name, prev) }));
 
   const listRef = useRef<HTMLDivElement>(null);
-  // Structural wrapper: gives `useEnter` a single scope to query descendants
-  // from, so per-Accordion refs aren't needed.
   useEnter(listRef);
 
   return (
