@@ -3,6 +3,7 @@ import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
+import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
@@ -15,6 +16,7 @@ import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import {
   CategoryIconFor,
+  CloseIcon,
   ExternalIcon,
   InfoIcon,
   SearchIcon,
@@ -24,7 +26,7 @@ import {
 import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
-import { accent, cssVars, drawable, outline } from '../theme/tokens';
+import { accent, drawable, mono, outline } from '../theme/tokens';
 import { Command } from './Command';
 import { Section } from './Section';
 
@@ -117,6 +119,16 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 export function Catalog() {
   const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
   const grid = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  // Shared by both category controls: the cards travel between cells under a
+  // view transition, or land outright where the browser or the visitor says no.
+  const pickCategory = (next: string) => {
+    if (!document.startViewTransition || !document.documentElement.dataset.motion) {
+      setCategory(next);
+      return;
+    }
+    document.startViewTransition(() => flushSync(() => setCategory(next))).ready.catch(() => {});
+  };
   // Cards below the fold still reveal on scroll; ones a filter puts back land
   // without it. See useEnter.
   useEnter(grid, visible);
@@ -135,6 +147,7 @@ export function Catalog() {
         <TextField
           type="search"
           label="Search plugins"
+          inputRef={searchInput}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -151,6 +164,28 @@ export function Catalog() {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
+              // The UA's own search-cancel button is the one glyph on the page
+              // drawn by someone else, and it doesn't track the theme. Hidden in
+              // the theme; this is the same control in the page's icon set.
+              endAdornment: query ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    edge="end"
+                    aria-label="Clear search"
+                    // Clears the query only — the category is a separate control
+                    // and this button is not attached to it. Clearing also
+                    // unmounts this button, so it hands focus back to the field
+                    // rather than dropping a keyboard user at the document top.
+                    onClick={() => {
+                      setQuery('');
+                      searchInput.current?.focus();
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
             },
             htmlInput: {
               autoComplete: 'off',
@@ -160,22 +195,35 @@ export function Catalog() {
           }}
           sx={{ width: 1, maxWidth: { md: 320 } }}
         />
+        {/* Seven exclusive options wrap to three rows on a phone — 138px of
+            control above a six-card list. The platform already has a one-of-many
+            control for a narrow column, and it opens as the OS picker. The row
+            of buttons returns as soon as there is width to lay it out in. */}
+        <TextField
+          select
+          label="Category"
+          value={category}
+          onChange={(e) => pickCategory(e.target.value)}
+          slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
+          // Mono, like the row of buttons it stands in for — it is the same
+          // control, and the value it shows reads as a filter, not as prose.
+          sx={{ display: { xs: 'flex', sm: 'none' }, width: 1, '& select': { fontFamily: mono } }}
+        >
+          <option value={ALL}>All</option>
+          {site.categories.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </TextField>
         <ToggleButtonGroup
           exclusive
           size="small"
           value={category}
-          onChange={(_, next: string | null) => {
-            if (!next) return;
-            if (!document.startViewTransition || !document.documentElement.dataset.motion) {
-              setCategory(next);
-              return;
-            }
-            document
-              .startViewTransition(() => flushSync(() => setCategory(next)))
-              .ready.catch(() => {});
-          }}
+          onChange={(_, next: string | null) => next && pickCategory(next)}
           aria-label="Filter plugins by category"
           sx={{
+            display: { xs: 'none', sm: 'flex' },
             flexWrap: 'wrap',
             gap: '3px',
             '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 },
@@ -196,13 +244,14 @@ export function Catalog() {
       </Stack>
 
       {visible.length === 0 ? (
-        <Stack data-settle spacing={2} sx={{ py: 6, alignItems: 'flex-start' }}>
-          <SearchOffIcon
-            fontSize="large"
-            sx={{ color: 'text.secondary' }}
-            aria-hidden
-            style={cssVars({ '--draw-delay': 80 })}
-          />
+        // Empty keeps the frame. A miss used to drop the section's one structural
+        // device and leave the message loose in the gap the grid had held.
+        <Stack
+          data-settle
+          spacing={2}
+          sx={{ py: 6, px: 3, alignItems: 'flex-start', border: outline }}
+        >
+          <SearchOffIcon fontSize="large" sx={{ color: 'text.secondary' }} aria-hidden />
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>

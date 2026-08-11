@@ -89,28 +89,6 @@
 }
 
 /*
- * Icon wipe: filled icons don't take a stroke draw, so they reveal by the same
- * left-to-right clip-path the hero panel uses. Callers set a `data-draw-delay`
- * (ms) so the three Install steps stagger, the lone hero icon leads, and the
- * search-off waits for the empty state to settle.
- */
-:root[data-motion] [data-draw-icon] {
-  clip-path: inset(0 100% 0 0);
-  animation: draw-icon var(--dur-reveal) var(--ease-out) both;
-  animation-delay: calc(var(--draw-delay, 0) * 1ms);
-}
-
-:root[data-motion][data-ready] [data-draw-icon] {
-  animation-play-state: running;
-}
-
-@keyframes draw-icon {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-}
-
-/*
  * Idle nudge on the hero CTA's arrow. A 2u drop-and-return, run once after
  * the hero settles — enough to be read as a cue without the page ever having
  * a loop running in the corner of a visitor's eye. Hover, focus and pointer
@@ -246,14 +224,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-motion] [data-draw-check],
-  :root[data-motion] [data-draw-icon],
   :root[data-motion] [data-swap-in],
   :root[data-motion] [data-settle] {
     animation: none;
-  }
-
-  :root[data-motion] [data-draw-icon] {
-    clip-path: none;
   }
 
   :root[data-motion] [data-arrow-nudge] .MuiButton-endIcon svg {

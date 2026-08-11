@@ -14,15 +14,11 @@ import { srOnly } from './theme/tokens';
  * Amber is spent only where the page already spends it — the mark, and a copy
  * that landed — because it is the palette's signal for live, not a highlight.
  */
-const icon = (path: string, drawable = false) =>
+const icon = (path: string) =>
   function Icon(props: SvgIconProps) {
     return (
       <SvgIcon {...props}>
-        <path
-          d={path}
-          pathLength={drawable ? 100 : undefined}
-          data-draw-icon={drawable || undefined}
-        />
+        <path d={path} />
       </SvgIcon>
     );
   };
@@ -127,22 +123,6 @@ export const SearchOffIcon = icon(
 export const CloseIcon = icon(
   'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
 );
-
-// Three stacked square tiles offset like a stack of cards — the unit the
-// marketplace trades in. Drawn in pairs of strokes so the offsets read at
-// 16px without aliasing to a solid block.
-export const PluginIcon = icon('M3 3h12v12H3zm2 2v8h8V5zm4 12h12v4H9zm6-6h6v4h-6zm0 2v-2h2v2z');
-
-// A square chest with a downward arrow through its lid — the install step.
-// Lid is a 2u stroke on top of the chest, arrow a chevron with square cap so
-// the corners stay 90 or 45.
-export const DownloadIcon = icon(
-  'M4 4h16v3H4zm2 2v1h12V6zM3 9h18v3h-2v-1H5v1H3zm8 1h2v6h-2zm-3 3 4 4 4-4-1.41-1.41L13 12.17l.59.59L12 14.17l-1.59-1.41L11 12.17l-1.59 1.42zm-1 7h12v1H7z',
-);
-
-// A square frame with `>` and an underscore cursor — the run-the-skill step.
-// The chevron is two strokes; the cursor a 2u square on the baseline.
-export const TerminalIcon = icon('M3 3h18v18H3zm2 2v14h14V5zm3 4 4 3-4 3v-2l2-1-2-1zm6 5h4v2h-4z');
 
 // A square robot face — the model-loaded chip. Two square eyes and a square
 // mouth, antenna as a 2u stroke up. Distinguishes from InfoIcon at a glance.

@@ -88,8 +88,15 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: sans,
-    h2: heading({ min: '1.75rem', max: '4.25rem', letterSpacing: '0.01em' }),
-    h4: heading({ min: '1.25rem', max: '2rem', letterSpacing: '0.06em' }),
+    h2: heading({
+      min: '1.75rem',
+      max: '4.25rem',
+      slope: '0.5rem + 4.1vw',
+      letterSpacing: '0.01em',
+    }),
+    // A quarter of h2's rate: section titles stay a step below the headline at
+    // every width instead of catching it on the way to their own ceiling.
+    h4: heading({ min: '1.25rem', max: '2rem', slope: '1rem + 1.11vw', letterSpacing: '0.06em' }),
     h5: { fontFamily: mono },
     h6: { fontFamily: mono },
     button: { fontFamily: mono },
@@ -146,7 +153,19 @@ export const theme = createTheme({
     },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: { '& .MuiOutlinedInput-notchedOutline': { borderColor: edge } },
+        root: {
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: edge },
+          // The field draws its own clear button, in the page's icon set.
+          '& input::-webkit-search-cancel-button': { display: 'none' },
+        },
+      },
+    },
+    // Focused, MUI paints the label primary.main. In the light scheme that is
+    // #B45309 on #EDF0F3 — 4.4:1, under AA for a 16px label. Amber stays on the
+    // notched outline, where 3:1 is the bar it has to clear.
+    MuiInputLabel: {
+      styleOverrides: {
+        root: { '&.Mui-focused': { color: 'var(--mui-palette-text-primary)' } },
       },
     },
     MuiToggleButtonGroup: {
@@ -159,6 +178,11 @@ export const theme = createTheme({
         root: {
           ...press,
           borderColor: edge,
+          // Unset, MUI's own action colour wins: pure white in dark — brighter
+          // than the selected row it sits beside — and rgba(0,0,0,.54) in light,
+          // 4.4:1 on the ground. Both are outside the palette. Unselected is
+          // secondary text; selected is primary, which is the whole hierarchy.
+          color: 'var(--mui-palette-text-secondary)',
           // A transparent 3px shadow in the resting state, so the selected
           // shadow interpolates instead of snapping. The brand says selected is
           // a 3px inset bar in primary, never a filled background — the

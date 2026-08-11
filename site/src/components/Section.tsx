@@ -29,7 +29,7 @@ export function Section({
       id={id}
       aria-labelledby={`${id}-title`}
       maxWidth="lg"
-      sx={{ py: { xs: 7, md: 9 } }}
+      sx={{ py: { xs: 6, md: 7 } }}
     >
       <Stack
         ref={header}
@@ -49,7 +49,7 @@ export function Section({
         </Typography>
         {count && (
           <>
-            <Chip label={count.total} size="small" aria-hidden />
+            <Chip label={count.total} size="small" variant="outlined" aria-hidden />
             <Box component="span" role="status" sx={srOnly}>
               {count.label}
             </Box>

@@ -65,10 +65,12 @@ export const srOnly = {
 export const heading = ({
   min,
   max,
+  slope,
   letterSpacing,
 }: {
   min: string;
   max: string;
+  slope: string;
   letterSpacing: string;
 }) => ({
   fontFamily: mono,
@@ -76,7 +78,7 @@ export const heading = ({
   textTransform: 'uppercase' as const,
   letterSpacing,
   lineHeight: 1.1,
-  fontSize: `clamp(${min}, 0.5rem + 4.1vw, ${max})`,
+  fontSize: `clamp(${min}, ${slope}, ${max})`,
   textWrap: 'balance' as const,
 });
 
@@ -84,10 +86,3 @@ export const focusRing = {
   outline: '2px solid var(--focus-ring)',
   outlineOffset: '2px',
 };
-
-// ponytail: typed escape hatch for callers that set CSS custom properties on a
-// MUI component's `style` prop. MUI's `Properties` rejects `--foo` keys; the
-// real DOM accepts them. Cast to the React.CSSProperties alias without losing
-// type checking on the rest of the object.
-export const cssVars = (vars: Record<`--${string}`, number | string>): React.CSSProperties =>
-  vars as unknown as React.CSSProperties;

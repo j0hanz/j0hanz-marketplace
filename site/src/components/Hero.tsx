@@ -4,60 +4,73 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useCountUp } from '../hooks/useCountUp';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
-import { pluralize, site } from '../site';
+import { site } from '../site';
 import { lit, mono, rule } from '../theme/tokens';
 import { Command } from './Command';
 
-const stats = [
-  { count: site.totals.plugins, unit: 'plugin' },
-  { count: site.totals.skills, unit: 'skill' },
-  { count: site.totals.agents, unit: 'agent' },
+// The three lines a visitor actually types, in the order they type them. The
+// example is whichever plugin ships the first slash command; with none, the
+// sequence is the one command that never depends on a plugin existing.
+const example = site.plugins.flatMap((plugin) =>
+  plugin.skills.flatMap((skill) =>
+    skill.command ? [{ install: plugin.installCommand, run: skill.command }] : [],
+  ),
+)[0];
+
+const steps = [
+  { label: 'Add the marketplace', value: site.addCommand },
+  ...(example
+    ? [
+        { label: 'Install a plugin', value: example.install },
+        { label: 'Run it', value: example.run },
+      ]
+    : []),
 ];
 
-// Reads the same flag main.tsx sets — `true` only when JS runs and the visitor
-// allows motion. The panel wipe takes 520ms with a 220ms delay, so the count
-// starts on the wipe's last frame and reads as a settling into the number.
-const COUNT_DELAY = 740;
+const eyebrow = {
+  fontFamily: mono,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.12em',
+};
 
-function StatNumber({ value }: { value: number }) {
-  const motion =
-    typeof document !== 'undefined' && document.documentElement.dataset.motion !== undefined;
-  const reduced =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const n = useCountUp(value, COUNT_DELAY, motion && !reduced);
-  return (
-    <Typography sx={{ fontFamily: mono, fontWeight: 700, lineHeight: 1.2, fontSize: '1.75rem' }}>
-      {n}
-    </Typography>
-  );
-}
+// Ordinals, not icons: these are the only numbered things on the page, and the
+// number is the information — step 2 does not work before step 1.
+const marker = {
+  flexShrink: 0,
+  width: 22,
+  height: 22,
+  display: 'grid',
+  placeItems: 'center',
+  fontFamily: mono,
+  fontWeight: 700,
+  fontSize: '0.75rem',
+  lineHeight: 1,
+  bgcolor: 'primary.main',
+  color: 'primary.contrastText',
+};
 
-// The one authored moment (index.css): the pitch rises, then the marketplace
-// panel wipes in behind its own frame. Everything after it is quieter by design.
+// The one authored moment (index.css): the pitch rises, then the panel holding
+// the commands wipes in behind its own frame. Everything after is quieter.
 export function Hero() {
   return (
-    <Container
-      component="section"
-      id="top"
-      maxWidth="lg"
-      sx={{ pt: { xs: 6, md: 11 }, pb: { xs: 4, md: 6 } }}
-    >
-      <Grid container spacing={{ xs: 5, md: 6 }} sx={{ alignItems: 'center' }}>
+    <Container component="section" id="top" maxWidth="lg" sx={{ pt: { xs: 5, md: 6 }, pb: 4 }}>
+      {/* Both columns start on the same line, so the panel's lit top rule sits
+          with the headline's first cap rather than floating against its middle. */}
+      <Grid container spacing={{ xs: 5, md: 6 }} sx={{ alignItems: 'start' }}>
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={{ xs: 3, md: 4 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
               Skills and agents for Claude Code.
             </Typography>
-            <Typography
-              variant="body1"
-              color="textSecondary"
-              sx={{ maxWidth: '48ch', '--i': 1 }}
-              data-hero
-            >
-              Install one plugin at a time. No build step, no dependencies.
-            </Typography>
+            <Stack spacing={1.5} data-hero sx={{ maxWidth: '48ch', '--i': 1 }}>
+              <Typography variant="body1">
+                Skills are slash commands you run. Agents are helpers Claude delegates work to.
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Install one plugin at a time. No build step, no dependencies.
+              </Typography>
+            </Stack>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
@@ -91,47 +104,35 @@ export function Hero() {
 
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack
-            spacing={2}
+            component="ol"
+            // list-style: none drops the list role in Safari, and with it the
+            // count these steps are read by. The marker carries the ordinal for
+            // anyone looking; the role keeps it for anyone listening.
+            role="list"
+            spacing={2.5}
             data-hero-panel
-            sx={{ p: 2, bgcolor: 'background.paper', border: rule, boxShadow: lit('top') }}
+            sx={{
+              listStyle: 'none',
+              m: 0,
+              p: 2,
+              bgcolor: 'background.paper',
+              border: rule,
+              boxShadow: lit('top'),
+            }}
           >
-            <Typography
-              component="p"
-              variant="caption"
-              color="textSecondary"
-              sx={{ fontFamily: mono, textTransform: 'uppercase', letterSpacing: '0.12em' }}
-            >
-              Add the marketplace
-            </Typography>
-            <Command value={site.addCommand} />
-
-            <Stack
-              component="ul"
-              direction="row"
-              sx={{
-                listStyle: 'none',
-                p: 0,
-                m: 0,
-                pt: 2,
-                borderTop: 1,
-                borderColor: 'divider',
-                '& > li + li': { pl: 2, borderLeft: 1, borderColor: 'divider' },
-                '& > li': { flex: 1, minWidth: 0 },
-              }}
-            >
-              {stats.map((stat) => (
-                <Box component="li" key={stat.unit}>
-                  <StatNumber value={stat.count} />
-                  <Typography variant="caption" color="textSecondary">
-                    {pluralize(stat.count, stat.unit)}
+            {steps.map((step, i) => (
+              <Box component="li" key={step.label}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
+                  <Box aria-hidden sx={marker}>
+                    {i + 1}
+                  </Box>
+                  <Typography variant="caption" color="textSecondary" sx={eyebrow}>
+                    {step.label}
                   </Typography>
-                </Box>
-              ))}
-            </Stack>
-
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-              Skills are slash commands you run. Agents are helpers Claude delegates work to.
-            </Typography>
+                </Stack>
+                <Command value={step.value} />
+              </Box>
+            ))}
           </Stack>
         </Grid>
       </Grid>

@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import { Catalog } from './components/Catalog';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
-import { Install } from './components/Install';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
 import { rule } from './theme/tokens';
@@ -28,6 +27,12 @@ export function App() {
   useEffect(() => {
     requestAnimationFrame(() => {
       document.documentElement.dataset.ready = '';
+      // The browser resolves the hash against the shell, before the reveals and
+      // the open accordion have any height, so a deep link lands short of its
+      // section. Re-aim once the real layout exists. getElementById rather than
+      // a selector: a hash like `#1` is a valid fragment and an invalid one.
+      if (location.hash.length > 1)
+        document.getElementById(location.hash.slice(1))?.scrollIntoView();
     });
   }, []);
 
@@ -41,7 +46,6 @@ export function App() {
         <Hero />
         <Catalog />
         <SkillIndex />
-        <Install />
       </main>
       <Footer />
     </>

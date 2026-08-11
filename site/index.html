@@ -126,6 +126,31 @@
           animation: none;
         }
       }
+      /* Styles the <noscript> fallback at the end of <body>. The shell is a
+         wait; without scripting there is nothing to wait for, so that block
+         also stops the loading bar and this carries the page instead. */
+      .fallback {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 16px;
+        color: var(--paint-ink);
+        font-family: system-ui, sans-serif;
+        line-height: 1.65;
+      }
+      .fallback code {
+        display: block;
+        margin: 8px 0 24px;
+        padding: 12px;
+        overflow-wrap: anywhere;
+        background: var(--paint-paper);
+        border: 1px solid var(--paint-steel);
+        font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+      }
+      @media (min-width: 600px) {
+        .fallback {
+          padding: 48px 24px;
+        }
+      }
     </style>
     <!--
       What MUI's InitColorSchemeScript does, for the shell that paints before it:
@@ -157,6 +182,31 @@
         </div>
       </div>
     </div>
+    <!--
+      The catalog is static data rendered by React, so without scripting there
+      is no page at all — only a shell animating toward a mount that never
+      comes. The one command a visitor came for does not need React to be read,
+      and the repo carries the rest.
+    -->
+    <noscript>
+      <style>
+        .shell::after {
+          width: 100%;
+          animation: none;
+        }
+      </style>
+      <div class="fallback">
+        <!-- Its own sentence: the description is authored data and ends however
+             it ends, so nothing here punctuates on its behalf. -->
+        <p>%DESCRIPTION%</p>
+        <p>Browsing the catalog needs JavaScript. Adding the marketplace does not:</p>
+        <code>/plugin marketplace add %REPO%</code>
+        <p>
+          Every plugin, and what each one ships, is listed at
+          <a href="https://github.com/%REPO%">github.com/%REPO%</a>.
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

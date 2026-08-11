@@ -19,7 +19,6 @@ import { ModeToggle } from './ModeToggle';
 const navLinks = [
   { label: 'Plugins', href: '#plugins' },
   { label: 'Skills', href: '#skills' },
-  { label: 'Install', href: '#install' },
 ];
 const hrefs = navLinks.map((link) => link.href);
 
@@ -143,27 +142,37 @@ export function Nav() {
             {site.name}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {navLinks.map((link) => (
-              <Button
-                key={link.href}
-                href={link.href}
-                color="inherit"
-                aria-current={active === link.href ? 'true' : undefined}
-                sx={{
-                  display: { xs: 'none', md: 'inline-flex' },
-                  minHeight: 44,
-                  borderBottom: '2px solid transparent',
-                  color: 'text.secondary',
-                  ...(active === link.href && {
-                    color: 'text.primary',
-                    fontWeight: 700,
-                    borderBottomColor: 'primary.main',
-                  }),
-                }}
-              >
-                {link.label}
-              </Button>
-            ))}
+            {/* The section links are the one navigation landmark on the page;
+                the theme and repo controls beside them are not part of it. */}
+            <Stack
+              component="nav"
+              aria-label="Sections"
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'center' }}
+            >
+              {navLinks.map((link) => (
+                <Button
+                  key={link.href}
+                  href={link.href}
+                  color="inherit"
+                  aria-current={active === link.href ? 'true' : undefined}
+                  sx={{
+                    display: { xs: 'none', md: 'inline-flex' },
+                    minHeight: 44,
+                    borderBottom: '2px solid transparent',
+                    color: 'text.secondary',
+                    ...(active === link.href && {
+                      color: 'text.primary',
+                      fontWeight: 700,
+                      borderBottomColor: 'primary.main',
+                    }),
+                  }}
+                >
+                  {link.label}
+                </Button>
+              ))}
+            </Stack>
             <ModeToggle />
             <IconButton
               color="inherit"
