@@ -12,7 +12,7 @@ import { accent, drawable, rule } from '../theme/tokens';
 // Caption and body2 leave these links 20–22px tall, under the 24px floor.
 // Padding on an inline box grows the hit area without moving the baseline the
 // surrounding Stack aligns on.
-const hit = { py: 0.5 };
+const hitArea = { py: 0.5 };
 
 export function Footer() {
   const footer = useRef<HTMLElement>(null);
@@ -45,7 +45,7 @@ export function Footer() {
               variant="caption"
               color="text.secondary"
               underline="hover"
-              sx={hit}
+              sx={hitArea}
             >
               MIT license
               <ExternalIcon />
@@ -58,7 +58,7 @@ export function Footer() {
             variant="body2"
             color="text.secondary"
             underline="hover"
-            sx={hit}
+            sx={hitArea}
           >
             {site.repo}
             <ExternalIcon />
