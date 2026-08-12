@@ -14,21 +14,21 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  CategoryIconFor,
-  CloseIcon,
-  ExternalIcon,
-  InfoIcon,
-  SearchIcon,
-  SearchOffIcon,
-} from '../icons';
-import { ALL, useCatalogFilter } from '../hooks/useCatalogFilter';
+import Box from '@mui/material/Box';
+import { CloseIcon, ExternalIcon, InfoIcon, SearchIcon, SearchOffIcon } from '../icons';
+import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
-import { accent, drawable, mono, outline } from '../theme/tokens';
+import { accent, drawable, mono, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
 import { Section } from './Section';
+
+// The title link covers the card, so the surface that lights under the pointer
+// is the surface that opens the plugin. Everything with its own target — the
+// chips carrying a tooltip, the copy bar — takes a positioned parent and paints
+// back above it.
+const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } };
 
 function PluginCard({ plugin }: { plugin: Plugin }) {
   const hooks = plugin.hookEvents.join(', ');
@@ -48,46 +48,50 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>
+        {/* Category and version name the plugin; the chips below count what is
+            in it. Two voices, so a version stops reading as a fourth count. */}
         <Stack
           direction="row"
           spacing={1}
-          sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+          sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}
         >
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <CategoryIconFor
-              name={plugin.category}
-              fontSize="small"
-              sx={{ color: 'text.secondary', flexShrink: 0 }}
-            />
-            <Typography variant="h6" component="h3" sx={{ overflowWrap: 'anywhere' }}>
-              <Link
-                href={plugin.homepage}
-                target="_blank"
-                rel="noreferrer"
-                color="inherit"
-                underline="hover"
-                // Overrides ExternalIcon's own phrasing, so it repeats the warning.
-                aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
-              >
-                {plugin.displayName}
-                <ExternalIcon />
-              </Link>
-            </Typography>
-          </Stack>
-          <Chip
-            label={plugin.version}
-            aria-label={`version ${plugin.version}`}
-            size="small"
-            variant="outlined"
-            sx={{ flexShrink: 0 }}
-          />
+          <Typography variant="caption" color="textSecondary" sx={tag}>
+            {plugin.category}
+          </Typography>
+          <Typography variant="caption" color="textSecondary" sx={{ ...tag, flexShrink: 0 }}>
+            <Box component="span" sx={srOnly}>
+              version{' '}
+            </Box>
+            {plugin.version}
+          </Typography>
         </Stack>
+
+        <Typography variant="h6" component="h3" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
+          <Link
+            href={plugin.homepage}
+            target="_blank"
+            rel="noreferrer"
+            color="inherit"
+            underline="hover"
+            // Overrides ExternalIcon's own phrasing, so it repeats the warning.
+            aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
+            sx={stretch}
+          >
+            {plugin.displayName}
+            <ExternalIcon />
+          </Link>
+        </Typography>
 
         <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
           {plugin.summary}
         </Typography>
 
-        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', mt: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          useFlexGap
+          sx={{ flexWrap: 'wrap', mt: 2, position: 'relative' }}
+        >
           <CountChips plugin={plugin} />
           {plugin.hookEvents.length > 0 && (
             <Tooltip title={hooks}>
@@ -104,15 +108,15 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         </Stack>
       </CardContent>
 
-      <CardActions>
+      <CardActions sx={{ position: 'relative' }}>
         <Command value={plugin.installCommand} />
       </CardActions>
     </Card>
   );
 }
 
-export function Catalog() {
-  const { visible, category, setCategory, query, setQuery, reset } = useCatalogFilter();
+export function Catalog({ filter }: { filter: CatalogFilter }) {
+  const { visible, category, setCategory, query, setQuery, reset } = filter;
   const grid = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   // Shared by both category controls: the cards travel between cells under a
@@ -222,7 +226,7 @@ export function Catalog() {
           sx={{
             display: { xs: 'none', sm: 'flex' },
             flexWrap: 'wrap',
-            gap: '3px',
+            gap: `${RULE_WIDTH}px`,
             '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 },
             // Wrapped rows can't share edges, so give every button its own.
             '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {

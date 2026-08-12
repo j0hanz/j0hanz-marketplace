@@ -28,6 +28,8 @@ export interface Plugin {
 export interface Site {
   name: string;
   pageTitle: string;
+  /** The pitch, without the category list the page prints as its filter row. */
+  tagline: string;
   description: string;
   repo: string;
   repoUrl: string;

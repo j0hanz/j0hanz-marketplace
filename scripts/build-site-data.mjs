@@ -125,6 +125,10 @@ export function build() {
     agents: total((p) => p.agents.length),
   };
 
+  const tagline =
+    `${count(totals.skills, 'skill')} and ${count(totals.agents, 'agent')} across ` +
+    `${count(totals.plugins, 'Claude Code plugin')}. Install one at a time, no build step.`;
+
   return {
     name: catalog.name,
     // The catalog line names the marketplace; a <title> has to name what the page
@@ -135,10 +139,10 @@ export function build() {
     // is written by hand goes stale the first time a plugin ships a skill. Front
     // sentence carries the pitch, so a search engine clipping the tail only ever
     // loses the category list.
-    description:
-      `${count(totals.skills, 'skill')} and ${count(totals.agents, 'agent')} across ` +
-      `${count(totals.plugins, 'Claude Code plugin')}. Install one at a time, no build step. ` +
-      `Categories: ${categories.join(', ')}.`,
+    tagline,
+    // The tail is for search results only: the page lists the categories itself,
+    // in the filter row under the hero, so the hero prints the tagline alone.
+    description: `${tagline} Categories: ${categories.join(', ')}.`,
     repo,
     repoUrl: `https://github.com/${repo}`,
     addCommand: `/plugin marketplace add ${repo}`,

@@ -7,6 +7,7 @@ import {
   heading,
   ink,
   lit,
+  litIdle,
   mono,
   paper,
   sans,
@@ -183,11 +184,10 @@ export const theme = createTheme({
           // 4.4:1 on the ground. Both are outside the palette. Unselected is
           // secondary text; selected is primary, which is the whole hierarchy.
           color: 'var(--mui-palette-text-secondary)',
-          // A transparent 3px shadow in the resting state, so the selected
-          // shadow interpolates instead of snapping. The brand says selected is
-          // a 3px inset bar in primary, never a filled background — the
-          // transparent twin keeps the geometry while the value swaps.
-          boxShadow: 'inset 0 -3px 0 transparent',
+          // A transparent bar in the resting state, so the selected shadow
+          // interpolates instead of snapping. The brand says selected is an
+          // inset bar in primary, never a filled background.
+          boxShadow: litIdle('bottom'),
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,

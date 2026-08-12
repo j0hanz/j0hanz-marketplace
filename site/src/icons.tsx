@@ -54,13 +54,12 @@ export const ArrowDownwardIcon = icon('M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.
 
 export const ContentCopyIcon = icon('M14 2H3v13h2V4h9zM8 7h13v15H8zm2 2v11h9V9z');
 
-export const ContrastIcon = icon(
-  'M12 2a10 10 0 1 1 0 20 10 10 0 1 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 1 0 0-16zM12 4a8 8 0 0 1 0 16z',
-);
+// The three modes are one frame at three fills — empty, half, solid — because
+// the page has no curve anywhere else and a round sun beside a square mark is a
+// second icon family. Fill is also the thing being chosen, which a sun is not.
+export const ContrastIcon = icon('M3 3h18v18H3zm2 2v14h14V5zm1 1h6v12H6z');
 
-export const DarkModeIcon = icon(
-  'M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1',
-);
+export const DarkModeIcon = icon('M3 3h18v18H3zm2 2v14h14V5zM6 6h12v12H6z');
 
 export const ExpandMoreIcon = icon('M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z');
 
@@ -70,9 +69,7 @@ export const GitHubIcon = icon(
 
 export const InfoIcon = icon('M2 2h20v20H2zm2 2v16h16V4zm7 2h2v2h-2zm0 4h2v8h-2z');
 
-export const LightModeIcon = icon(
-  'M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5M2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1m18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1M11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1m0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1M5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0z',
-);
+export const LightModeIcon = icon('M3 3h18v18H3zm2 2v14h14V5z');
 
 export const MenuIcon = icon('M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z');
 
@@ -86,25 +83,7 @@ export const CloseIcon = icon(
   'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
 );
 
-export const BotIcon = icon(
-  'M4 8h16v12H4zm2 2v8h12v-8zm2 2h2v2H8zm6 0h2v2h-2zM7 14h10v2H7zM11 4h2v3h-2z',
-);
-
-const CATEGORY_PATH: Record<string, string | undefined> = {
-  authoring: 'M3 3h18v18H3zm2 2v14h14V5zm10 4-6 6-2-2 6-6zM7 17l4-4 1 1-4 4z',
-  development: 'M3 3h18v18H3zm2 2v14h14V5zm2 4 4 3-4 3v-2l2-1-2-1zm5 5h5v2h-5z',
-  frontend: 'M3 3h18v18H3zm2 2v14h14V5zM7 7l-2 5 2 5h2L7 12l2-5zm10 0h-2l-2 5 2 5h2l-2-5z',
-  learning: 'M3 3h18v18H3zm2 2v14h14V5zm0 0v14m14-14v14M5 6h14M5 18h14',
-  productivity: 'M3 3h18v18H3zm2 2v14h14V5zm10 1-7 8h4l-1 5 7-8h-4z',
-  quality: 'M3 3h18v18H3zm2 2v14h14V5zm2 5 4 4 8-8-2-2-6 6-2-2z',
-};
-
-const FALLBACK_PATH = 'M3 3h18v18H3zm2 2v14h14V5z';
-
-export function CategoryIconFor({ name, ...props }: SvgIconProps & { name: string }) {
-  return (
-    <SvgIcon {...props}>
-      <path d={CATEGORY_PATH[name] ?? FALLBACK_PATH} />
-    </SvgIcon>
-  );
-}
+// Categories are named on the card in words. Six 20px glyphs that differ by a
+// mark inside a shared frame did not survive being told apart at that size, and
+// two of them — learning's stroke-only path under a fill, and every plugin in a
+// category the set never got a drawing for — came out as the empty frame.

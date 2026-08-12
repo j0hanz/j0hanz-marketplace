@@ -26,6 +26,13 @@ const LIT_OFFSET = {
 export const lit = (side: keyof typeof LIT_OFFSET) => `inset ${LIT_OFFSET[side]} 0 0 ${accent}`;
 
 /**
+ * The same bar in transparent, so a control that can become live reserves the
+ * geometry while resting and interpolates the colour instead of snapping it in.
+ */
+export const litIdle = (side: keyof typeof LIT_OFFSET) =>
+  `inset ${LIT_OFFSET[side]} 0 0 transparent`;
+
+/**
  * Geometry for a structural rule that motion can draw in; index.css owns the
  * timing and the states. Undrawn is not the default, so no-JS, print, and
  * reduced-motion keep the frame. The caller owns positioning: the element must
@@ -52,6 +59,17 @@ export const steel = { light: '#4A5568', dark: '#68758A' } as const;
 export const scrollOffset = 80;
 
 export const codeSx = { fontFamily: mono, overflowWrap: 'anywhere' } as const;
+
+/**
+ * Metadata voice. A chip counts things — skills, agents, hooks — and nothing
+ * else; anything that names a thing instead (category, version, kind of entry)
+ * is set in this. Two classes, so a version stops reading as a fourth count.
+ */
+export const tag = {
+  fontFamily: mono,
+  textTransform: 'uppercase',
+  letterSpacing: '0.12em',
+} as const;
 
 export const srOnly = {
   position: 'absolute',

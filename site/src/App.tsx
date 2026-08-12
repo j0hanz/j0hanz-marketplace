@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import { useEffect } from 'react';
+import { useCatalogFilter } from './hooks/useCatalogFilter';
 import { Catalog } from './components/Catalog';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
@@ -24,6 +25,11 @@ const skipLink = {
 };
 
 export function App() {
+  // One filter for the page: the search reads skill and agent names, so the
+  // index that lists them answers it too rather than sitting whole underneath a
+  // grid that just emptied.
+  const filter = useCatalogFilter();
+
   useEffect(() => {
     requestAnimationFrame(() => {
       document.documentElement.dataset.ready = '';
@@ -44,8 +50,8 @@ export function App() {
       <Nav />
       <main id="main" tabIndex={-1}>
         <Hero />
-        <Catalog />
-        <SkillIndex />
+        <Catalog filter={filter} />
+        <SkillIndex visible={filter.visible} needle={filter.needle} />
       </main>
       <Footer />
     </>

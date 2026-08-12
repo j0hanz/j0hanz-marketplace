@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { site } from '../site';
-import { accent, drawable, lit, mono, rule } from '../theme/tokens';
+import { accent, drawable, lit, litIdle, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
@@ -151,12 +151,14 @@ export function Nav() {
                   sx={{
                     display: { xs: 'none', md: 'inline-flex' },
                     minHeight: 44,
-                    borderBottom: '2px solid transparent',
                     color: 'text.secondary',
+                    // The same bar the category filter and the open row wear:
+                    // one width for one meaning, held transparent until lit.
+                    boxShadow: litIdle('bottom'),
                     ...(active === link.href && {
                       color: 'text.primary',
                       fontWeight: 700,
-                      borderBottomColor: 'primary.main',
+                      boxShadow: lit('bottom'),
                     }),
                   }}
                 >

@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
 import { site } from '../site';
-import { mono, rule } from '../theme/tokens';
+import { mono, rule, tag } from '../theme/tokens';
 import { Command } from './Command';
 
 // The three lines a visitor actually types, in the order they type them. The
@@ -27,12 +27,6 @@ const steps = [
       ]
     : []),
 ];
-
-const eyebrow = {
-  fontFamily: mono,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.12em',
-};
 
 // Ordinals, not icons: these are the only numbered things on the page, and the
 // number is the information — step 2 does not work before step 1.
@@ -57,9 +51,19 @@ export function Hero() {
           with the headline's first cap rather than floating against its middle. */}
       <Grid container spacing={{ xs: 5, md: 2 }} sx={{ alignItems: 'start' }}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <Stack spacing={{ xs: 2, md: 6 }} sx={{ alignItems: 'flex-start' }}>
+          <Stack spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
               Skills and agents for Claude Code
+            </Typography>
+            {/* What the headline leaves to be counted. Same sentence the tab and
+                the search result carry, so the page opens the way it was found. */}
+            <Typography
+              variant="body1"
+              color="textSecondary"
+              data-hero
+              sx={{ '--i': 1, maxWidth: '46ch' }}
+            >
+              {site.tagline}
             </Typography>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
@@ -110,7 +114,7 @@ export function Hero() {
                   <Box aria-hidden sx={marker}>
                     {i + 1}
                   </Box>
-                  <Typography variant="caption" color="textSecondary" sx={eyebrow}>
+                  <Typography variant="caption" color="textSecondary" sx={tag}>
                     {step.label}
                   </Typography>
                 </Stack>
