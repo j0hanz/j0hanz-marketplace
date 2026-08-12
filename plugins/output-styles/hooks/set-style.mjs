@@ -19,24 +19,32 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// Menu order. null => delete the key, restoring Claude's built-in default.
-const CHOICES = {
-  concise: 'output-styles:concise',
-  tldr: 'output-styles:tldr',
-  'diagram-first': 'output-styles:diagram-first',
-  schematic: 'output-styles:schematic',
-  default: null,
-};
-
-// Shown when /set-style is typed with no argument, or an argument we don't know.
-// Kept in the same order as CHOICES; the self-test fails if the two drift apart.
-const MENU = [
-  ['concise', 'Terse, direct output — no filler, no unsolicited examples.'],
-  ['tldr', 'One-line summary, then bullets — no prose filler.'],
-  ['diagram-first', 'Answer with a diagram or visual first, then minimal prose.'],
-  ['schematic', 'Prose answer first, ASCII diagrams only — no narration or recap.'],
-  ['default', "Reset to Claude's built-in default output style."],
+// One ordered row per style: key, settings value, menu description. Menu order is
+// row order; a null value deletes the key, restoring Claude's built-in default.
+// CHOICES and MENU both derive from these rows, so the two can never drift apart.
+const STYLES = [
+  [
+    'concise',
+    'output-styles:concise',
+    'Terse, direct output — no filler, no unsolicited examples.',
+  ],
+  ['tldr', 'output-styles:tldr', 'One-line summary, then bullets — no prose filler.'],
+  [
+    'diagram-first',
+    'output-styles:diagram-first',
+    'Answer with a diagram or visual first, then minimal prose.',
+  ],
+  [
+    'schematic',
+    'output-styles:schematic',
+    'Prose answer first, ASCII diagrams only — no narration or recap.',
+  ],
+  ['default', null, "Reset to Claude's built-in default output style."],
 ];
+
+const CHOICES = Object.fromEntries(STYLES.map(([key, value]) => [key, value]));
+// Shown when /set-style is typed with no argument, or an argument we don't know.
+const MENU = STYLES.map(([key, , description]) => [key, description]);
 
 const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
 
@@ -107,7 +115,12 @@ function writeSettings(file, obj) {
   fs.mkdirSync(dir, { recursive: true });
   const tmp = path.join(dir, `.set-style.${process.pid}.tmp`);
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n', 'utf8');
-  fs.renameSync(tmp, file);
+  try {
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
+  }
 }
 
 // Warn if project/local settings in cwd override the global outputStyle.
@@ -195,7 +208,7 @@ function main(argv) {
 }
 
 // ponytail: in-process self-test, no framework — smallest thing that fails if the
-// merge, the arg parse, or the menu drifts.
+// merge, the arg parse, or the menu rendering breaks.
 function selfTest() {
   const fails = [];
   const check = (ok, msg) => ok || fails.push(msg);
@@ -233,10 +246,7 @@ function selfTest() {
     check(threw, `readSettings accepted ${bad}`);
   }
 
-  // 4) every shipped style is reachable and listed — this is the drift that hid schematic
-  const listed = MENU.map(([key]) => key).join(',');
-  const known = Object.keys(CHOICES).join(',');
-  check(listed === known, `MENU [${listed}] does not match CHOICES [${known}]`);
+  // 4) every shipped style still round-trips through the normalizer
   for (const key of Object.keys(CHOICES)) {
     check(normalize(key) === key, `normalize("${key}") => ${normalize(key)}`);
   }
