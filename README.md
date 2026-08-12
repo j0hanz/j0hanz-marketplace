@@ -24,6 +24,7 @@ Claude Code plugins: skills and agents you can install into any project.
 /plugin install craft@j0hanz-marketplace
 /plugin install review@j0hanz-marketplace
 /plugin install prompt@j0hanz-marketplace
+/plugin install output-styles@j0hanz-marketplace
 ```
 
 <!-- install:end -->
@@ -86,6 +87,12 @@ Clean Code readability pass and a strict maintainability review, both behavior-p
 Rewrites a rough, half-formed prompt into one that works on current Claude models
 
 - Commands: `/prompt:prompting`
+
+### output-styles
+
+Set a global output style — Concise, TL;DR, or Diagram-first — via a picker skill
+
+- Commands: `/output-styles:set-style`
 
 <!-- plugins:end -->
 

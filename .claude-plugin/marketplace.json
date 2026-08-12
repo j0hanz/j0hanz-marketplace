@@ -41,6 +41,12 @@
       "source": "./plugins/prompt",
       "description": "Rewrites a rough, half-formed prompt into one that works on current Claude models",
       "category": "productivity"
+    },
+    {
+      "name": "output-styles",
+      "source": "./plugins/output-styles",
+      "description": "Set a global output style — Concise, TL;DR, or Diagram-first — via a picker skill",
+      "category": "productivity"
     }
   ]
 }
