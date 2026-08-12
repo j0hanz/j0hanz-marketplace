@@ -4,28 +4,18 @@ description: 'Pick an output style (Concise, TL;DR, Diagram-first, or built-in C
 disable-model-invocation: true
 ---
 
-1. Use AskUserQuestion to present ONE single-select question:
+1. Use AskUserQuestion:
    - Header: "Output style"
    - Question: "Which output style do you want to enable globally?"
-   - Options (in this order):
-     - "Concise" — "Terse, direct output. No filler, no unsolicited examples."
-     - "TL;DR" — "One-line summary, then bullets. No prose filler."
-     - "Diagram-first" — "Answer with a diagram or visual first, then minimal prose."
-     - "Built-in Claude default" — "Reset to Claude's built-in default output style."
-   - Do NOT add an "Other" option; AskUserQuestion provides it automatically.
+   - Options — exactly these, in this order (AskUserQuestion adds "Other" itself):
 
-2. Map the selection to a script argument:
-   - Concise -> `concise`
-   - TL;DR -> `tldr`
-   - Diagram-first -> `diagram-first`
-   - Built-in Claude default -> `default`
+     | Option                  | Description                                                | Arg             |
+     | ----------------------- | ---------------------------------------------------------- | --------------- |
+     | Concise                 | Terse, direct output. No filler, no unsolicited examples.  | `concise`       |
+     | TL;DR                   | One-line summary, then bullets. No prose filler.           | `tldr`          |
+     | Diagram-first           | Answer with a diagram or visual first, then minimal prose. | `diagram-first` |
+     | Built-in Claude default | Reset to Claude's built-in default output style.           | `default`       |
 
-3. Run the apply script with Bash:
+2. Run: `node "${CLAUDE_PLUGIN_ROOT}/scripts/set-style.mjs" <arg from the table>`
 
-   ```
-   node "$CLAUDE_PLUGIN_ROOT/scripts/set-style.mjs" <arg>
-   ```
-
-4. Report the script's stdout to the user. Then state clearly: the change takes effect after `/clear` or a new session — output style is read at session start. If the script warned about a project/local settings override, relay that warning verbatim.
-
-5. If the user picked "Built-in Claude default", confirm their global `outputStyle` was removed (restoring default).
+3. Relay the script's stdout verbatim, including any project/local override warning.
