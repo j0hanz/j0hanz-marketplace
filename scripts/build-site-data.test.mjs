@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import test from 'node:test';
-import { build } from './build-site-data.mjs';
+import { build, readme } from './build-site-data.mjs';
 
 const site = build();
 const catalog = JSON.parse(readFileSync('.claude-plugin/marketplace.json', 'utf8'));
@@ -41,15 +41,21 @@ test('skills carry a description and any command is namespaced', () => {
   }
 });
 
-test('totals and categories are derived from the plugins', () => {
-  const skills = site.plugins.flatMap((p) => p.skills);
-  assert.equal(site.totals.plugins, site.plugins.length);
-  assert.equal(site.totals.skills, skills.length);
-  assert.equal(
-    site.totals.agents,
-    site.plugins.reduce((n, p) => n + p.agents.length, 0),
-  );
+test('categories are derived from the plugins', () => {
   assert.deepEqual(site.categories, [...new Set(site.plugins.map((p) => p.category))].sort());
+  // An entry with no category used to default to '', which reaches the page as a nameless
+  // filter button. The build throws on it now; this holds the data to the same rule.
+  for (const plugin of site.plugins) assert.ok(plugin.category, `${plugin.name}: blank category`);
+});
+
+test('homepages point at this repo, not a hardcoded one', () => {
+  for (const plugin of site.plugins) {
+    assert.equal(
+      plugin.homepage,
+      `https://github.com/${site.repo}/tree/main/plugins/${plugin.name}`,
+      `${plugin.name}: homepage does not follow the repo slug`,
+    );
+  }
 });
 
 test('install commands use the real repo slug and marketplace name', () => {
@@ -70,9 +76,9 @@ test('the page title and meta description count the real catalog', () => {
   // and the blank check below passes it: "undefined skills" is not a blank field.
   assert.doesNotMatch(`${site.pageTitle} ${site.description}`, /undefined|NaN|%\w+%/);
   const counts = [
-    [site.totals.skills, 'skill'],
-    [site.totals.agents, 'agent'],
-    [site.totals.plugins, 'Claude Code plugin'],
+    [site.plugins.flatMap((p) => p.skills).length, 'skill'],
+    [site.plugins.flatMap((p) => p.agents).length, 'agent'],
+    [site.plugins.length, 'Claude Code plugin'],
   ];
   for (const [n, word] of counts) {
     const phrase = `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -80,6 +86,23 @@ test('the page title and meta description count the real catalog', () => {
   }
   for (const category of site.categories) {
     assert.ok(site.description.includes(category), `description omits the ${category} category`);
+  }
+});
+
+test('the README lists the real plugins and only the real commands', () => {
+  const current = readFileSync('README.md', 'utf8');
+  assert.equal(
+    current,
+    readme(current, site),
+    'README.md is out of date or was edited inside its markers; run `npm run site:data`',
+  );
+  // What the hand-kept version got wrong: a table row per skill, whether or not the skill
+  // was invocable. Nothing outside the fenced install block may look like a slash command
+  // that build() did not produce.
+  const commands = new Set(site.plugins.flatMap((p) => p.skills.flatMap((s) => s.command ?? [])));
+  const section = current.slice(current.indexOf('<!-- plugins:start -->'));
+  for (const [, command] of section.matchAll(/`(\/[\w-]+:[\w-]+)`/g)) {
+    assert.ok(commands.has(command), `README advertises ${command}, which does not exist`);
   }
 });
 

@@ -35,7 +35,6 @@ export interface Site {
   repoUrl: string;
   addCommand: string;
   categories: string[];
-  totals: { plugins: number; skills: number; agents: number };
   plugins: Plugin[];
 }
 
