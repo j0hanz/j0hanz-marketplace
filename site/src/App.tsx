@@ -30,8 +30,6 @@ export function App() {
   useEffect(() => {
     requestAnimationFrame(() => {
       document.documentElement.dataset.ready = '';
-      if (location.hash.length > 1)
-        document.getElementById(location.hash.slice(1))?.scrollIntoView();
     });
   }, []);
 

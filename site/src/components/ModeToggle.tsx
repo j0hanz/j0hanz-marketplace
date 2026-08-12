@@ -1,7 +1,8 @@
 import IconButton from '@mui/material/IconButton';
 import { useColorScheme } from '@mui/material/styles';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ContrastIcon, DarkModeIcon, LightModeIcon } from '../icons';
+import { usePressedKey } from '../hooks/usePressedKey';
 import { ground } from '../theme/tokens';
 
 type Mode = 'system' | 'light' | 'dark';
@@ -22,7 +23,7 @@ export function ModeToggle() {
   const { mode, setMode, colorScheme } = useColorScheme();
   // Gates the icon swap. `mode` resolves a beat after mount, and a returning
   // visitor's stored choice re-picking the icon is not a press.
-  const [pressed, setPressed] = useState(false);
+  const swap = usePressedKey();
   // `mode` is undefined until MUI mounts, so `current` falls back to the first
   // row and `next` reads off it — the first paint never offers the mode showing.
   const current = modes.find((m) => m.key === mode) ?? modes[0];
@@ -43,11 +44,11 @@ export function ModeToggle() {
       color="inherit"
       aria-label={`${current.label}. Switch to ${next.target}.`}
       onClick={() => {
-        setPressed(true);
+        swap.press();
         setMode(next.key);
       }}
     >
-      <current.Icon data-swap-in={pressed || undefined} />
+      <current.Icon data-swap-in={swap.pressed} />
     </IconButton>
   );
 }

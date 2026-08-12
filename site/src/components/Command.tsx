@@ -5,6 +5,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon, ContentCopyIcon } from '../icons';
+import { usePressedKey } from '../hooks/usePressedKey';
 import { codeSx, srOnly } from '../theme/tokens';
 
 // Both strings are read aloud and branched on, so they are named once.
@@ -15,13 +16,11 @@ type Status = '' | typeof COPIED | typeof FAILED;
 
 export function Command({ value }: { value: string }) {
   const [status, setStatus] = useState<Status>('');
-  // Gates the icon swap and keys it: the page holds ten of these and none should
-  // animate on first paint, and a repeated failure swaps the same glyph back in.
-  const [presses, setPresses] = useState(0);
+  const swap = usePressedKey();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const announce = (next: Status) => {
-    setPresses((n) => n + 1);
+    swap.press();
     setStatus(next);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setStatus(''), 1600);
@@ -41,7 +40,6 @@ export function Command({ value }: { value: string }) {
   const tip = status || 'Copy';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
   const iconColor = copied ? 'primary' : status ? 'error' : undefined;
-  const swap = presses && !copied ? presses : undefined;
 
   return (
     <Paper
@@ -60,7 +58,7 @@ export function Command({ value }: { value: string }) {
       </Typography>
       <Tooltip title={tip}>
         <IconButton onClick={copy} aria-label={`Copy ${value}`}>
-          <Icon key={presses} fontSize="small" color={iconColor} data-swap-in={swap} />
+          <Icon key={swap.key} fontSize="small" color={iconColor} data-swap-in={swap.pressed} />
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" sx={srOnly}>

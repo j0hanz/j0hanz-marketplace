@@ -4,7 +4,6 @@ import {
   edge,
   focusRing,
   ground,
-  heading,
   ink,
   lit,
   litIdle,
@@ -25,9 +24,6 @@ declare module '@mui/material/styles' {
     steel?: string;
   }
 }
-
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 const press = {
   transition: [
@@ -86,13 +82,24 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: sans,
-    h2: heading({
-      min: '1.75rem',
-      max: '4.25rem',
-      slope: '0.5rem + 4.1vw',
+    h2: {
+      fontFamily: mono,
+      fontWeight: 700,
+      textTransform: 'uppercase',
       letterSpacing: '0.01em',
-    }),
-    h4: heading({ min: '1.25rem', max: '2rem', slope: '1rem + 1.11vw', letterSpacing: '0.06em' }),
+      lineHeight: 1.1,
+      fontSize: 'clamp(1.75rem, 0.5rem + 4.1vw, 4.25rem)',
+      textWrap: 'balance',
+    },
+    h4: {
+      fontFamily: mono,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+      lineHeight: 1.1,
+      fontSize: 'clamp(1.25rem, 1rem + 1.11vw, 2rem)',
+      textWrap: 'balance',
+    },
     h5: { fontFamily: mono },
     h6: { fontFamily: mono },
     button: { fontFamily: mono },
@@ -102,19 +109,9 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)', '--grain': 0.028 },
-        '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)', '--grain': 0.05 },
+        ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)' },
+        '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)' },
         html: { scrollPaddingTop: scrollOffset },
-        'body::after': {
-          content: '""',
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: 'var(--grain)',
-          backgroundImage: GRAIN,
-        },
-        '@media print': { 'body::after': { display: 'none' } },
         ':focus-visible': focusRing,
         '@media (prefers-reduced-motion: reduce)': {
           '*, *::before, *::after': {

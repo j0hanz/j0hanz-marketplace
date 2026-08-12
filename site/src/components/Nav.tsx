@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
+import { usePressedKey } from '../hooks/usePressedKey';
 import { site } from '../site';
 import { accent, drawable, lit, litIdle, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
@@ -31,7 +32,7 @@ const mobileMenuId = 'nav-mobile-menu';
 
 function MobileMenu({ active }: { active: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const [pressed, setPressed] = useState(false);
+  const swap = usePressedKey();
   const open = Boolean(anchor);
   const close = () => setAnchor(null);
   const Glyph = open ? CloseIcon : MenuIcon;
@@ -45,12 +46,12 @@ function MobileMenu({ active }: { active: string }) {
         aria-expanded={open}
         aria-controls={open ? mobileMenuId : undefined}
         onClick={(e) => {
-          setPressed(true);
+          swap.press();
           setAnchor(e.currentTarget);
         }}
         sx={{ display: { xs: 'inline-flex', md: 'none' } }}
       >
-        <Glyph data-swap-in={pressed || undefined} />
+        <Glyph data-swap-in={swap.pressed} />
       </IconButton>
       <Menu
         id={mobileMenuId}

@@ -6,6 +6,7 @@ import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import Link from '@mui/material/Link';
+import SvgIcon from '@mui/material/SvgIcon';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -15,7 +16,7 @@ import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
-import { CloseIcon, ExternalIcon, InfoIcon, SearchIcon, SearchOffIcon } from '../icons';
+import { CloseIcon, ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
@@ -201,7 +202,9 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
 
       {visible.length === 0 ? (
         <Stack spacing={2} sx={{ py: 6, px: 3, alignItems: 'flex-start', border: outline }}>
-          <SearchOffIcon fontSize="large" sx={{ color: 'text.secondary' }} aria-hidden />
+          <SvgIcon fontSize="large" sx={{ color: 'text.secondary' }} aria-hidden>
+            <path d="M3 3h14v14H3zm2 2v10h10V5zm4.59 3L5 7.41 6.41 6 11 10.59 13.59 8 15 9.41 12.41 12 15 14.59 13.59 16 11 13.41 8.41 16 7 14.59 9.59 12zm8.12 7.29 1.42-1.42-3-3-1.42 1.42z" />
+          </SvgIcon>
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>

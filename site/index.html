@@ -249,11 +249,6 @@
           background-position: 250% 0;
         }
       }
-      /* The shell's bar stops here too: a failed load is not still loading. */
-      .shell.is-stopped::after {
-        width: 100%;
-        animation: none;
-      }
       @media (prefers-reduced-motion: reduce) {
         .skel {
           display: none;
@@ -312,23 +307,6 @@
       </div>
     </div>
     <!--
-      The two ways the app might never come up with scripting enabled: the
-      module failed to load (the entry script's error event), or it is just
-      slow (the timer below). Either reveals the one command a visitor came
-      for, which never needed the page. App sets data-ready on mount, which
-      hides this. Kept outside #root so React never clears it, and separate
-      from the noscript block because the copy is not the same situation.
-    -->
-    <div class="fallback js-stalled" hidden>
-      <p>%DESCRIPTION%</p>
-      <p>The page is taking longer than it should. The marketplace command works without it:</p>
-      <code>/plugin marketplace add %REPO%</code>
-      <p>
-        Every plugin, and what each one ships, is listed at
-        <a href="https://github.com/%REPO%">github.com/%REPO%</a>.
-      </p>
-    </div>
-    <!--
       The catalog is static data rendered by React, so without scripting there
       is no page at all — only a shell animating toward a mount that never
       comes. The one command a visitor came for does not need React to be read,
@@ -357,50 +335,5 @@
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // The shell is a wait; this gives it an end state. Two paths: the entry
-      // module failed to load (its error event stops the bar and reveals the
-      // stalled block), or it is just slow (a 10s timer reveals the same block
-      // but lets the bar keep trying). App sets data-ready on mount, which
-      // hides the block and clears the timer. Runtime errors before mount are
-      // caught too; ones after mount are React's problem, so `up` gates them.
-      // The module script is sourced above this, so it is already in the DOM
-      // here; its error event fires async after fetch, so the listener attaches
-      // in time. Vite rewrites that tag in build (and drops any id), so select
-      // by selector rather than id.
-      (function () {
-        var stalled = document.querySelector('.js-stalled');
-        if (!stalled) return;
-        var shell = document.querySelector('.shell');
-        var entry = document.querySelector('script[type="module"]');
-        var up = false;
-        function reveal(stopped) {
-          stalled.hidden = false;
-          if (stopped && shell) shell.classList.add('is-stopped');
-        }
-        var timer = setTimeout(function () {
-          if (!up) reveal(false);
-        }, 10000);
-        var obs = new MutationObserver(function () {
-          if (document.documentElement.dataset.ready !== undefined) {
-            up = true;
-            stalled.hidden = true;
-            clearTimeout(timer);
-            obs.disconnect();
-          }
-        });
-        obs.observe(document.documentElement, {
-          attributes: true,
-          attributeFilter: ['data-ready'],
-        });
-        if (entry)
-          entry.addEventListener('error', function () {
-            if (!up) reveal(true);
-          });
-        window.addEventListener('error', function () {
-          if (!up) reveal(true);
-        });
-      })();
-    </script>
   </body>
 </html>

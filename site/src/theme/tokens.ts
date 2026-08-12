@@ -80,26 +80,6 @@ export const srOnly = {
   whiteSpace: 'nowrap',
 } as const;
 
-export const heading = ({
-  min,
-  max,
-  slope,
-  letterSpacing,
-}: {
-  min: string;
-  max: string;
-  slope: string;
-  letterSpacing: string;
-}) => ({
-  fontFamily: mono,
-  fontWeight: 700,
-  textTransform: 'uppercase' as const,
-  letterSpacing,
-  lineHeight: 1.1,
-  fontSize: `clamp(${min}, ${slope}, ${max})`,
-  textWrap: 'balance' as const,
-});
-
 export const focusRing = {
   outline: '2px solid var(--focus-ring)',
   outlineOffset: '2px',

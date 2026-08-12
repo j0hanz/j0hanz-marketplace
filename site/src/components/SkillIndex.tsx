@@ -8,7 +8,6 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
@@ -30,59 +29,7 @@ const counts = (plugin: Plugin) =>
     .filter(Boolean)
     .join(', ');
 
-function Entry({
-  code,
-  description,
-  leading,
-  trailing,
-}: {
-  code: string;
-  description: string;
-  leading?: ReactNode;
-  trailing?: ReactNode;
-}) {
-  return (
-    <ListItem disableGutters alignItems="flex-start">
-      <ListItemText
-        slotProps={{
-          primary: { component: 'div' },
-          secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
-        }}
-        primary={
-          <Stack
-            direction="row"
-            spacing={1}
-            useFlexGap
-            sx={{ flexWrap: 'wrap', alignItems: 'center' }}
-          >
-            {leading}
-            <Typography component="code" variant="body2" sx={codeSx}>
-              {code}
-            </Typography>
-            {trailing}
-          </Stack>
-        }
-        secondary={description}
-      />
-    </ListItem>
-  );
-}
-
-function Kind({ label, title }: { label: string; title?: string }) {
-  const text = (
-    <Typography
-      component="span"
-      variant="caption"
-      color="textSecondary"
-      tabIndex={title ? 0 : undefined}
-      aria-label={title ? `${label}. ${title}` : undefined}
-      sx={{ ...tag, py: 0.5 }}
-    >
-      {label}
-    </Typography>
-  );
-  return title ? <Tooltip title={title}>{text}</Tooltip> : text;
-}
+const tagSx = { ...tag, py: 0.5 } as const;
 
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
@@ -151,36 +98,82 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
                   <List disablePadding>
                     {plugin.skills.map((skill) => (
-                      <Entry
-                        key={skill.name}
-                        code={skill.command ?? skill.name}
-                        description={skill.description}
-                        leading={
-                          !skill.command ? (
-                            <Kind label="model-loaded" title={MODEL_LOADED} />
-                          ) : undefined
-                        }
-                        trailing={
-                          skill.argumentHint && (
-                            <Typography
-                              component="code"
-                              variant="caption"
-                              color="textSecondary"
-                              sx={codeSx}
+                      <ListItem key={skill.name} disableGutters alignItems="flex-start">
+                        <ListItemText
+                          slotProps={{
+                            primary: { component: 'div' },
+                            secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
+                          }}
+                          primary={
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              useFlexGap
+                              sx={{ flexWrap: 'wrap', alignItems: 'center' }}
                             >
-                              {skill.argumentHint}
-                            </Typography>
-                          )
-                        }
-                      />
+                              {!skill.command && (
+                                <Tooltip title={MODEL_LOADED}>
+                                  <Typography
+                                    component="span"
+                                    variant="caption"
+                                    color="textSecondary"
+                                    tabIndex={0}
+                                    aria-label={`model-loaded. ${MODEL_LOADED}`}
+                                    sx={tagSx}
+                                  >
+                                    model-loaded
+                                  </Typography>
+                                </Tooltip>
+                              )}
+                              <Typography component="code" variant="body2" sx={codeSx}>
+                                {skill.command ?? skill.name}
+                              </Typography>
+                              {skill.argumentHint && (
+                                <Typography
+                                  component="code"
+                                  variant="caption"
+                                  color="textSecondary"
+                                  sx={codeSx}
+                                >
+                                  {skill.argumentHint}
+                                </Typography>
+                              )}
+                            </Stack>
+                          }
+                          secondary={skill.description}
+                        />
+                      </ListItem>
                     ))}
                     {plugin.agents.map((agent) => (
-                      <Entry
-                        key={agent.name}
-                        code={agent.name}
-                        description={agent.description}
-                        trailing={<Kind label="agent" />}
-                      />
+                      <ListItem key={agent.name} disableGutters alignItems="flex-start">
+                        <ListItemText
+                          slotProps={{
+                            primary: { component: 'div' },
+                            secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
+                          }}
+                          primary={
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              useFlexGap
+                              sx={{ flexWrap: 'wrap', alignItems: 'center' }}
+                            >
+                              <Typography component="code" variant="body2" sx={codeSx}>
+                                {agent.name}
+                              </Typography>
+                              <Typography
+                                component="span"
+                                variant="caption"
+                                color="textSecondary"
+                                sx={tagSx}
+                              >
+                                agent
+                              </Typography>
+                            </Stack>
+                          }
+                          secondary={agent.description}
+                        />
+                      </ListItem>
                     ))}
                   </List>
                 </AccordionDetails>

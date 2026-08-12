@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { type Plugin, site } from '../site';
 
 export const ALL = 'all';
@@ -27,7 +27,6 @@ export function useCatalogFilter() {
   const [category, setCategory] = useState(categoryParam);
   const [query, setQuery] = useState(() => param('q') ?? '');
   const deferred = useDeferredValue(query);
-  const lastCategory = useRef(category);
 
   useEffect(() => {
     const next = new URLSearchParams(location.search);
@@ -36,27 +35,8 @@ export function useCatalogFilter() {
     if (deferred) next.set('q', deferred);
     else next.delete('q');
     const search = next.toString();
-    const url = `${location.pathname}${search && '?'}${search}${location.hash}`;
-    // A category is a choice a visitor makes once and can want back, so it gets
-    // a history entry; typing does not, or Back would walk the query letter by
-    // letter. Both still land in the URL, which is what a shared link carries.
-    const picked = category !== lastCategory.current;
-    lastCategory.current = category;
-    if (picked) history.pushState(null, '', url);
-    else history.replaceState(null, '', url);
+    history.replaceState(null, '', `${location.pathname}${search && '?'}${search}${location.hash}`);
   }, [category, deferred]);
-
-  // Back has to move the page, not just the address bar.
-  useEffect(() => {
-    const restore = () => {
-      const next = categoryParam();
-      lastCategory.current = next;
-      setCategory(next);
-      setQuery(param('q') ?? '');
-    };
-    window.addEventListener('popstate', restore);
-    return () => window.removeEventListener('popstate', restore);
-  }, []);
 
   const needle = deferred.trim().toLowerCase();
   const visible: Plugin[] = [];

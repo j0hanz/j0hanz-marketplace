@@ -1,12 +1,11 @@
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { useEnter } from '../hooks/useEnter';
-import { drawable, srOnly } from '../theme/tokens';
+import { drawable } from '../theme/tokens';
 
 export function Section({
   id,
@@ -48,12 +47,21 @@ export function Section({
           {title}
         </Typography>
         {count && (
-          <>
-            <Chip label={count.total} size="small" variant="outlined" aria-hidden />
-            <Box component="span" role="status" sx={srOnly}>
-              {count.label}
-            </Box>
-          </>
+          <Box
+            component="span"
+            aria-label={count.label}
+            sx={{
+              px: 1,
+              py: 0.25,
+              border: 1,
+              borderColor: 'divider',
+              fontFamily: 'var(--mui-font-family-mono, monospace)',
+              fontSize: '0.75rem',
+              lineHeight: 1.6,
+            }}
+          >
+            {count.total}
+          </Box>
         )}
       </Stack>
       {children}
