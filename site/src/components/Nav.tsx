@@ -123,13 +123,12 @@ export function Nav() {
               gap: 1,
               color: 'inherit',
               textDecoration: 'none',
-              fontWeight: 700,
               fontSize: { xs: '0.8125rem', sm: '1rem' },
               letterSpacing: { xs: 0, sm: '0.05em' },
               py: 1,
             }}
           >
-            <MarkIcon sx={{ fontSize: 20 }} />
+            <MarkIcon />
             {site.name}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
