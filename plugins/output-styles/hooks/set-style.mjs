@@ -82,6 +82,10 @@ function readSettings(file) {
     if (e.code === 'ENOENT') return {};
     throw e;
   }
+  // Strip a leading UTF-8 BOM: JSON.parse rejects it (not valid JSON per RFC 8259),
+  // so a settings file saved with a BOM would otherwise read as "not valid JSON"
+  // even though its content is fine.
+  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
   if (raw.trim() === '') return {};
   let obj;
   try {
@@ -129,6 +133,10 @@ function writeSettings(file, obj) {
 function overrideWarnings(cwd) {
   const warnings = [];
   for (const name of ['.claude/settings.json', '.claude/settings.local.json']) {
+    // When cwd is the user's home, these resolve to the global config files
+    // (~/.claude/*), not project overrides — warning about them tells the user
+    // their global setting overrides itself. Skip that case.
+    if (path.resolve(cwd, name) === path.resolve(os.homedir(), name)) continue;
     let obj;
     try {
       obj = JSON.parse(fs.readFileSync(path.join(cwd, name), 'utf8'));
@@ -274,6 +282,10 @@ function selfTest() {
   fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
   fs.writeFileSync(path.join(dir, '.claude', 'settings.json'), '{"outputStyle":"x"}');
   check(overrideWarnings(dir).length === 1, 'project override went unreported');
+
+  // 8) a BOM-prefixed settings file is accepted, not rejected as invalid JSON
+  fs.writeFileSync(file, '﻿{"outputStyle":"output-styles:concise"}');
+  check(readSettings(file).outputStyle === 'output-styles:concise', 'BOM settings rejected');
 
   fs.rmSync(dir, { recursive: true, force: true });
   for (const f of fails) console.log(`self-test FAIL: ${f}`);
