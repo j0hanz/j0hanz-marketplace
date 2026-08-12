@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "output-styles",
   "displayName": "Output Styles",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A plugin that provides a set of output styles for Claude Code, allowing users to customize the appearance and formatting of their code output.",
   "author": {
     "name": "j0hanz",

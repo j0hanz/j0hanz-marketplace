@@ -13,18 +13,19 @@
 //         never reaches the model. Not JSON: on exit 2 stderr is the only channel read.
 // fails:  unreadable stdin -> exit 0 with no output, expansion proceeds and
 //         skills/set-style/SKILL.md handles it the slow way
-// verify: node scripts/set-style.mjs --self-test
-//         echo '{"command_args":"concise"}' | node scripts/set-style.mjs --hook; echo $?
+// verify: node hooks/set-style.mjs --self-test
+//         echo '{"command_args":"concise"}' | node hooks/set-style.mjs --hook; echo $?
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+// Menu order. null => delete the key, restoring Claude's built-in default.
 const CHOICES = {
   concise: 'output-styles:concise',
   tldr: 'output-styles:tldr',
   'diagram-first': 'output-styles:diagram-first',
   schematic: 'output-styles:schematic',
-  default: null, // null => delete the key
+  default: null,
 };
 
 // Shown when /set-style is typed with no argument, or an argument we don't know.
@@ -37,22 +38,22 @@ const MENU = [
   ['default', "Reset to Claude's built-in default output style."],
 ];
 
+const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
+
 // UserPromptExpansion sends command_args as one space-separated string. Tolerate an
-// array too, so the parse survives if that shape ever changes back.
+// array too, so the parse survives if that shape ever changes back — and so argv,
+// which really is an array, goes through this same parse.
 function firstArg(commandArgs) {
   const text = Array.isArray(commandArgs) ? commandArgs.join(' ') : String(commandArgs ?? '');
   return text.trim().split(/\s+/)[0] ?? '';
 }
 
-// Normalize user input: lower-case, strip non-alphanumeric, match known choices.
+// Match input against CHOICES with case and punctuation dropped from both sides, so
+// "TL;DR" finds tldr and "Diagram First" finds diagram-first. Derived from CHOICES:
+// adding a style needs no edit here.
 function normalize(arg) {
   const key = arg.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (key === 'tldr' || key === 'tlr') return 'tldr';
-  if (key === 'concise') return 'concise';
-  if (key === 'diagramfirst') return 'diagram-first';
-  if (key === 'schematic') return 'schematic';
-  if (key === 'default') return 'default';
-  return null;
+  return Object.keys(CHOICES).find((c) => c.replace(/-/g, '') === key) ?? null;
 }
 
 function menuLines(badArg) {
@@ -62,12 +63,7 @@ function menuLines(badArg) {
   return out;
 }
 
-function usage(stream) {
-  stream.write('usage: node set-style.mjs <choice>\n');
-  stream.write(`  choice: ${Object.keys(CHOICES).join(' | ')}\n`);
-  stream.write('  (default removes outputStyle, restoring Claude built-in Default)\n');
-}
-
+// Both entry points print these throws verbatim, so each one names its own repair.
 function readSettings(file) {
   let raw;
   try {
@@ -81,69 +77,71 @@ function readSettings(file) {
   try {
     obj = JSON.parse(raw);
   } catch (e) {
-    const err = new Error(`settings.json is not valid JSON: ${file}: ${e.message}`);
-    err.invalidJson = true;
-    throw err;
+    throw new Error(`${file} is not valid JSON (${e.message}) — fix it, refusing to overwrite.`);
   }
-  return obj && typeof obj === 'object' ? obj : {};
+  // An array or a scalar would drop the assignment again on the way back through
+  // JSON.stringify, reporting success while changing nothing.
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+    throw new Error(`${file} does not hold a JSON object — fix it, refusing to overwrite.`);
+  }
+  return obj;
 }
 
 // Apply the choice to an in-memory object; return true if a change was made.
 function applyChoice(obj, choice) {
   const mapped = CHOICES[choice];
   if (mapped === null) {
-    if (Object.prototype.hasOwnProperty.call(obj, 'outputStyle')) {
-      delete obj.outputStyle;
-      return true;
-    }
-    return false;
+    if (!Object.hasOwn(obj, 'outputStyle')) return false;
+    delete obj.outputStyle;
+    return true;
   }
   if (obj.outputStyle === mapped) return false;
   obj.outputStyle = mapped;
   return true;
 }
 
+// Temp file + rename, because a crash mid-write would otherwise truncate the file
+// holding every other global setting the user has.
 function writeSettings(file, obj) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(dir, `.set-style.${process.pid}.tmp`);
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+  fs.renameSync(tmp, file);
 }
 
 // Warn if project/local settings in cwd override the global outputStyle.
 function overrideWarnings(cwd) {
   const warnings = [];
   for (const name of ['.claude/settings.json', '.claude/settings.local.json']) {
-    const f = path.join(cwd, name);
-    let raw;
+    let obj;
     try {
-      raw = fs.readFileSync(f, 'utf8');
+      obj = JSON.parse(fs.readFileSync(path.join(cwd, name), 'utf8'));
     } catch {
-      continue;
+      continue; // absent, unreadable, or malformed — not ours to report
     }
-    try {
-      const obj = JSON.parse(raw);
-      if (obj && Object.prototype.hasOwnProperty.call(obj, 'outputStyle')) {
-        warnings.push(
-          `warning: ${name} sets "outputStyle" — project/local settings override the global one and may prevent this change from taking effect here.`,
-        );
-      }
-    } catch {
-      // ignore unreadable local files
+    if (obj && Object.hasOwn(obj, 'outputStyle')) {
+      warnings.push(
+        `warning: ${name} sets "outputStyle" — project/local settings override the global one and may prevent this change from taking effect here.`,
+      );
     }
   }
   return warnings;
 }
 
-// Write the choice through and return the lines to report. Throws on unreadable settings.
+// Write the choice through and return the lines to report. Throws on unusable settings.
 function run(choice, cwd) {
-  const file = path.join(os.homedir(), '.claude', 'settings.json');
-  const obj = readSettings(file);
-  if (!applyChoice(obj, choice)) return ['Already set.'];
-  writeSettings(file, obj);
+  const obj = readSettings(SETTINGS);
+  // Warn on the no-op path too: already-set plus a silent project override is exactly
+  // the case where the style appears not to apply.
+  const warnings = overrideWarnings(cwd);
+  if (!applyChoice(obj, choice)) return ['Already set.', ...warnings];
+  writeSettings(SETTINGS, obj);
   const label = choice === 'default' ? 'default (built-in)' : CHOICES[choice];
   return [
     `outputStyle set to: ${label}`,
     'Note: output style is read at session start — run /clear or start a new session for it to take effect.',
-    ...overrideWarnings(cwd),
+    ...warnings,
   ];
 }
 
@@ -159,7 +157,7 @@ function hookMain() {
   }
   // Only the first argument names a style. Trailing words are ignored rather than
   // rejected, so "/set-style concise please" still applies concise.
-  const raw = firstArg(payload.command_args);
+  const raw = firstArg(payload?.command_args);
   const choice = raw ? normalize(raw) : null;
 
   let lines;
@@ -167,9 +165,9 @@ function hookMain() {
     lines = menuLines(raw);
   } else {
     try {
-      lines = run(choice, typeof payload.cwd === 'string' ? payload.cwd : process.cwd());
+      lines = run(choice, typeof payload?.cwd === 'string' ? payload.cwd : process.cwd());
     } catch (e) {
-      lines = [`set-style: ${e && e.message ? e.message : String(e)}`];
+      lines = [`set-style: ${e?.message ?? String(e)}`];
     }
   }
 
@@ -180,94 +178,72 @@ function hookMain() {
 function main(argv) {
   if (argv.length === 1 && argv[0] === '--self-test') return selfTest();
   if (argv.length === 1 && argv[0] === '--hook') return hookMain();
-  if (argv.length !== 1) {
-    usage(process.stderr);
-    return 1;
-  }
-  const choice = normalize(argv[0]);
-  if (!choice) {
-    usage(process.stderr);
-    process.stderr.write(`error: unknown choice "${argv[0]}"\n`);
-    return 1;
-  }
 
-  let lines;
-  try {
-    lines = run(choice, process.cwd());
-  } catch (e) {
-    if (e.invalidJson) {
-      process.stderr.write(`error: ${e.message}\n`);
-      process.stderr.write('Refusing to overwrite the existing settings file.\n');
-      return 1;
-    }
-    throw e;
+  const raw = firstArg(argv);
+  const choice = raw ? normalize(raw) : null;
+  if (!choice) {
+    process.stderr.write(menuLines(raw).join('\n') + '\n');
+    return 1;
   }
-  for (const line of lines) console.log(line);
+  try {
+    for (const line of run(choice, process.cwd())) console.log(line);
+  } catch (e) {
+    process.stderr.write(`error: ${e?.message ?? String(e)}\n`);
+    return 1;
+  }
   return 0;
 }
 
-// ponytail: in-process self-test, no framework — smallest thing that fails if merge logic breaks.
+// ponytail: in-process self-test, no framework — smallest thing that fails if the
+// merge, the arg parse, or the menu drifts.
 function selfTest() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'set-style-'));
-  const file = path.join(tmp, 'settings.json');
+  const fails = [];
+  const check = (ok, msg) => ok || fails.push(msg);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'set-style-'));
+  const file = path.join(dir, 'settings.json');
+  const roundTrip = (obj, choice) => {
+    applyChoice(obj, choice);
+    writeSettings(file, obj);
+    return readSettings(file);
+  };
 
-  // 1) set concise on empty file
-  let obj = readSettings(file);
-  applyChoice(obj, 'concise');
-  writeSettings(file, obj);
-  obj = readSettings(file);
-  if (obj.outputStyle !== 'output-styles:concise') {
-    console.log(`self-test FAIL: expected output-styles:concise, got ${obj.outputStyle}`);
-    return 1;
-  }
+  // 1) set on an absent file, reset, then set again through the normalizer
+  let obj = roundTrip(readSettings(file), 'concise');
+  check(obj.outputStyle === 'output-styles:concise', `set concise => ${obj.outputStyle}`);
+  obj = roundTrip(obj, 'default');
+  check(!Object.hasOwn(obj, 'outputStyle'), `default left outputStyle=${obj.outputStyle}`);
+  check(normalize('TL;DR') === 'tldr', `normalize("TL;DR") => ${normalize('TL;DR')}`);
+  obj = roundTrip(obj, normalize('TL;DR'));
+  check(obj.outputStyle === 'output-styles:tldr', `set tldr => ${obj.outputStyle}`);
 
-  // 2) set default -> key gone
-  applyChoice(obj, 'default');
-  writeSettings(file, obj);
-  obj = readSettings(file);
-  if (Object.prototype.hasOwnProperty.call(obj, 'outputStyle')) {
-    console.log(`self-test FAIL: expected outputStyle absent, got ${obj.outputStyle}`);
-    return 1;
-  }
+  // 2) unrelated keys survive — the whole reason this merges instead of replacing
+  fs.writeFileSync(file, JSON.stringify({ model: 'opus', outputStyle: 'stale' }));
+  obj = roundTrip(readSettings(file), 'concise');
+  check(obj.model === 'opus', 'merge dropped an unrelated key');
 
-  // 3) "TL;DR" input normalizes to tldr
-  const norm = normalize('TL;DR');
-  if (norm !== 'tldr') {
-    console.log(`self-test FAIL: normalize("TL;DR") => ${norm}, expected tldr`);
-    return 1;
-  }
-  applyChoice(obj, norm);
-  writeSettings(file, obj);
-  obj = readSettings(file);
-  if (obj.outputStyle !== 'output-styles:tldr') {
-    console.log(`self-test FAIL: expected output-styles:tldr, got ${obj.outputStyle}`);
-    return 1;
+  // 3) a settings file we cannot merge into is refused, never overwritten
+  for (const bad of ['[1,2]', '"hello"', '{oops']) {
+    fs.writeFileSync(file, bad);
+    let threw = false;
+    try {
+      readSettings(file);
+    } catch {
+      threw = true;
+    }
+    check(threw, `readSettings accepted ${bad}`);
   }
 
   // 4) every shipped style is reachable and listed — this is the drift that hid schematic
-  const listed = MENU.map(([key]) => key);
-  const known = Object.keys(CHOICES);
-  if (listed.join(',') !== known.join(',')) {
-    console.log(`self-test FAIL: MENU [${listed}] does not match CHOICES [${known}]`);
-    return 1;
-  }
-  for (const key of known) {
-    if (normalize(key) !== key) {
-      console.log(`self-test FAIL: normalize("${key}") => ${normalize(key)}`);
-      return 1;
-    }
+  const listed = MENU.map(([key]) => key).join(',');
+  const known = Object.keys(CHOICES).join(',');
+  check(listed === known, `MENU [${listed}] does not match CHOICES [${known}]`);
+  for (const key of Object.keys(CHOICES)) {
+    check(normalize(key) === key, `normalize("${key}") => ${normalize(key)}`);
   }
 
   // 5) both menu shapes — a bare /set-style, and one carrying a style we don't know
-  if (!menuLines('').join('\n').includes('schematic')) {
-    console.log('self-test FAIL: menu does not list schematic');
-    return 1;
-  }
-  const rejected = menuLines('bogus');
-  if (!rejected[0].includes('"bogus"')) {
-    console.log(`self-test FAIL: bad-arg menu opened with ${rejected[0]}`);
-    return 1;
-  }
+  check(menuLines('').join('\n').includes('schematic'), 'menu does not list schematic');
+  check(menuLines('bogus')[0].includes('"bogus"'), `bad-arg menu opened ${menuLines('bogus')[0]}`);
 
   // 6) the hook payload shape — command_args is a string, and reading it as an array
   // made every /set-style <style> fall through to the menu
@@ -279,22 +255,25 @@ function selfTest() {
     ['', ''],
     [undefined, ''],
   ]) {
-    const got = firstArg(input);
-    if (got !== want) {
-      console.log(
-        `self-test FAIL: firstArg(${JSON.stringify(input)}) => "${got}", expected "${want}"`,
-      );
-      return 1;
-    }
+    check(firstArg(input) === want, `firstArg(${JSON.stringify(input)}) => "${firstArg(input)}"`);
   }
 
+  // 7) a project override is reported even when the global was already correct
+  fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.claude', 'settings.json'), '{"outputStyle":"x"}');
+  check(overrideWarnings(dir).length === 1, 'project override went unreported');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+  for (const f of fails) console.log(`self-test FAIL: ${f}`);
+  if (fails.length) return 1;
   console.log('self-test ok');
   return 0;
 }
 
+// exitCode, not process.exit(): exit() can cut off a piped stdout/stderr mid-write.
 try {
-  process.exit(main(process.argv.slice(2)));
+  process.exitCode = main(process.argv.slice(2));
 } catch (e) {
-  process.stderr.write(`error: ${e && e.message ? e.message : String(e)}\n`);
-  process.exit(1);
+  process.stderr.write(`error: ${e?.message ?? String(e)}\n`);
+  process.exitCode = 1;
 }
