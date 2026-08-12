@@ -12,7 +12,7 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --dur-reveal: 280ms;
   --dur-draw: 320ms;
-  --dur-swap: 160ms;
+  --dur-swap: 200ms;
 }
 
 /* Content arriving: subordinate to the rule draws. */
@@ -21,7 +21,8 @@
   transform: translateY(10px);
   transition:
     opacity var(--dur-reveal) var(--ease-out),
-    transform var(--dur-reveal) var(--ease-out);
+    transform var(--dur-reveal) var(--ease-out),
+    box-shadow 200ms var(--ease-out);
 }
 
 :root[data-motion] [data-reveal][data-shown] {
@@ -106,6 +107,7 @@
   from {
     opacity: 0;
     transform: scale(0.9);
+    filter: blur(3px);
   }
 }
 

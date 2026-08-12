@@ -33,7 +33,7 @@ const press = {
     'box-shadow 200ms var(--ease-out)',
     'color 200ms var(--ease-out)',
   ].join(', '),
-  '&:active': { transform: 'scale(0.97)', transitionDuration: '60ms' },
+  '&:active': { transform: 'scale(0.97)', transitionDuration: '120ms' },
 };
 
 export const theme = createTheme({
