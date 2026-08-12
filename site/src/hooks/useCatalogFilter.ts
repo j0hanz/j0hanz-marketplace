@@ -18,8 +18,13 @@ const searchIndex = site.plugins.map((plugin) => ({
 
 const param = (key: string) => new URLSearchParams(location.search).get(key);
 
+const categoryParam = () => {
+  const value = param('category');
+  return value && site.categories.includes(value) ? value : ALL;
+};
+
 export function useCatalogFilter() {
-  const [category, setCategory] = useState(() => param('category') ?? ALL);
+  const [category, setCategory] = useState(categoryParam);
   const [query, setQuery] = useState(() => param('q') ?? '');
   const deferred = useDeferredValue(query);
   const lastCategory = useRef(category);
@@ -44,7 +49,7 @@ export function useCatalogFilter() {
   // Back has to move the page, not just the address bar.
   useEffect(() => {
     const restore = () => {
-      const next = param('category') ?? ALL;
+      const next = categoryParam();
       lastCategory.current = next;
       setCategory(next);
       setQuery(param('q') ?? '');

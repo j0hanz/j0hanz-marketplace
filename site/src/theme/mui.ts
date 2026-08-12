@@ -67,9 +67,6 @@ export const theme = createTheme({
     },
   },
   shape: { borderRadius: 0 },
-  // Menu, Tooltip and Accordion would otherwise run MUI's curve — a second
-  // vocabulary on a page with one. Easing is emitted as a CSS string, so the
-  // token resolves at paint. Leaving is quicker than entering.
   transitions: {
     easing: {
       easeOut: 'var(--ease-out)',
@@ -95,8 +92,6 @@ export const theme = createTheme({
       slope: '0.5rem + 4.1vw',
       letterSpacing: '0.01em',
     }),
-    // A quarter of h2's rate: section titles stay a step below the headline at
-    // every width instead of catching it on the way to their own ceiling.
     h4: heading({ min: '1.25rem', max: '2rem', slope: '1rem + 1.11vw', letterSpacing: '0.06em' }),
     h5: { fontFamily: mono },
     h6: { fontFamily: mono },
@@ -109,8 +104,6 @@ export const theme = createTheme({
       styleOverrides: {
         ':root, .light': { '--focus-ring': 'var(--mui-palette-text-primary)', '--grain': 0.028 },
         '.dark': { '--focus-ring': 'var(--mui-palette-primary-main)', '--grain': 0.05 },
-        // No smooth scroll: it drags the viewport across every section in
-        // between, spending the reveals each was holding for its own arrival.
         html: { scrollPaddingTop: scrollOffset },
         'body::after': {
           content: '""',
@@ -141,8 +134,6 @@ export const theme = createTheme({
       },
     },
     MuiButton: { styleOverrides: { root: press } },
-    // 12px around a 24px icon clears the 44px touch target. Scoped to the default
-    // size: a `root` padding would outrank MUI's own small and large variants.
     MuiIconButton: { styleOverrides: { root: press, sizeMedium: { padding: 12 } } },
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     MuiCard: { styleOverrides: { root: { borderColor: edge } } },
@@ -156,14 +147,10 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-notchedOutline': { borderColor: edge },
-          // The field draws its own clear button, in the page's icon set.
           '& input::-webkit-search-cancel-button': { display: 'none' },
         },
       },
     },
-    // Focused, MUI paints the label primary.main. In the light scheme that is
-    // #B45309 on #EDF0F3 — 4.4:1, under AA for a 16px label. Amber stays on the
-    // notched outline, where 3:1 is the bar it has to clear.
     MuiInputLabel: {
       styleOverrides: {
         root: { '&.Mui-focused': { color: 'var(--mui-palette-text-primary)' } },
@@ -179,27 +166,20 @@ export const theme = createTheme({
         root: {
           ...press,
           borderColor: edge,
-          // Unset, MUI's own action colour wins: pure white in dark — brighter
-          // than the selected row it sits beside — and rgba(0,0,0,.54) in light,
-          // 4.4:1 on the ground. Both are outside the palette. Unselected is
-          // secondary text; selected is primary, which is the whole hierarchy.
           color: 'var(--mui-palette-text-secondary)',
-          // A transparent bar in the resting state, so the selected shadow
-          // interpolates instead of snapping. The brand says selected is an
-          // inset bar in primary, never a filled background.
           boxShadow: litIdle('bottom'),
           '&.Mui-selected': {
             color: 'var(--mui-palette-text-primary)',
             fontWeight: 700,
             boxShadow: lit('bottom'),
+            backgroundColor: 'transparent',
+            '&:hover': { backgroundColor: 'var(--mui-palette-action-hover)' },
           },
         },
       },
     },
     MuiAccordion: { defaultProps: { slotProps: { transition: { timeout: 200 } } } },
     MuiTooltip: {
-      // describeChild keeps the child's own visible label as its accessible
-      // name; without it MUI replaces "2 hooks" with the tooltip text.
       defaultProps: { enterDelay: 400, enterNextDelay: 0, describeChild: true },
       styleOverrides: {
         tooltip: {

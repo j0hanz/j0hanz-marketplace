@@ -25,18 +25,11 @@ const skipLink = {
 };
 
 export function App() {
-  // One filter for the page: the search reads skill and agent names, so the
-  // index that lists them answers it too rather than sitting whole underneath a
-  // grid that just emptied.
   const filter = useCatalogFilter();
 
   useEffect(() => {
     requestAnimationFrame(() => {
       document.documentElement.dataset.ready = '';
-      // The browser resolves the hash against the shell, before the reveals and
-      // the open accordion have any height, so a deep link lands short of its
-      // section. Re-aim once the real layout exists. getElementById rather than
-      // a selector: a hash like `#1` is a valid fragment and an invalid one.
       if (location.hash.length > 1)
         document.getElementById(location.hash.slice(1))?.scrollIntoView();
     });
@@ -51,7 +44,7 @@ export function App() {
       <main id="main" tabIndex={-1}>
         <Hero />
         <Catalog filter={filter} />
-        <SkillIndex visible={filter.visible} needle={filter.needle} />
+        <SkillIndex visible={filter.visible} searching={Boolean(filter.needle)} />
       </main>
       <Footer />
     </>

@@ -10,18 +10,6 @@ export function useActiveSection(hrefs: readonly string[]) {
 
   useEffect(() => {
     const onScreen = new Set<string>();
-    const updateActive = () => {
-      const inBand = hrefs.findLast((href) => onScreen.has(href));
-      if (inBand) {
-        setActive(inBand);
-        return;
-      }
-      const atEnd =
-        window.scrollY > 0 &&
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      setActive(atEnd ? (hrefs.at(-1) ?? '') : '');
-    };
-
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -29,7 +17,7 @@ export function useActiveSection(hrefs: readonly string[]) {
           if (entry.isIntersecting) onScreen.add(href);
           else onScreen.delete(href);
         }
-        updateActive();
+        setActive(hrefs.findLast((href) => onScreen.has(href)) ?? '');
       },
       { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
     );
@@ -38,11 +26,7 @@ export function useActiveSection(hrefs: readonly string[]) {
       const section = document.querySelector(href);
       if (section) observer.observe(section);
     }
-    window.addEventListener('scroll', updateActive, { passive: true });
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('scroll', updateActive);
-    };
+    return () => observer.disconnect();
   }, [hrefs]);
 
   return active;

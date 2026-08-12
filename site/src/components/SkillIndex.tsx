@@ -9,7 +9,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ReactNode } from 'react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, type Plugin } from '../site';
@@ -22,8 +22,6 @@ const MODEL_LOADED = 'Claude auto-loads this skill. It is not a user-facing slas
 const sum = (plugins: Plugin[], of: (plugin: Plugin) => number) =>
   plugins.reduce((n, plugin) => n + of(plugin), 0);
 
-// The counts a row carries, as one phrase: the summary is a button, and its chips
-// would otherwise join its name — and the heading MUI wraps it in — unspaced.
 const counts = (plugin: Plugin) =>
   [
     plugin.skills.length && countLabel(plugin.skills.length, 'skill'),
@@ -70,7 +68,6 @@ function Entry({
   );
 }
 
-/** Names what kind of entry a row is. Counting is the chips' job. */
 function Kind({ label, title }: { label: string; title?: string }) {
   const text = (
     <Typography
@@ -87,15 +84,9 @@ function Kind({ label, title }: { label: string; title?: string }) {
   return title ? <Tooltip title={title}>{text}</Tooltip> : text;
 }
 
-export function SkillIndex({ visible, needle }: { visible: Plugin[]; needle: string }) {
+export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
-  const [overrides, setOverrides] = useState<Partial<Record<string, boolean>>>({});
   const firstPluginName = visible[0]?.name;
-  // A search is a question about what is inside these rows, so it opens them.
-  const isOpen = (name: string, map = overrides) =>
-    map[name] ?? (Boolean(needle) || (isDesktop && name === firstPluginName));
-  const toggle = (name: string) =>
-    setOverrides((prev) => ({ ...prev, [name]: !isOpen(name, prev) }));
 
   const listRef = useRef<HTMLDivElement>(null);
   useEnter(listRef, visible);
@@ -118,82 +109,84 @@ export function SkillIndex({ visible, needle }: { visible: Plugin[]; needle: str
             Nothing to list while the plugins above are filtered out.
           </Typography>
         ) : (
-          visible.map((plugin) => (
-            <Accordion
-              key={plugin.name}
-              expanded={isOpen(plugin.name)}
-              onChange={() => toggle(plugin.name)}
-              disableGutters
-              square
-              elevation={0}
-              data-reveal
-              sx={{
-                bgcolor: 'transparent',
-                borderTop: outline,
-                '&:last-of-type': { borderBottom: outline },
-                '&::before': { display: 'none' },
-                '&.Mui-expanded': { boxShadow: lit('left') },
-              }}
-            >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-label={`${plugin.displayName}: ${counts(plugin)}`}
-                sx={{ px: { xs: 1.5, sm: 2 } }}
+          visible.map((plugin) => {
+            const openByDefault = searching || (isDesktop && plugin.name === firstPluginName);
+            return (
+              <Accordion
+                key={`${plugin.name}-${openByDefault}`}
+                defaultExpanded={openByDefault}
+                disableGutters
+                square
+                elevation={0}
+                data-reveal
+                sx={{
+                  bgcolor: 'transparent',
+                  borderTop: outline,
+                  '&:last-of-type': { borderBottom: outline },
+                  '&::before': { display: 'none' },
+                  '&.Mui-expanded': { boxShadow: lit('left') },
+                }}
               >
-                <Typography
-                  component="span"
-                  variant="h6"
-                  sx={{ flexGrow: 1, minWidth: 0, fontSize: '1rem' }}
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-label={`${plugin.displayName}: ${counts(plugin)}`}
+                  sx={{ px: { xs: 1.5, sm: 2 } }}
                 >
-                  {plugin.displayName}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  aria-hidden
-                  sx={{ mr: 2, flexShrink: 0, alignSelf: 'center' }}
-                >
-                  <CountChips plugin={plugin} />
-                </Stack>
-              </AccordionSummary>
-              <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
-                <List disablePadding>
-                  {plugin.skills.map((skill) => (
-                    <Entry
-                      key={skill.name}
-                      code={skill.command ?? skill.name}
-                      description={skill.description}
-                      leading={
-                        !skill.command ? (
-                          <Kind label="model-loaded" title={MODEL_LOADED} />
-                        ) : undefined
-                      }
-                      trailing={
-                        skill.argumentHint && (
-                          <Typography
-                            component="code"
-                            variant="caption"
-                            color="textSecondary"
-                            sx={codeSx}
-                          >
-                            {skill.argumentHint}
-                          </Typography>
-                        )
-                      }
-                    />
-                  ))}
-                  {plugin.agents.map((agent) => (
-                    <Entry
-                      key={agent.name}
-                      code={agent.name}
-                      description={agent.description}
-                      trailing={<Kind label="agent" />}
-                    />
-                  ))}
-                </List>
-              </AccordionDetails>
-            </Accordion>
-          ))
+                  <Typography
+                    component="span"
+                    variant="h6"
+                    sx={{ flexGrow: 1, minWidth: 0, fontSize: '1rem' }}
+                  >
+                    {plugin.displayName}
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    aria-hidden
+                    sx={{ mr: 2, flexShrink: 0, alignSelf: 'center' }}
+                  >
+                    <CountChips plugin={plugin} />
+                  </Stack>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
+                  <List disablePadding>
+                    {plugin.skills.map((skill) => (
+                      <Entry
+                        key={skill.name}
+                        code={skill.command ?? skill.name}
+                        description={skill.description}
+                        leading={
+                          !skill.command ? (
+                            <Kind label="model-loaded" title={MODEL_LOADED} />
+                          ) : undefined
+                        }
+                        trailing={
+                          skill.argumentHint && (
+                            <Typography
+                              component="code"
+                              variant="caption"
+                              color="textSecondary"
+                              sx={codeSx}
+                            >
+                              {skill.argumentHint}
+                            </Typography>
+                          )
+                        }
+                      />
+                    ))}
+                    {plugin.agents.map((agent) => (
+                      <Entry
+                        key={agent.name}
+                        code={agent.name}
+                        description={agent.description}
+                        trailing={<Kind label="agent" />}
+                      />
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+            );
+          })
         )}
       </div>
     </Section>

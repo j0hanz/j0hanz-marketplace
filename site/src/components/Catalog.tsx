@@ -19,15 +19,11 @@ import { CloseIcon, ExternalIcon, InfoIcon, SearchIcon, SearchOffIcon } from '..
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
-import { accent, drawable, mono, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
+import { accent, drawable, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
 import { Section } from './Section';
 
-// The title link covers the card, so the surface that lights under the pointer
-// is the surface that opens the plugin. Everything with its own target — the
-// chips carrying a tooltip, the copy bar — takes a positioned parent and paints
-// back above it.
 const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } };
 
 function PluginCard({ plugin }: { plugin: Plugin }) {
@@ -41,15 +37,11 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        // Named per plugin so a card surviving the filter travels to its new
-        // cell instead of cross-fading in place.
         viewTransitionName: `card-${plugin.name}`,
         ...drawable('top', accent),
       }}
     >
       <CardContent sx={{ flexGrow: 1 }}>
-        {/* Category and version name the plugin; the chips below count what is
-            in it. Two voices, so a version stops reading as a fourth count. */}
         <Stack
           direction="row"
           spacing={1}
@@ -73,7 +65,6 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
             rel="noreferrer"
             color="inherit"
             underline="hover"
-            // Overrides ExternalIcon's own phrasing, so it repeats the warning.
             aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
             sx={stretch}
           >
@@ -119,8 +110,6 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
   const { visible, category, setCategory, query, setQuery, reset } = filter;
   const grid = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
-  // Shared by both category controls: the cards travel between cells under a
-  // view transition, or land outright where the browser or the visitor says no.
   const pickCategory = (next: string) => {
     if (!document.startViewTransition || !document.documentElement.dataset.motion) {
       setCategory(next);
@@ -128,8 +117,6 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
     }
     document.startViewTransition(() => flushSync(() => setCategory(next))).ready.catch(() => {});
   };
-  // Cards below the fold still reveal on scroll; ones a filter puts back land
-  // without it. See useEnter.
   useEnter(grid, visible);
 
   return (
@@ -163,19 +150,12 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
-              // The UA's own search-cancel button is the one glyph on the page
-              // drawn by someone else, and it doesn't track the theme. Hidden in
-              // the theme; this is the same control in the page's icon set.
               endAdornment: query ? (
                 <InputAdornment position="end">
                   <IconButton
                     size="small"
                     edge="end"
                     aria-label="Clear search"
-                    // Clears the query only — the category is a separate control
-                    // and this button is not attached to it. Clearing also
-                    // unmounts this button, so it hands focus back to the field
-                    // rather than dropping a keyboard user at the document top.
                     onClick={() => {
                       setQuery('');
                       searchInput.current?.focus();
@@ -194,29 +174,6 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           }}
           sx={{ width: 1, maxWidth: { md: 320 } }}
         />
-        <TextField
-          select
-          label="Category"
-          value={category}
-          onChange={(e) => pickCategory(e.target.value)}
-          slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
-          sx={{
-            display: { xs: 'flex', sm: 'none' },
-            width: 1,
-            '& select': {
-              fontFamily: mono,
-              backgroundColor: 'var(--mui-palette-background-default)',
-              color: 'var(--mui-palette-text-primary)',
-            },
-          }}
-        >
-          <option value={ALL}>All</option>
-          {site.categories.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </TextField>
         <ToggleButtonGroup
           exclusive
           size="small"
@@ -224,11 +181,9 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           onChange={(_, next: string | null) => next && pickCategory(next)}
           aria-label="Filter plugins by category"
           sx={{
-            display: { xs: 'none', sm: 'flex' },
             flexWrap: 'wrap',
             gap: `${RULE_WIDTH}px`,
             '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 },
-            // Wrapped rows can't share edges, so give every button its own.
             '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
               ml: 0,
               borderLeft: outline,
@@ -250,8 +205,6 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}
           </Typography>
-          {/* Not relayed: `reset` clears the query too, and `visible` reads a
-              deferred copy of it that no synchronous flush can advance. */}
           <Link
             component="button"
             variant="body2"
