@@ -7,24 +7,15 @@ import { useRef } from 'react';
 import { ExternalIcon, MarkIcon } from '../icons';
 import { useEnter } from '../hooks/useEnter';
 import { site } from '../site';
-import { accent, drawable, rule } from '../theme/tokens';
 
-// Caption and body2 leave these links 20–22px tall, under the 24px floor.
-// Padding on an inline box grows the hit area without moving the baseline the
-// surrounding Stack aligns on.
-const hitArea = { py: 0.5 };
+const hitArea = { py: 0.3 };
 
 export function Footer() {
   const footer = useRef<HTMLElement>(null);
   useEnter(footer);
 
   return (
-    <Box
-      component="footer"
-      ref={footer}
-      data-draw
-      sx={{ borderTop: rule, py: 5, position: 'relative', ...drawable('top', accent) }}
-    >
+    <Box component="footer" ref={footer} data-draw sx={{ py: 3, position: 'relative' }}>
       <Container maxWidth="lg">
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
