@@ -8,7 +8,7 @@
 //   node set-style.mjs --hook     UserPromptExpansion handler, see hooks/hooks.json.
 //
 // fires:  UserPromptExpansion, matcher (^|:)set-style$
-// reads:  .command_args[0], .cwd
+// reads:  .command_args (a space-separated string, not an array), .cwd
 // emits:  exit 2 + stderr, the documented way to block an expansion, so /set-style
 //         never reaches the model. Not JSON: on exit 2 stderr is the only channel read.
 // fails:  unreadable stdin -> exit 0 with no output, expansion proceeds and
@@ -36,6 +36,13 @@ const MENU = [
   ['schematic', 'Prose answer first, ASCII diagrams only — no narration or recap.'],
   ['default', "Reset to Claude's built-in default output style."],
 ];
+
+// UserPromptExpansion sends command_args as one space-separated string. Tolerate an
+// array too, so the parse survives if that shape ever changes back.
+function firstArg(commandArgs) {
+  const text = Array.isArray(commandArgs) ? commandArgs.join(' ') : String(commandArgs ?? '');
+  return text.trim().split(/\s+/)[0] ?? '';
+}
 
 // Normalize user input: lower-case, strip non-alphanumeric, match known choices.
 function normalize(arg) {
@@ -152,8 +159,7 @@ function hookMain() {
   }
   // Only the first argument names a style. Trailing words are ignored rather than
   // rejected, so "/set-style concise please" still applies concise.
-  const args = Array.isArray(payload.command_args) ? payload.command_args : [];
-  const raw = args.length ? String(args[0]).trim() : '';
+  const raw = firstArg(payload.command_args);
   const choice = raw ? normalize(raw) : null;
 
   let lines;
@@ -261,6 +267,25 @@ function selfTest() {
   if (!rejected[0].includes('"bogus"')) {
     console.log(`self-test FAIL: bad-arg menu opened with ${rejected[0]}`);
     return 1;
+  }
+
+  // 6) the hook payload shape — command_args is a string, and reading it as an array
+  // made every /set-style <style> fall through to the menu
+  for (const [input, want] of [
+    ['concise', 'concise'],
+    ['  tldr  ', 'tldr'],
+    ['concise please', 'concise'],
+    [['concise'], 'concise'],
+    ['', ''],
+    [undefined, ''],
+  ]) {
+    const got = firstArg(input);
+    if (got !== want) {
+      console.log(
+        `self-test FAIL: firstArg(${JSON.stringify(input)}) => "${got}", expected "${want}"`,
+      );
+      return 1;
+    }
   }
 
   console.log('self-test ok');
