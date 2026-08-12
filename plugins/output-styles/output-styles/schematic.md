@@ -1,6 +1,6 @@
 ---
-name: Schematic
-description: Prose answer first, ASCII diagrams only, no narration or recap
+name: schematic
+description: 'Prose answer first, ASCII diagrams only — no narration or recap.'
 keep-coding-instructions: true
 ---
 

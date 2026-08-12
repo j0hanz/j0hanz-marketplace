@@ -1,0 +1,19 @@
+{
+  "description": "Applies /set-style <style> without a model turn. Needs node on PATH; without it the expansion falls through to the set-style skill.",
+  "hooks": {
+    "UserPromptExpansion": [
+      {
+        "matcher": "(^|:)set-style$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/set-style.mjs", "--hook"],
+            "timeout": 5,
+            "statusMessage": "Setting output style"
+          }
+        ]
+      }
+    ]
+  }
+}

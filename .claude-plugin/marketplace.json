@@ -45,7 +45,7 @@
     {
       "name": "output-styles",
       "source": "./plugins/output-styles",
-      "description": "Set a global output style — Concise, TL;DR, or Diagram-first — via a picker skill",
+      "description": "Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — with `/set-style <style>`",
       "category": "productivity"
     }
   ]

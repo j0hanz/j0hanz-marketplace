@@ -90,9 +90,10 @@ Rewrites a rough, half-formed prompt into one that works on current Claude model
 
 ### output-styles
 
-Set a global output style — Concise, TL;DR, or Diagram-first — via a picker skill
+Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — with `/set-style <style>`
 
 - Commands: `/output-styles:set-style`
+- Hooks: `UserPromptExpansion`
 
 <!-- plugins:end -->
 

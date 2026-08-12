@@ -2,6 +2,19 @@
 // set-style.mjs — set the user's GLOBAL outputStyle in ~/.claude/settings.json.
 // Merges into the existing global settings file (never overwrites unrelated keys).
 // Uses only Node built-ins: node:fs, node:os, node:path.
+//
+// Two entry points:
+//   node set-style.mjs <choice>   CLI / skill fallback — prints to stdout.
+//   node set-style.mjs --hook     UserPromptExpansion handler, see hooks/hooks.json.
+//
+// fires:  UserPromptExpansion, matcher (^|:)set-style$
+// reads:  .command_args[0], .cwd
+// emits:  exit 2 + stderr, the documented way to block an expansion, so /set-style
+//         never reaches the model. Not JSON: on exit 2 stderr is the only channel read.
+// fails:  unreadable stdin -> exit 0 with no output, expansion proceeds and
+//         skills/set-style/SKILL.md handles it the slow way
+// verify: node scripts/set-style.mjs --self-test
+//         echo '{"command_args":["concise"]}' | node scripts/set-style.mjs --hook; echo $?
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,8 +23,19 @@ const CHOICES = {
   concise: 'output-styles:concise',
   tldr: 'output-styles:tldr',
   'diagram-first': 'output-styles:diagram-first',
+  schematic: 'output-styles:schematic',
   default: null, // null => delete the key
 };
+
+// Shown when /set-style is typed with no argument, or an argument we don't know.
+// Kept in the same order as CHOICES; the self-test fails if the two drift apart.
+const MENU = [
+  ['concise', 'Terse, direct output — no filler, no unsolicited examples.'],
+  ['tldr', 'One-line summary, then bullets — no prose filler.'],
+  ['diagram-first', 'Answer with a diagram or visual first, then minimal prose.'],
+  ['schematic', 'Prose answer first, ASCII diagrams only — no narration or recap.'],
+  ['default', "Reset to Claude's built-in default output style."],
+];
 
 // Normalize user input: lower-case, strip non-alphanumeric, match known choices.
 function normalize(arg) {
@@ -19,13 +43,21 @@ function normalize(arg) {
   if (key === 'tldr' || key === 'tlr') return 'tldr';
   if (key === 'concise') return 'concise';
   if (key === 'diagramfirst') return 'diagram-first';
+  if (key === 'schematic') return 'schematic';
   if (key === 'default') return 'default';
   return null;
 }
 
+function menuLines(badArg) {
+  const out = badArg ? [`Unknown output style "${badArg}".`, ''] : [];
+  out.push('Usage: /set-style <style>');
+  for (const [key, description] of MENU) out.push(`  ${key.padEnd(13)} ${description}`);
+  return out;
+}
+
 function usage(stream) {
   stream.write('usage: node set-style.mjs <choice>\n');
-  stream.write('  choice: concise | tldr | diagram-first | default\n');
+  stream.write(`  choice: ${Object.keys(CHOICES).join(' | ')}\n`);
   stream.write('  (default removes outputStyle, restoring Claude built-in Default)\n');
 }
 
@@ -70,7 +102,8 @@ function writeSettings(file, obj) {
 }
 
 // Warn if project/local settings in cwd override the global outputStyle.
-function warnOverrides(cwd) {
+function overrideWarnings(cwd) {
+  const warnings = [];
   for (const name of ['.claude/settings.json', '.claude/settings.local.json']) {
     const f = path.join(cwd, name);
     let raw;
@@ -82,7 +115,7 @@ function warnOverrides(cwd) {
     try {
       const obj = JSON.parse(raw);
       if (obj && Object.prototype.hasOwnProperty.call(obj, 'outputStyle')) {
-        console.log(
+        warnings.push(
           `warning: ${name} sets "outputStyle" — project/local settings override the global one and may prevent this change from taking effect here.`,
         );
       }
@@ -90,12 +123,57 @@ function warnOverrides(cwd) {
       // ignore unreadable local files
     }
   }
+  return warnings;
+}
+
+// Write the choice through and return the lines to report. Throws on unreadable settings.
+function run(choice, cwd) {
+  const file = path.join(os.homedir(), '.claude', 'settings.json');
+  const obj = readSettings(file);
+  if (!applyChoice(obj, choice)) return ['Already set.'];
+  writeSettings(file, obj);
+  const label = choice === 'default' ? 'default (built-in)' : CHOICES[choice];
+  return [
+    `outputStyle set to: ${label}`,
+    'Note: output style is read at session start — run /clear or start a new session for it to take effect.',
+    ...overrideWarnings(cwd),
+  ];
+}
+
+// UserPromptExpansion handler. Answers on stderr and exits 2, which blocks the
+// expansion, so the model is never invoked. Exit 0 with no output is the fail-open
+// path: the expansion proceeds and the skill does the job instead.
+function hookMain() {
+  let payload;
+  try {
+    payload = JSON.parse(fs.readFileSync(0, 'utf8'));
+  } catch {
+    return 0;
+  }
+  // Only the first argument names a style. Trailing words are ignored rather than
+  // rejected, so "/set-style concise please" still applies concise.
+  const args = Array.isArray(payload.command_args) ? payload.command_args : [];
+  const raw = args.length ? String(args[0]).trim() : '';
+  const choice = raw ? normalize(raw) : null;
+
+  let lines;
+  if (!choice) {
+    lines = menuLines(raw);
+  } else {
+    try {
+      lines = run(choice, typeof payload.cwd === 'string' ? payload.cwd : process.cwd());
+    } catch (e) {
+      lines = [`set-style: ${e && e.message ? e.message : String(e)}`];
+    }
+  }
+
+  process.stderr.write(lines.join('\n') + '\n');
+  return 2;
 }
 
 function main(argv) {
-  if (argv.length === 1 && argv[0] === '--self-test') {
-    return selfTest();
-  }
+  if (argv.length === 1 && argv[0] === '--self-test') return selfTest();
+  if (argv.length === 1 && argv[0] === '--hook') return hookMain();
   if (argv.length !== 1) {
     usage(process.stderr);
     return 1;
@@ -107,12 +185,9 @@ function main(argv) {
     return 1;
   }
 
-  const cwd = process.cwd();
-
-  const file = path.join(os.homedir(), '.claude', 'settings.json');
-  let obj;
+  let lines;
   try {
-    obj = readSettings(file);
+    lines = run(choice, process.cwd());
   } catch (e) {
     if (e.invalidJson) {
       process.stderr.write(`error: ${e.message}\n`);
@@ -121,21 +196,7 @@ function main(argv) {
     }
     throw e;
   }
-
-  const changed = applyChoice(obj, choice);
-  if (!changed) {
-    console.log('Already set.');
-    return 0;
-  }
-  writeSettings(file, obj);
-
-  const label = choice === 'default' ? 'default (built-in)' : CHOICES[choice];
-  console.log(`outputStyle set to: ${label}`);
-  console.log(
-    'Note: output style is read at session start — run /clear or start a new session for it to take effect.',
-  );
-
-  warnOverrides(cwd);
+  for (const line of lines) console.log(line);
   return 0;
 }
 
@@ -174,6 +235,31 @@ function selfTest() {
   obj = readSettings(file);
   if (obj.outputStyle !== 'output-styles:tldr') {
     console.log(`self-test FAIL: expected output-styles:tldr, got ${obj.outputStyle}`);
+    return 1;
+  }
+
+  // 4) every shipped style is reachable and listed — this is the drift that hid schematic
+  const listed = MENU.map(([key]) => key);
+  const known = Object.keys(CHOICES);
+  if (listed.join(',') !== known.join(',')) {
+    console.log(`self-test FAIL: MENU [${listed}] does not match CHOICES [${known}]`);
+    return 1;
+  }
+  for (const key of known) {
+    if (normalize(key) !== key) {
+      console.log(`self-test FAIL: normalize("${key}") => ${normalize(key)}`);
+      return 1;
+    }
+  }
+
+  // 5) both menu shapes — a bare /set-style, and one carrying a style we don't know
+  if (!menuLines('').join('\n').includes('schematic')) {
+    console.log('self-test FAIL: menu does not list schematic');
+    return 1;
+  }
+  const rejected = menuLines('bogus');
+  if (!rejected[0].includes('"bogus"')) {
+    console.log(`self-test FAIL: bad-arg menu opened with ${rejected[0]}`);
     return 1;
   }
 
