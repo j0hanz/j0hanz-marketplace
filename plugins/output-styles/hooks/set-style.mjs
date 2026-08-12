@@ -45,6 +45,8 @@ const STYLES = [
 const CHOICES = Object.fromEntries(STYLES.map(([key, value]) => [key, value]));
 // Shown when /set-style is typed with no argument, or an argument we don't know.
 const MENU = STYLES.map(([key, , description]) => [key, description]);
+// Longest key, so a longer style can't silently break the menu's column alignment.
+const MENU_PAD = Math.max(...STYLES.map(([key]) => key.length));
 
 const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
 
@@ -59,16 +61,16 @@ function firstArg(commandArgs) {
 // Match input against CHOICES with case and punctuation dropped from both sides, so
 // "TL;DR" finds tldr and "Diagram First" finds diagram-first. Derived from CHOICES:
 // adding a style needs no edit here.
-function normalize(arg) {
+function matchChoice(arg) {
   const key = arg.toLowerCase().replace(/[^a-z0-9]/g, '');
   return Object.keys(CHOICES).find((c) => c.replace(/-/g, '') === key) ?? null;
 }
 
 function menuLines(badArg) {
-  const out = badArg ? [`Unknown output style "${badArg}".`, ''] : [];
-  out.push('Usage: /set-style <style>');
-  for (const [key, description] of MENU) out.push(`  ${key.padEnd(13)} ${description}`);
-  return out;
+  const lines = badArg ? [`Unknown output style "${badArg}".`, ''] : [];
+  lines.push('Usage: /set-style <style>');
+  for (const [key, description] of MENU) lines.push(`  ${key.padEnd(MENU_PAD)} ${description}`);
+  return lines;
 }
 
 // Both entry points print these throws verbatim, so each one names its own repair.
@@ -171,7 +173,7 @@ function hookMain() {
   // Only the first argument names a style. Trailing words are ignored rather than
   // rejected, so "/set-style concise please" still applies concise.
   const raw = firstArg(payload?.command_args);
-  const choice = raw ? normalize(raw) : null;
+  const choice = raw ? matchChoice(raw) : null;
 
   let lines;
   if (!choice) {
@@ -193,7 +195,7 @@ function main(argv) {
   if (argv.length === 1 && argv[0] === '--hook') return hookMain();
 
   const raw = firstArg(argv);
-  const choice = raw ? normalize(raw) : null;
+  const choice = raw ? matchChoice(raw) : null;
   if (!choice) {
     process.stderr.write(menuLines(raw).join('\n') + '\n');
     return 1;
@@ -220,13 +222,13 @@ function selfTest() {
     return readSettings(file);
   };
 
-  // 1) set on an absent file, reset, then set again through the normalizer
+  // 1) set on an absent file, reset, then set again through the matcher
   let obj = roundTrip(readSettings(file), 'concise');
   check(obj.outputStyle === 'output-styles:concise', `set concise => ${obj.outputStyle}`);
   obj = roundTrip(obj, 'default');
   check(!Object.hasOwn(obj, 'outputStyle'), `default left outputStyle=${obj.outputStyle}`);
-  check(normalize('TL;DR') === 'tldr', `normalize("TL;DR") => ${normalize('TL;DR')}`);
-  obj = roundTrip(obj, normalize('TL;DR'));
+  check(matchChoice('TL;DR') === 'tldr', `matchChoice("TL;DR") => ${matchChoice('TL;DR')}`);
+  obj = roundTrip(obj, matchChoice('TL;DR'));
   check(obj.outputStyle === 'output-styles:tldr', `set tldr => ${obj.outputStyle}`);
 
   // 2) unrelated keys survive — the whole reason this merges instead of replacing
@@ -246,9 +248,9 @@ function selfTest() {
     check(threw, `readSettings accepted ${bad}`);
   }
 
-  // 4) every shipped style still round-trips through the normalizer
+  // 4) every shipped style still round-trips through the matcher
   for (const key of Object.keys(CHOICES)) {
-    check(normalize(key) === key, `normalize("${key}") => ${normalize(key)}`);
+    check(matchChoice(key) === key, `matchChoice("${key}") => ${matchChoice(key)}`);
   }
 
   // 5) both menu shapes — a bare /set-style, and one carrying a style we don't know
