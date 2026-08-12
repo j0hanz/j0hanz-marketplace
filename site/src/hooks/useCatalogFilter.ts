@@ -1,31 +1,39 @@
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { type Plugin, site } from '../site';
 
 export const ALL = 'all';
 
-const searchIndex = site.plugins.map((plugin) => ({
-  plugin,
-  haystack: [
-    plugin.displayName,
-    plugin.summary,
-    plugin.hookEvents.join(' '),
-    ...plugin.skills.map((skill) => skill.name + ' ' + skill.description),
-    ...plugin.agents.map((agent) => agent.name + ' ' + agent.description),
-  ]
-    .join(' ')
-    .toLowerCase(),
-}));
-
-const param = (key: string) => new URLSearchParams(location.search).get(key);
-
-const categoryParam = () => {
-  const value = param('category');
-  return value && site.categories.includes(value) ? value : ALL;
+const readSearch = (key: string) => {
+  try {
+    return new URLSearchParams(location.search).get(key);
+  } catch {
+    return null;
+  }
 };
 
+const haystacks = (() => {
+  const map = new Map<Plugin, string>();
+  for (const plugin of site.plugins) {
+    map.set(
+      plugin,
+      [plugin.displayName, plugin.summary, plugin.hookEvents.join(' ')]
+        .concat(
+          plugin.skills.flatMap((skill) => [skill.name, skill.description]),
+          plugin.agents.flatMap((agent) => [agent.name, agent.description]),
+        )
+        .join(' ')
+        .toLowerCase(),
+    );
+  }
+  return map;
+})();
+
 export function useCatalogFilter() {
-  const [category, setCategory] = useState(categoryParam);
-  const [query, setQuery] = useState(() => param('q') ?? '');
+  const [category, setCategory] = useState(() => {
+    const value = readSearch('category');
+    return value && site.categories.includes(value) ? value : ALL;
+  });
+  const [query, setQuery] = useState(() => readSearch('q') ?? '');
   const deferred = useDeferredValue(query);
 
   useEffect(() => {
@@ -39,15 +47,16 @@ export function useCatalogFilter() {
   }, [category, deferred]);
 
   const needle = deferred.trim().toLowerCase();
-  const visible: Plugin[] = [];
-  for (const { plugin, haystack } of searchIndex) {
-    if (
-      (category === ALL || plugin.category === category) &&
-      (!needle || haystack.includes(needle))
-    ) {
-      visible.push(plugin);
-    }
-  }
+
+  const visible = useMemo(
+    () =>
+      site.plugins.filter((plugin) => {
+        if (category !== ALL && plugin.category !== category) return false;
+        if (needle && !haystacks.get(plugin)!.includes(needle)) return false;
+        return true;
+      }),
+    [category, needle],
+  );
 
   return {
     visible,

@@ -9,21 +9,12 @@ import { site } from '../site';
 import { mono, rule, tag } from '../theme/tokens';
 import { Command } from './Command';
 
-// The three lines a visitor actually types, in the order they type them. The
-// example is whichever plugin ships the first slash command; with none, the
-// sequence is the one command that never depends on a plugin existing.
-const example = site.plugins.flatMap((plugin) =>
-  plugin.skills.flatMap((skill) =>
-    skill.command ? [{ install: plugin.installCommand, run: skill.command }] : [],
-  ),
-)[0];
-
 const steps = [
   { label: 'Add the marketplace', value: site.addCommand },
-  ...(example
+  ...(site.example
     ? [
-        { label: 'Install a plugin', value: example.install },
-        { label: 'Run it', value: example.run },
+        { label: 'Install a plugin', value: site.example.install },
+        { label: 'Run it', value: site.example.run },
       ]
     : []),
 ];

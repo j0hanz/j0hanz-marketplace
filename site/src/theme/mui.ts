@@ -1,11 +1,11 @@
 import { createTheme } from '@mui/material/styles';
 import {
+  activeSx,
   brand,
   edge,
   focusRing,
   ground,
   ink,
-  lit,
   litIdle,
   mono,
   paper,
@@ -166,9 +166,7 @@ export const theme = createTheme({
           color: 'var(--mui-palette-text-secondary)',
           boxShadow: litIdle('bottom'),
           '&.Mui-selected': {
-            color: 'var(--mui-palette-text-primary)',
-            fontWeight: 700,
-            boxShadow: lit('bottom'),
+            ...activeSx('bottom'),
             backgroundColor: 'transparent',
             '&:hover': { backgroundColor: 'var(--mui-palette-action-hover)' },
           },

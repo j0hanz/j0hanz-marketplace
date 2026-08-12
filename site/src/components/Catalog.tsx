@@ -18,11 +18,11 @@ import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
 import { CloseIcon, ExternalIcon, InfoIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
-import { useEnter } from '../hooks/useEnter';
 import { countLabel, site, type Plugin } from '../site';
 import { accent, drawable, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
+import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
 
 const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } };
@@ -109,16 +109,19 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
 
 export function Catalog({ filter }: { filter: CatalogFilter }) {
   const { visible, category, setCategory, query, setQuery, reset } = filter;
-  const grid = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const pickCategory = (next: string) => {
-    if (!document.startViewTransition || !document.documentElement.dataset.motion) {
+    if (!document.startViewTransition) {
       setCategory(next);
       return;
     }
-    document.startViewTransition(() => flushSync(() => setCategory(next))).ready.catch(() => {});
+    try {
+      document.startViewTransition(() => flushSync(() => setCategory(next)));
+    } catch (e) {
+      console.error('view transition failed', e);
+      setCategory(next);
+    }
   };
-  useEnter(grid, visible);
 
   return (
     <Section
@@ -219,13 +222,15 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           </Link>
         </Stack>
       ) : (
-        <Grid container spacing={3} ref={grid}>
-          {visible.map((plugin) => (
-            <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>
-              <PluginCard plugin={plugin} />
-            </Grid>
-          ))}
-        </Grid>
+        <RevealOnEnter dep={visible.length}>
+          <Grid container spacing={3}>
+            {visible.map((plugin) => (
+              <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>
+                <PluginCard plugin={plugin} />
+              </Grid>
+            ))}
+          </Grid>
+        </RevealOnEnter>
       )}
     </Section>
   );

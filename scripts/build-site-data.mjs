@@ -144,6 +144,15 @@ export function build() {
     `${count(skills, 'skill')} and ${count(agents, 'agent')} across ` +
     `${count(plugins.length, 'Claude Code plugin')}. Install one at a time, no build step.`;
 
+  // The first command a visitor actually runs after `marketplace add`. Picked at build
+  // time, so the hero ships its install steps in one import, not a flatMap at render.
+  const example =
+    plugins
+      .flatMap((p) =>
+        p.skills.flatMap((s) => (s.command ? { install: p.installCommand, run: s.command } : [])),
+      )
+      .at(0) ?? null;
+
   return {
     name: catalog.name,
     // The catalog line names the marketplace; a <title> has to name what the page
@@ -163,6 +172,7 @@ export function build() {
     addCommand: `/plugin marketplace add ${repo}`,
     categories,
     plugins,
+    example,
   };
 }
 

@@ -8,12 +8,11 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useRef } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { useEnter } from '../hooks/useEnter';
 import { countLabel, type Plugin } from '../site';
 import { codeSx, lit, outline, tag } from '../theme/tokens';
 import { CountChips } from './CountChips';
+import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
 
 const MODEL_LOADED = 'Claude auto-loads this skill. It is not a user-facing slash command.';
@@ -35,9 +34,6 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
   const firstPluginName = visible[0]?.name;
 
-  const listRef = useRef<HTMLDivElement>(null);
-  useEnter(listRef, visible);
-
   const skills = sum(visible, (plugin) => plugin.skills.length);
   const agents = sum(visible, (plugin) => plugin.agents.length);
 
@@ -50,13 +46,13 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
         label: `${countLabel(skills, 'skill')} and ${countLabel(agents, 'agent')}`,
       }}
     >
-      <div ref={listRef}>
-        {visible.length === 0 ? (
-          <Typography variant="body1" color="textSecondary" sx={{ py: 6, px: 3, border: outline }}>
-            Nothing to list while the plugins above are filtered out.
-          </Typography>
-        ) : (
-          visible.map((plugin) => {
+      {visible.length === 0 ? (
+        <Typography variant="body1" color="textSecondary" sx={{ py: 6, px: 3, border: outline }}>
+          Nothing to list while the plugins above are filtered out.
+        </Typography>
+      ) : (
+        <RevealOnEnter dep={visible.length}>
+          {visible.map((plugin) => {
             const openByDefault = searching || (isDesktop && plugin.name === firstPluginName);
             return (
               <Accordion
@@ -179,9 +175,9 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 </AccordionDetails>
               </Accordion>
             );
-          })
-        )}
-      </div>
+          })}
+        </RevealOnEnter>
+      )}
     </Section>
   );
 }

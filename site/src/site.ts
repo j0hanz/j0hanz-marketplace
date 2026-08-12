@@ -36,6 +36,7 @@ export interface Site {
   addCommand: string;
   categories: string[];
   plugins: Plugin[];
+  example: { install: string; run: string } | null;
 }
 
 export const site: Site = raw;

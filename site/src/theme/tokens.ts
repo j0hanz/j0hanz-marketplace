@@ -32,6 +32,13 @@ export const lit = (side: keyof typeof LIT_OFFSET) => `inset ${LIT_OFFSET[side]}
 export const litIdle = (side: keyof typeof LIT_OFFSET) =>
   `inset ${LIT_OFFSET[side]} 0 0 transparent`;
 
+/** What it means to be the current section, the selected filter, the open row. */
+export const activeSx = (side: keyof typeof LIT_OFFSET) => ({
+  color: 'var(--mui-palette-text-primary)',
+  fontWeight: 700,
+  boxShadow: lit(side),
+});
+
 /**
  * Geometry for a structural rule that motion can draw in; index.css owns the
  * timing and the states. Undrawn is not the default, so no-JS, print, and

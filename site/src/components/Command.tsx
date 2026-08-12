@@ -8,14 +8,10 @@ import { CheckIcon, ContentCopyIcon } from '../icons';
 import { usePressedKey } from '../hooks/usePressedKey';
 import { codeSx, srOnly } from '../theme/tokens';
 
-// Both strings are read aloud and branched on, so they are named once.
-const COPIED = 'Copied';
-const FAILED = 'Copy failed. Select the text and copy it';
-
-type Status = '' | typeof COPIED | typeof FAILED;
+type Status = 'idle' | 'copied' | 'failed';
 
 export function Command({ value }: { value: string }) {
-  const [status, setStatus] = useState<Status>('');
+  const [status, setStatus] = useState<Status>('idle');
   const swap = usePressedKey();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -23,23 +19,28 @@ export function Command({ value }: { value: string }) {
     swap.press();
     setStatus(next);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setStatus(''), 1600);
+    timer.current = setTimeout(() => setStatus('idle'), 1600);
   };
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      announce(COPIED);
+      announce('copied');
     } catch {
-      announce(FAILED);
+      announce('failed');
     }
   };
 
-  const copied = status === COPIED;
-  const tip = status || 'Copy';
+  const copied = status === 'copied';
+  const tip =
+    status === 'idle'
+      ? 'Copy'
+      : status === 'copied'
+        ? 'Copied'
+        : 'Copy failed. Select the text and copy it';
   const Icon = copied ? CheckIcon : ContentCopyIcon;
-  const iconColor = copied ? 'primary' : status ? 'error' : undefined;
+  const iconColor = copied ? 'primary' : status === 'failed' ? 'error' : undefined;
 
   return (
     <Paper
@@ -62,7 +63,7 @@ export function Command({ value }: { value: string }) {
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" sx={srOnly}>
-        {status}
+        {status === 'idle' ? '' : status === 'copied' ? 'Copied' : 'Copy failed'}
       </Box>
     </Paper>
   );

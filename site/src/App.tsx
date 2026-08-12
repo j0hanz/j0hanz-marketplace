@@ -6,23 +6,7 @@ import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
-import { rule } from './theme/tokens';
-
-const skipLink = {
-  position: 'fixed',
-  top: 8,
-  left: 8,
-  zIndex: 'tooltip',
-  px: 2,
-  py: 1,
-  bgcolor: 'background.paper',
-  color: 'text.primary',
-  border: rule,
-  textDecoration: 'none',
-  transform: 'translateY(-300%)',
-  transition: 'transform 150ms var(--ease-out)',
-  '&:focus-visible': { transform: 'none' },
-};
+import { SkipLink } from './components/SkipLink';
 
 export function App() {
   const filter = useCatalogFilter();
@@ -35,15 +19,13 @@ export function App() {
 
   return (
     <>
-      <Box component="a" href="#main" sx={skipLink}>
-        Skip to content
-      </Box>
+      <SkipLink />
       <Nav />
-      <main id="main" tabIndex={-1}>
+      <Box component="main" id="main" tabIndex={-1}>
         <Hero />
         <Catalog filter={filter} />
         <SkillIndex visible={filter.visible} searching={Boolean(filter.needle)} />
-      </main>
+      </Box>
       <Footer />
     </>
   );

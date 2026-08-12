@@ -13,7 +13,7 @@ import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icon
 import { useActiveSection } from '../hooks/useActiveSection';
 import { usePressedKey } from '../hooks/usePressedKey';
 import { site } from '../site';
-import { accent, drawable, lit, litIdle, mono, rule } from '../theme/tokens';
+import { accent, activeSx, drawable, litIdle, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
@@ -70,10 +70,7 @@ function MobileMenu({ active }: { active: string }) {
             href={link.href}
             onClick={close}
             aria-current={active === link.href ? 'true' : undefined}
-            sx={{
-              ...menuItemSx,
-              ...(active === link.href && { fontWeight: 700, boxShadow: lit('left') }),
-            }}
+            sx={{ ...menuItemSx, ...(active === link.href && activeSx('left')) }}
           >
             {link.label}
           </MenuItem>
@@ -155,11 +152,7 @@ export function Nav() {
                     // The same bar the category filter and the open row wear:
                     // one width for one meaning, held transparent until lit.
                     boxShadow: litIdle('bottom'),
-                    ...(active === link.href && {
-                      color: 'text.primary',
-                      fontWeight: 700,
-                      boxShadow: lit('bottom'),
-                    }),
+                    ...(active === link.href && activeSx('bottom')),
                   }}
                 >
                   {link.label}
