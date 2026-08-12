@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/set-style.mjs", "--hook"],
+            "args": ["${CLAUDE_PLUGIN_ROOT}/set-style.mjs", "--hook"],
             "timeout": 5,
             "statusMessage": "Setting output style"
           }
