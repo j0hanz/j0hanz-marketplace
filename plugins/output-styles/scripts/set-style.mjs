@@ -14,7 +14,7 @@
 // fails:  unreadable stdin -> exit 0 with no output, expansion proceeds and
 //         skills/set-style/SKILL.md handles it the slow way
 // verify: node scripts/set-style.mjs --self-test
-//         echo '{"command_args":["concise"]}' | node scripts/set-style.mjs --hook; echo $?
+//         echo '{"command_args":"concise"}' | node scripts/set-style.mjs --hook; echo $?
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
