@@ -1,30 +1,53 @@
 ---
 name: clean-code
-description: Use when reviewing code for readability, maintainability, and adherence to clean code principles.
-user-invocable: false
+description: Readability pass over code that already works — naming, function size, comments, structure — behavior byte-for-byte unchanged, every function in scope carrying a verdict. Use when asked to clean up or tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt), structural and maintainability review of a branch (qc), or deleting over-engineering.
 ---
 
 # Clean Code
 
+Turn working code into code the next reader changes without fear. Behavior stays identical: every edit is a **rename**, an **extraction**, a **reorder**, or a deleted comment — plus the new code those need.
+
+Cleaning applies the verdicts; reviewing reports them. Same pass either way, and the review mode skips steps 1 and 4.
+
 ## Hazards
 
-Every edit is a rename, an extraction, a reorder, or a deleted comment — plus the new code those need. Renaming a local is free; the rest carry named hazards:
+Renaming a local is free. The other three edits carry hazards a reader does not see coming, so they stay inline:
 
-- **Extraction** moves a fragment into a new frame, changing what `return`, `break`, `yield`, `?`, Go `defer` and `recover()`, or an `await` inside a lock or transaction means. Extract the whole block, not across its boundary.
+- **Extraction** moves a fragment into a new frame, changing what `return`, `break`, `yield`, `?`, Go `defer` and `recover()`, or an `await` inside a lock or transaction means. Extract the whole block, never across its boundary.
 - **Reorder** answers to declaration order: JS/TS temporal dead zone, C without a forward declaration, decorators, dataclass fields, Go package `var` and `init`, `macro_rules!`.
 - **Deleted comment** breaks the build when the comment is code: `//go:build`, `//go:generate`, `# type: ignore`, `# noqa`, `// eslint-disable-next-line`, `// @ts-expect-error`, SPDX headers, `// Code generated ... DO NOT EDIT`. Rust `///` and Python `>>>` blocks are executed tests.
 
-## The pass
+## Steps
 
-Reviewing rather than cleaning up? Same pass — report each verdict instead of applying it, and skip steps 1 and 4.
+### 1. Pin the behavior
 
-1. Run the tests covering the touched files and save their output. That saved output is what "behavior unchanged" gets measured against; a check written after the edits only asserts what the new code already does.
-2. List every function in the target — every function in the file, the changed functions in a diff, or every function in the files a PR touches. That list is the scope. Read each one, then read its direct callers, one hop out. Generated, vendored, and applied-migration files stay out of scope: a rename there is reverted by the next codegen run, or breaks a checksum.
-3. Walk the list against the heuristics below, one function at a time. Before each rename (or a rename verdict, in review mode), grep the identifier as a **string** as well as a symbol — reflection, DI by name, ORM columns, template variables, string-keyed dispatch, test-discovery names (`test_*`, `Test*`), and CI or Makefile references survive a symbol-aware rename and break at runtime. A name is also wire-visible without appearing as a literal anywhere — an untagged Go field, `vars()`, `asdict()`, or Jackson without `@JsonProperty` serializes under the identifier itself — so check what the payload is built from, not only what the source quotes.
+Run the tests covering the touched files and save their output. That saved output is what "behavior unchanged" gets measured against; a check written after the edits only asserts what the new code already does.
 
-   Done when every function on the list carries one of three verdicts: **changed**, with what and why; **left clean**; or **left dirty on purpose**, naming the heuristic declined and the constraint that outranked it — a file-level "looks fine" is not a verdict, and neither is "the rest is trivial". Where two heuristics conflict, a constraint written in the code — a why-comment, a wire format, a hot-path note — outranks the book.
+**Done when** the pre-edit output is saved, or the absence of any covering test is stated.
 
-4. Run the tests covering the touched files and diff the output against step 1. Done when the tests pass and the output matches; red or changed means the pass altered behavior, so revert the edit that caused it. If nothing covers the touched code, say so and leave one runnable check behind that fails if the touched logic breaks.
+### 2. List the scope
+
+Every function in the target — every function in the file, the changed functions in a diff, or every function in the files a PR touches. Read each one, then read its direct callers, one hop out. Where the surface is wide, fan out [research](../research/SKILL.md) to find who says each name.
+
+Generated, vendored, and applied-migration files stay out of scope: a rename there is reverted by the next codegen run, or breaks a checksum.
+
+**Done when** the list is written and every function on it has been read along with its direct callers.
+
+### 3. Walk the list
+
+One function at a time, against the heuristics below.
+
+Before each rename — or each rename verdict, in review mode — grep the identifier as a **string** as well as a symbol. Reflection, DI by name, ORM columns, template variables, string-keyed dispatch, test-discovery names (`test_*`, `Test*`), and CI or Makefile references survive a symbol-aware rename and break at runtime. A name is also wire-visible without appearing as a literal anywhere — an untagged Go field, `vars()`, `asdict()`, or Jackson without `@JsonProperty` serializes under the identifier itself — so check what the payload is built from, not only what the source quotes.
+
+Where two heuristics conflict, a constraint written in the code — a why-comment, a wire format, a hot-path note — outranks the book.
+
+**Done when** every function on the list carries one of three verdicts: **changed**, with what and why; **left clean**; or **left dirty on purpose**, naming the heuristic declined and the constraint that outranked it. A file-level "looks fine" is not a verdict, and neither is "the rest is trivial".
+
+### 4. Prove behavior held
+
+Run the same tests and diff the output against step 1.
+
+**Done when** the tests pass and the output matches. Red or changed means the pass altered behavior — revert the edit that caused it. Where nothing covered the touched code, say so and leave one runnable check behind that fails if the touched logic breaks.
 
 ## Names
 
@@ -60,3 +83,13 @@ Reviewing rather than cleaning up? Same pass — report each verdict instead of 
 - **Extract-till-you-drop** shreds readable code into a call graph nobody can hold. Extract when the fragment has a name worth saying; that name is the whole test.
 - **Public names are API.** An exported symbol, JSON key, CLI flag, or DB column renames into a breaking change. Rename inside the module boundary; ask before crossing it — and the same holds for deleting an unused exported symbol.
 - **Class-per-responsibility is a Java conclusion.** A Go package of methods on a few structs, a Rust module and `impl` block, and a Python module of functions each satisfy single responsibility already; splitting them to satisfy the book fights the borrow checker or reads as Java-brain.
+
+## Handing off
+
+This skill is one of three that read a landed diff, each on its own axis and none on the others' ([plan](../plan/SKILL.md)). A verdict that turns out to need more than a rename leaves this pass rather than stretching it:
+
+| What the walk surfaced                         | Hands to                             |
+| :--------------------------------------------- | :----------------------------------- |
+| The code is wrong, not merely unclear          | [bug-hunt](../bug-hunt/SKILL.md)     |
+| The shape is wrong — layering, indirection     | [qc](../qc/SKILL.md)                 |
+| The edit no longer fits one behavior-safe pass | [write-plan](../write-plan/SKILL.md) |

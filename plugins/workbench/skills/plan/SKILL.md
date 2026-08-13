@@ -13,7 +13,7 @@ argument-hint: '[what to plan]'
 
 Enter at the first link the ask needs, stop at the last one it earns — most asks use a slice, not the whole chain. The chain runs forward with two back-edges: [verify-specs](../verify-specs/SKILL.md) returns an unmet ID to [write-plan](../write-plan/SKILL.md) when the code is wrong and to [write-specs](../write-specs/SKILL.md) when the requirement is, and a STOP in [run-plan](../run-plan/SKILL.md) returns the same way.
 
-Skills run beside a link rather than in it: [research](../research/SKILL.md) feeds facts in, [prototype](../prototype/SKILL.md) settles a look-or-behavior question before the spec, [write-adr](../write-adr/SKILL.md) takes a settled decision out, [write-qa](../write-qa/SKILL.md) turns a spec into manual cases where the observation cannot be run, and [tdd](../tdd/SKILL.md) runs _inside_ [run-plan](../run-plan/SKILL.md) — on any step that adds behavior, and on any code written with no plan at all.
+Skills run beside a link rather than in it: [research](../research/SKILL.md) feeds facts in, [prototype](../prototype/SKILL.md) settles a look-or-behavior question before the spec, [write-adr](../write-adr/SKILL.md) takes a settled decision out, [write-qa](../write-qa/SKILL.md) covers what only a human run can check — test plans, manual cases, regression suites — and files the bug reports a run produces, and [tdd](../tdd/SKILL.md) runs _inside_ [run-plan](../run-plan/SKILL.md) — on any step that adds behavior, and on any code written with no plan at all.
 
 Three review the diff once code lands, each on its own axis, none on the others': [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure, [clean-code](../clean-code/SKILL.md) for readability.
 
@@ -47,7 +47,7 @@ First matching row wins, read top to bottom.
 | Behavior settled, code to write, no plan   | [tdd](../tdd/SKILL.md)                                                                                           |
 | Plan written, not run                      | [run-plan](../run-plan/SKILL.md)                                                                                 |
 | Change landed against a spec               | [verify-specs](../verify-specs/SKILL.md)                                                                         |
-| Spec needs manual cases or a bug report    | [write-qa](../write-qa/SKILL.md)                                                                                 |
+| Test plan, manual cases, suite, bug report | [write-qa](../write-qa/SKILL.md)                                                                                 |
 | Code correctness or security in doubt      | [bug-hunt](../bug-hunt/SKILL.md)                                                                                 |
 | Branch diff, review structure              | [qc](../qc/SKILL.md)                                                                                             |
 | Readability only, behavior unchanged       | [clean-code](../clean-code/SKILL.md)                                                                             |

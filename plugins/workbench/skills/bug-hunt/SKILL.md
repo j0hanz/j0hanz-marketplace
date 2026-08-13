@@ -75,24 +75,7 @@ Mapping happens at hub, before any hunter dispatched. Partitioning on diff alone
 - **Blast-radius files may overlap across clusters.** Shared caller read by every cluster that needs it; duplicate findings on it deduped at hub by file plus symbol plus excerpt. Same excerpt at two different lines in one symbol is two sites, not a duplicate — keep both. **On duplicate, surviving finding takes higher severity and `confirmed-candidate` over `suspected`**, and its `ruled_out` keeps both hunters' quotes. Escalating costs nothing: refuter wave still gates Confirmed, and a killed candidate is dropped entirely.
 - **Only the main thread writes `.bug-hunt.md`.** No hunter, refuter, or fallback path writes ledger state.
 
-## Worked Example
-
-One small run end to end. Repo on branch `feat/checkout`, tree clean, ledger exists with `audited-through: a1b2c3d`.
-
-**1. Resolve.** Rule 3 matches. `git diff --name-only a1b2c3d..HEAD` gives `src/cart.ts`, `src/checkout.ts`, `src/format.ts`; `unaudited-in-scope` carries `src/legacy/tax.ts` from last run's size cap. Changed-set: 4 files.
-
-**2. Map.** Grep every symbol those files export, repo-wide, before cutting anything. `cart.ts` exports `applyDiscount` — called in `checkout.ts` and `api/orders.ts`. `format.ts` exports `money` — called in 11 files.
-
-**3. Partition.** Two clusters, not four:
-
-- **Cluster 1** — changed `src/cart.ts`, `src/checkout.ts`; blast radius `api/orders.ts` (calls `applyDiscount`), `test/cart.test.ts`. The two changed files go together because they share `applyDiscount`; splitting them hands the caller to one hunter and the callee to another, and neither can judge the contract alone.
-- **Cluster 2** — changed `src/format.ts`, `src/legacy/tax.ts`; the 11 `money` call sites sit in large view files, and reading enough of each to judge the contract busts the 1200-line budget well before the 15-file one. Pull the 3 that pass a computed value, record the other 8 under `not_audited`.
-
-**4. Worklist.** Four `[pending]` entries, one per changed file — not two. Worklist is per file; dispatch is per cluster. The two counts are not meant to match.
-
-**5. Dispatch, refute, report.** Two hunters. Cluster 1 returns two `confirmed-candidate` plus one `suspected`; cluster 2 returns one `confirmed-candidate`. The three candidates go to three blind refuters — one comes back `killed` and is dropped, appearing nowhere in the report. The `suspected` never goes to a refuter at all. Report: 2 Confirmed, 1 Suspected.
-
-**6. Ledger.** Worklist deleted (every entry `[done]`). `src/legacy/tax.ts` clears from `unaudited-in-scope` — it was audited. The 8 unread `money` call sites are added to it, with reason and date, so the next run pulls them back.
+One run end to end, showing why cluster count and worklist count differ: `references/example.md`. Read it when a run's partitioning is not obvious.
 
 ## Hunter Contract
 
@@ -154,54 +137,9 @@ Per-trace, per-file, and per-cluster stopping rules are in `references/hunter-br
 
 ## Output
 
-**Findings go to chat, every run.** Findings file is document nobody reopens; report only useful at moment it lands.
+**Findings go to chat, every run.** A findings file is a document nobody reopens; the report is only useful at the moment it lands.
 
-```markdown
-## Verdict
-
-<N Critical, N Major, N Minor confirmed; N suspected> — <safe to ship / fix first>. <The single worst thing, one sentence.>
-
-## Confirmed
-
-### [Critical] Short title — `path/to/file.ext:120` <(carried from YYYY-MM-DD) — only when carried from ledger>
-
-- **What:** what is actually wrong
-- **Trigger:** the exact input, state, or sequence that causes it
-- **Impact:** what breaks, for whom
-- **Ruled out:** where this could have been handled and isn't — e.g. "`validate.ts:40` checks length but not null; the only caller `api.ts:88` passes the raw body"
-- **Fix:** described or sketched — never applied
-
-### [Major] ...
-
-## Suspected
-
-### [Major] Short title — `path/to/file.ext:44` <(carried from YYYY-MM-DD) — only when carried from ledger>
-
-- **Why suspected:** the reasoning
-- **Settles it:** the one check that would confirm or kill this
-
-## Questions
-
-<Only when the intended behavior is genuinely unknowable from the code. Not a dumping ground.>
-- `path/to/file.ext:77` — is a negative quantity meant to be rejected, or treated as a refund?
-
-## Coverage
-
-<Every hunter's coverage object merged into one view.>
-
-- **Read fully:** N files <list them when 15 or fewer>
-- **Pulled in by blast radius:** <files and why>
-- **Not audited:** <what and why — size cap, generated, no access>
-- **Assumed:** <third-party behavior taken on trust>
-
-## Ledger
-
-Updated `.bug-hunt.md` — audited through `<ref>`, N carried forward, N dismissed. <Non-empty worklist: N files remain unhunted; a re-run resumes there.>
-```
-
-Rank findings by severity, then by number of call sites affected — never by discovery order.
-
-Verdict counts cover this run's findings **plus** Open findings carried forward from the ledger — a carried Critical is still a ship-blocker. The Ledger line says how many of the count were carried, and every carried finding is tagged `(carried from <date>)` in its own heading. Untagged carried finding reads as new work and gets re-triaged.
+Report skeleton, ranking rule, and how carried findings are counted: `references/report.md`. Hub reads it before writing the report.
 
 ## The Ledger
 
@@ -211,15 +149,7 @@ Rewrite it at end of every run, including runs that found nothing. When it alrea
 
 **Committed or ignored, user's call — say which once.** Ledger is per-checkout state, and its `audited-through` sha is meaningless in another clone. On first run in a repo, mention in the report that `.bug-hunt.md` is unignored and offer the two options: gitignore it (audit state stays local, each checkout tracks its own), or commit it (team shares Dismissed and Open, at the cost of merge conflicts on every concurrent run). Never edit `.gitignore` — writing that file breaks [Hard Rules](#hard-rules); the ledger stays the only file this skill writes.
 
-Every hunter's `not_audited` entry naming file or directory inside resolved scope goes to `unaudited-in-scope`, with reason and date — scope rule 3 pulls it back next run. Permanent exclusion does not: generated file, vendored tree, no read access are reported in Coverage and not carried, since no future run will read them either. Skip recorded only in chat is skip forgotten.
-
-Any in-scope file with uncommitted changes at audit time goes to `dirty-at-audit` — scope rule 3 re-audits it next run regardless of diff, because the version a hunter read mid-edit may not match the committed tree. Entry clears once that path is next audited clean.
-
-**`audited-through` advances only to the sha whose full diff has been audited.** A cold run whose worklist completes writes `audited-through` = HEAD. A run that resumes a pending worklist, or any run ending with `[pending]` entries, keeps the value it read — do not advance it, or the intervening diff is silently dropped from all future scope.
-
-Open carries **both** confirmed and suspected findings, tagged. Suspicion that quietly disappears because its file was skipped reads as resolution, and it isn't.
-
-File format, matching key, worklist lifecycle, and carry-forward rules: see `references/ledger.md`.
+A skip recorded only in chat is a skip forgotten: what carries into `unaudited-in-scope` and `dirty-at-audit`, what never carries, and how the whole file is written — file format, matching key, worklist lifecycle, `audited-through` advance rule, and carry-forward rules — is in `references/ledger.md`. Hub reads it before rewriting the ledger.
 
 ## Hard Rules
 

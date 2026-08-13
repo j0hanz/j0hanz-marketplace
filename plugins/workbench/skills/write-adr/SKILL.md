@@ -23,9 +23,9 @@ Done when every rule above is satisfied.
 
 ## Referencing
 
-Records live at `docs/adr/NNN-<slug>.md`, zero-padded, the next number found by scanning the directory. They sit outside the per-change directories: a decision outlives the change that made it.
+Records live at `docs/adr/NNN-<slug>.md` under the [referencing convention](../write-specs/SKILL.md#referencing) — outside the per-change directories, because a decision outlives the change that made it.
 
-Paths are relative **to the record**, under the [referencing convention](../write-specs/SKILL.md#referencing) — repo source is two levels up from `docs/adr/`:
+Paths are relative **to the record**:
 
 ```markdown
 superseded by [`ADR-012`](012-<slug>.md)

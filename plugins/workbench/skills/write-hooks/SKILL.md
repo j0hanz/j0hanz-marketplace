@@ -1,6 +1,6 @@
 ---
 name: write-hooks
-description: Use when writing hooks, auditing existing hooks, or reviewing hook system for coherence.
+description: Author a Claude Code hook that fires on the right event and fails safe — handler config, matchers, exit codes, JSON output, plugin shipping. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the skill or plugin that carries the hook (write-skills).
 ---
 
 # Writing hooks
@@ -11,8 +11,8 @@ what it emits, what happens on fail, how confirm fired. Write those before code.
 Default shape: `type: "command"`, bash + `jq`, shell form, shipped in plugin's
 `hooks/hooks.json` against `${CLAUDE_PLUGIN_ROOT}`. Deviate only where step says so.
 
-**Route:** authoring → work steps. Hooks already exist → [Audit](#audit).
-"It isn't firing" → [Not firing](#not-firing).
+**Route:** authoring, work the steps. Hooks already exist, or one isn't firing:
+load [AUDIT.md](AUDIT.md) instead — those branches read hooks, they don't write them.
 
 ## 1. Name the job
 
@@ -299,66 +299,9 @@ case exited 0 instead of erroring.
   cancelled, context discarded — since v2.1.196 transcript shows notice naming hook and
   timeout; earlier versions cancel silently.
 
-## Audit
+## Reading hooks already installed
 
-### Enumerate before judging
-
-Hook config **merges** rather than replaces, so any single settings file holds fraction of
-what actually runs. Six sources feed one event:
-
-```
-~/.claude/settings.json          .claude/settings.json      .claude/settings.local.json
-managed policy settings          <plugin>/hooks/hooks.json  skill + agent frontmatter
-```
-
-`/hooks` only merged view — every handler with source it came from, incl ones
-nobody remembers installing. Read it first, then open files behind whatever it names. Enabled
-plugins usual surprise: check `enabledPlugins` in user settings, read
-`hooks/hooks.json` of each one that's `true`. Frontmatter hooks scoped to live skill or
-agent, won't appear till that component active.
-
-Then reproduce, don't infer. Replay each handler against captured payload, read exit
-code — hook that looks like guard but returns 1 is most common finding, reading
-script rarely reveals it:
-
-```bash
-bash path/to/hook.sh < payload.json; echo "exit=$?"
-```
-
-### Rank what you find
-
-Fix in this order, cuz earlier defect sits, more it silently costs.
-
-1. **Guards that don't guard** — exit 1 instead of 2; `set -e` with unguarded `grep`; `deny`
-   carrying `updatedInput`; `allow` mistaken for security grant.
-2. **Hooks that never fire** — `if` on non-tool event; `mcp__server` with no `__.*`;
-   unanchored regex matcher; matcher compared against something other than what author
-   assumed; `Stop` hook in agent frontmatter still written for `Stop` (step 6).
-3. **Says nothing** — `additionalContext` at top level; deny reason with no repair;
-   imperative context shown to user instead of used.
-4. **Hot-path cost** — empty matcher on tool event = process per tool call; blocking
-   hooks doing non-decisive work should be `async`; no `timeout` on tests or network calls.
-5. **Portability** — undeclared `jq`; unquoted `${CLAUDE_PLUGIN_ROOT}`; bare `$VAR` in
-   PowerShell hook; state written under plugin root.
-
-Report each finding as `source → event → handler` plus one-line fix. Don't rewrite hooks
-was asked to review until user picks which findings to apply.
-
-## Not firing
-
-In order — stop at first that explains it.
-
-1. `/hooks` — listed under event, from source expected? Absent means invalid JSON
-   (trailing comma usual cause) or wrong settings file.
-2. Matcher: case-sensitive; exact-match vs regex depends on chars in it; may not
-   be compared against what assumed — check table in step 3.
-3. `if` set on non-tool event removes handler entirely.
-4. Wrong event for path. `PreToolUse` doesn't fire for files pulled in with `@` in prompt
-   — those inlined with no tool call. Typing `/skillname` skips Skill tool.
-   `PostToolUseFailure` skips permission denials and validation errors. `Stop` hook in agent
-   frontmatter running as `SubagentStop` (step 6).
-5. `claude --debug-file /tmp/h.log`, reproduce, read log.
-6. Replay captured payload by hand. If script works standalone, defect's in
-   wiring, not code.
-7. `command not found` → use absolute path or `${CLAUDE_PLUGIN_ROOT}`; on macOS/Linux
-   confirm `chmod +x`, or invoke through `bash` so bit doesn't matter.
+Two branches read rather than write: auditing a set that already runs, and chasing one that
+never fires. Both need the merged view before anything else, cuz config **merges** across six
+sources and no single settings file holds what actually runs. Load [AUDIT.md](AUDIT.md) — it
+carries the enumeration order, the ranking of what you find, and the not-firing checklist.

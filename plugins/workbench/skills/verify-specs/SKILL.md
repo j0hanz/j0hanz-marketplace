@@ -17,7 +17,7 @@ List every requirement ID in the spec beside its falsifying observation. Where a
 
 ### 2. Observe
 
-Run each one against the built system — prefer a test (cite the [tdd](../tdd/SKILL.md) test name); fall back to a command when no test covers it, a manual request or check only when no automation exists. An ID whose evidence is an argument rather than an observation is **unmet**.
+Run each one against the built system — prefer a test (cite the [tdd](../tdd/SKILL.md) test name); fall back to a command when no test covers it, a manual check only when no automation exists — cite the [write-qa](../write-qa/SKILL.md) case that scripts it, and file what it breaks as a bug record there. An ID whose evidence is an argument rather than an observation is **unmet**.
 
 Unwanted-behavior requirements (`If … then …`) need the bad input actually sent. An error path nobody triggered is unverified, not passing.
 

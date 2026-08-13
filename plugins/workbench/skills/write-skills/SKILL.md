@@ -1,6 +1,6 @@
 ---
 name: write-skills
-description: Use when creating new skills, auditing existing skills, or reviewing skill system for coherence.
+description: Author a SKILL.md that fires predictably — invocation mode, description as pointer, what sits inline versus disclosed, and the failure modes that make a skill drift. Use when writing a new skill, auditing one that misfires or sprawls, or judging a skill set for coherence. Not for authoring hooks (write-hooks), CLAUDE.md agent memory, or reader-facing project docs.
 ---
 
 Skill exists to wrangle determinism out of stochastic system. **Predictability** root virtue; every lever below serve it.

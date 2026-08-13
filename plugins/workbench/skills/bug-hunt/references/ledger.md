@@ -29,6 +29,8 @@ unaudited-in-scope: src/legacy/ (size cap, YYYY-MM-DD)
 
 The `checked` list on an Open entry holds the file paths cited in the finding's `Ruled out` line — extracted by the hub when it writes the entry, so carry-forward rule 3 can tell whether a Ruled-out guard changed. Identity for matching is still symbol + excerpt (see Matching key), never `checked`.
 
+Open carries **both** confirmed and suspected findings, tagged. A suspicion that quietly disappears because its file was skipped reads as resolution, and it isn't.
+
 ## Carry-forward rules
 
 Applies to any run where `.bug-hunt.md` exists.
