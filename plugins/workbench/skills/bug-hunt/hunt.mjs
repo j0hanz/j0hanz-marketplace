@@ -115,10 +115,11 @@ const EXPORTS = [
   /^\s*pub\s+(?:async\s+)?(?:fn|struct|enum|trait)\s+([A-Za-z_]\w*)/,
 ];
 
-// PROBE_LIMIT and COMMON_WORD_FILES are quoted back in the sentences that
-// disclose them, so each reads one name — a cap that drifts from its own
-// disclosure turns the brief into a liar. TAG_WIDTH derives from the tags
-// themselves: add a tag and the column stays aligned.
+// MIN_SYMBOL_LENGTH, PROBE_LIMIT and COMMON_WORD_FILES are quoted back in the
+// sentences that disclose them, so each reads one name — a cap that drifts from its
+// own disclosure turns the brief into a liar, and a cap with no disclosure at all
+// is the same lie told by omission. TAG_WIDTH derives from the tags themselves: add
+// a tag and the column stays aligned.
 const MIN_SYMBOL_LENGTH = 4;
 const PROBE_LIMIT = 40;
 const COMMON_WORD_FILES = 15;
@@ -136,8 +137,11 @@ const were = (n) => (n === 1 ? 'was' : 'were');
 // trimEnd, never trim: `status --porcelain` leads with a status column whose
 // first char is a space for an unstaged edit, and stripping it shifts every path
 // left by one. Trailing newline is all any caller here needs gone.
+// quotePath=false on every call: by default git octal-escapes any path outside
+// ASCII — `"st\303\244der.ts"` — and stripping the quotes leaves a name that does
+// not open, so the file drops out of the audit for having a non-English filename.
 const git = (...args) =>
-  execFileSync('git', args, {
+  execFileSync('git', ['-c', 'core.quotePath=false', ...args], {
     encoding: 'utf8',
     maxBuffer: 32 << 20,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -148,8 +152,24 @@ const auditable = (p) =>
   !SKIP_FILE.test(p.split('/').pop()) &&
   !p.split('/').some((part) => SKIP_DIR.has(part));
 
+// A named directory under the repo root is walked twice — once to resolve scope,
+// once for the caller scan — and one unreadable directory warning twice reads as
+// two problems.
+const warned = new Set();
+
 function walk(dir, out = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  // One directory the process cannot open would otherwise throw from under the
+  // whole-repo scan, and the brief prints in one go at the end — a crash here
+  // costs every section. Loud on stderr, out of the brief on stdout.
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    if (!warned.has(dir)) console.error(`unreadable directory, not scanned: ${dir}`);
+    warned.add(dir);
+    return out;
+  }
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       if (!SKIP_DIR.has(entry.name)) walk(join(dir, entry.name), out);
     } else {
@@ -208,10 +228,17 @@ function resolveScope(args, from) {
       console.error('--since needs a ref');
       process.exit(2);
     }
-    return {
-      rule: `changed since ${since}`,
-      files: git('diff', '--name-only', `${since}..HEAD`).split('\n'),
-    };
+    // A ref that does not resolve is the same class of problem as a clean tree on
+    // the default branch — a scope only the user can settle, not a stack trace.
+    try {
+      return {
+        rule: `changed since ${since}`,
+        files: git('diff', '--name-only', `${since}..HEAD`).split('\n'),
+      };
+    } catch {
+      console.error(`no such ref: ${since}`);
+      process.exit(2);
+    }
   }
 
   // Porcelain v1: two status chars, a space, then the path. A `D` in either
@@ -252,18 +279,24 @@ function resolveScope(args, from) {
 
 // Scope names the paths; this opens them, once, for every pass that follows. A
 // file that will not open leaves by name rather than riding along as a 0-line
-// entry nobody audits.
+// entry nobody audits — and so does a file that is not code, since a path named
+// on the command line and dropped without a word is a scope quietly narrowed.
 function readScope(paths) {
   const source = new Map();
   const unreadable = [];
-  for (const file of new Set(paths.filter(Boolean).filter(auditable))) {
+  const skipped = [];
+  for (const file of new Set(paths.filter(Boolean))) {
+    if (!auditable(file)) {
+      skipped.push(file);
+      continue;
+    }
     try {
       source.set(file, readFileSync(file, 'utf8'));
     } catch {
       unreadable.push(file);
     }
   }
-  return { source, unreadable };
+  return { source, unreadable, skipped };
 }
 
 function tells(source) {
@@ -302,13 +335,33 @@ function tells(source) {
   );
 }
 
+// `$` is legal in a JS identifier and a metacharacter in a regex, so it escapes
+// here or `\b$foo\b` compiles to a boundary, an end-of-input anchor, and text that
+// can never follow it — a symbol reported as having no callers because its probe
+// could not match anything. `\b` is wrong beside it for the same reason: `$` is not
+// a word character, so the boundary lands inside the name rather than around it.
+// Every metacharacter escapes, not just the one EXPORTS can capture today: a
+// pattern that grows a `.` or a `-` would rebuild this bug in silence.
+const probe = (name) =>
+  new RegExp(`(?<![\\w$])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w$])`);
+
 function blastRadius(source) {
+  // Name to every file exporting it, never to one winner: two changed files can
+  // export the same name, and picking the last both mislabels the owner and probes
+  // callers of only that one's language family.
   const symbols = new Map();
+  const short = new Set();
   for (const [file, text] of source) {
     for (const line of text.split('\n')) {
       for (const re of EXPORTS) {
         const name = re.exec(line)?.[1];
-        if (name && name.length >= MIN_SYMBOL_LENGTH) symbols.set(name, file);
+        if (!name) continue;
+        if (name.length < MIN_SYMBOL_LENGTH) {
+          short.add(name);
+          continue;
+        }
+        if (!symbols.has(name)) symbols.set(name, new Set());
+        symbols.get(name).add(file);
       }
     }
   }
@@ -317,7 +370,7 @@ function blastRadius(source) {
   const ranked = [...symbols.keys()].sort((a, b) => b.length - a.length);
   const probes = ranked
     .slice(0, PROBE_LIMIT)
-    .map((name) => [name, new RegExp(`\\b${name}\\b`), family(symbols.get(name))]);
+    .map((name) => [name, probe(name), new Set([...symbols.get(name)].map(family))]);
 
   const universe = walk(process.cwd()).filter((file) => !source.has(file));
   const callers = new Map();
@@ -329,8 +382,8 @@ function blastRadius(source) {
     } catch {
       continue;
     }
-    for (const [name, re, owner] of probes) {
-      if (owner !== fam) continue;
+    for (const [name, re, owners] of probes) {
+      if (!owners.has(fam)) continue;
       if (re.test(text)) {
         if (!callers.has(name)) callers.set(name, []);
         callers.get(name).push(file);
@@ -347,7 +400,7 @@ function blastRadius(source) {
       generic += 1;
     }
   }
-  return { symbols, callers, generic, unprobed: ranked.length - probes.length };
+  return { symbols, callers, generic, unprobed: ranked.length - probes.length, short: short.size };
 }
 
 // Git reports paths from the repo root, so the whole run works from there.
@@ -370,7 +423,7 @@ if (!scope) {
   process.exit(2);
 }
 
-const { source, unreadable } = readScope(scope.files);
+const { source, unreadable, skipped } = readScope(scope.files);
 const changed = [...source].map(([file, text]) => [file, text.split('\n').length]);
 const total = changed.reduce((n, [, lines]) => n + lines, 0);
 
@@ -383,6 +436,13 @@ if (unreadable.length > 0) {
     `\n${plural(unreadable.length, 'file')} in scope could not be read and left the audit:`,
   );
   for (const file of unreadable) brief.push(`    ${file}`);
+}
+if (skipped.length > 0) {
+  brief.push(
+    `\n${plural(skipped.length, 'file')} in scope ${were(skipped.length)} skipped — not a code` +
+      ` extension, or generated, vendored, or build output:`,
+  );
+  for (const file of skipped) brief.push(`    ${file}`);
 }
 if (changed.length === 0) {
   brief.push('\nNothing auditable in scope. Stop and say so.');
@@ -400,18 +460,29 @@ brief.push(`\n## Changed\n`);
 for (const [file, lines] of changed.sort((a, b) => b[1] - a[1]))
   brief.push(`${file}  (${plural(lines, 'line')})`);
 
-const { symbols, callers, generic, unprobed } = blastRadius(source);
+const { symbols, callers, generic, unprobed, short } = blastRadius(source);
 brief.push(`\n## Blast radius\n`);
 if (callers.size === 0) {
-  brief.push(
-    symbols.size === 0
-      ? 'No exported symbols found in the changed set — grep the contracts by hand.'
-      : `${plural(symbols.size - unprobed, 'exported symbol')} probed, no callers outside the changed set.`,
-  );
+  // Both claims below are ones the drops can make false: a symbol can have been
+  // found and discarded as a common word, or found and never probed for being too
+  // short. Saying "none found" over a disclosure that names two is the liar this
+  // section exists to avoid.
+  if (symbols.size > 0) {
+    brief.push(
+      `${plural(symbols.size - unprobed, 'exported symbol')} probed. ` +
+        (generic > 0
+          ? 'Every symbol with callers was dropped as a common word — see below.'
+          : 'No callers outside the changed set.'),
+    );
+  } else if (short > 0) {
+    brief.push('Every exported symbol found was too short to probe — see below.');
+  } else {
+    brief.push('No exported symbols found in the changed set — grep the contracts by hand.');
+  }
 } else {
   brief.push('Read enough of each caller to judge the changed contract, then stop.\n');
   for (const [name, paths] of [...callers].sort((a, b) => b[1].length - a[1].length)) {
-    brief.push(`${name}  (${symbols.get(name)})`);
+    brief.push(`${name}  (${[...symbols.get(name)].join(', ')})`);
     for (const caller of paths.slice(0, CALLERS_SHOWN)) brief.push(`    ${caller}`);
     if (paths.length > CALLERS_SHOWN) brief.push(`    …and ${paths.length - CALLERS_SHOWN} more`);
   }
@@ -419,13 +490,19 @@ if (callers.size === 0) {
 if (generic > 0) {
   brief.push(
     `\n${plural(generic, 'symbol')} hit more than ${COMMON_WORD_FILES} files and ${were(generic)}` +
-      ` dropped as common words. Grep them by hand if the change touched their contract.`,
+      ` dropped as too common. Grep them by hand if the change touched their contract.`,
   );
 }
 if (unprobed > 0) {
   brief.push(
     `\n${plural(unprobed, 'shorter symbol')} fell past the ${PROBE_LIMIT}-symbol probe limit and` +
       ` ${were(unprobed)} never scanned for callers. Grep them by hand.`,
+  );
+}
+if (short > 0) {
+  brief.push(
+    `\n${plural(short, 'symbol')} shorter than ${MIN_SYMBOL_LENGTH} characters ${were(short)} never` +
+      ` probed — too short to tell a contract from a coincidence. Grep them by hand.`,
   );
 }
 
