@@ -29,31 +29,11 @@ const SKIP_DIR = new Set([
 // Only patterns a CODE extension can actually reach — `auditable` gates on
 // CODE first, so lockfiles and snapshots never get this far.
 const SKIP_FILE = /\.min\.\w+$|\.generated\./;
-const CODE = new Set([
-  '.ts',
-  '.tsx',
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.cjs',
-  '.py',
-  '.go',
-  '.rs',
-  '.rb',
-  '.java',
-  '.kt',
-  '.cs',
-  '.php',
-  '.swift',
-  '.c',
-  '.h',
-  '.cc',
-  '.cpp',
-  '.sh',
-]);
 
 // A symbol is only a contract inside its own language. Cross-language matches
 // are string coincidences — `build` in a .py file is not a caller of a .mjs export.
+// CODE is the set of FAMILY keys: nothing is auditable that isn't classified,
+// and `family`'s 'other' fallback is dead for any file passing the CODE gate.
 const FAMILY = {
   '.ts': 'js',
   '.tsx': 'js',
@@ -77,6 +57,7 @@ const FAMILY = {
   '.cpp': 'c',
 };
 const family = (p) => FAMILY[extname(p)] ?? 'other';
+const CODE = new Set(Object.keys(FAMILY));
 
 // Each tell names a place to look, never a finding. `only` scopes it to the
 // families where it means something. Every tell runs against the whole file
@@ -109,7 +90,7 @@ const TELLS = [
 const EXPORTS = [
   /^\s*export\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/,
   /^\s*export\s+(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/,
-  /^\s*(?:public\s+)?(?:async\s+)?def\s+([a-zA-Z_]\w*)/,
+  /^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)/,
   /^\s*class\s+([A-Za-z_]\w*)/,
   /^\s*func\s+(?:\([^)]*\)\s*)?([A-Z]\w*)/,
   /^\s*pub\s+(?:async\s+)?(?:fn|struct|enum|trait)\s+([A-Za-z_]\w*)/,
