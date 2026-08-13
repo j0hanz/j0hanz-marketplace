@@ -4,18 +4,8 @@ import { text } from 'node:stream/consumers';
 
 const PREFIX = 'workbench:';
 const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
-const STAGES = ['spec', 'plan', 'run', 'verify', 'map', 'hunt', 'test-plan', 'cases', 'regression'];
-const ARTIFACT = new RegExp(`^(.+)\\.(${STAGES.join('|')})\\.md$`);
+const ARTIFACT = /^(.+)\.([a-z][a-z-]*)\.md$/;
 const CHAIN = ['spec', 'plan', 'run', 'verify'];
-const CREATORS = new Set([
-  'write-specs',
-  'write-plan',
-  'run-plan',
-  'verify-specs',
-  'frontier',
-  'bug-hunt',
-  'write-qa',
-]);
 
 let event = '';
 const emit = (message) =>
@@ -44,16 +34,13 @@ try {
     .filter((entry) => entry.isDirectory() && EFFORT_DIR.test(entry.name))
     .map((entry) => entry.name)
     .sort();
+  const loose = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length;
   const lines = [];
   if (efforts.length === 0) {
-    if (!CREATORS.has(invoked.replace(PREFIX, ''))) process.exit(0);
-    const loose = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length;
     lines.push(
       'workbench effort directory: none under docs/plan/',
       '  convention: docs/plan/YYYY-MM-DD-<name>/ holds <name>.spec.md, <name>.plan.md, <name>.run.md, <name>.verify.md',
     );
-    if (loose > 0)
-      lines.push(`  docs/plan/ holds ${loose} loose .md file${loose === 1 ? '' : 's'}`);
   } else {
     const touched = (dir) => {
       try {
@@ -80,7 +67,10 @@ try {
     }
     lines.push(`workbench effort directory: docs/plan/${live}/`);
     for (const [stem, kinds] of byStem) {
-      const has = STAGES.filter((stage) => kinds.has(stage));
+      const has = [
+        ...CHAIN.filter((stage) => kinds.has(stage)),
+        ...[...kinds].filter((stage) => !CHAIN.includes(stage)).sort(),
+      ];
       const started = CHAIN.some((stage) => kinds.has(stage));
       const missing = started ? CHAIN.filter((stage) => !kinds.has(stage)) : [];
       lines.push(
@@ -95,10 +85,19 @@ try {
       : 0;
     if (tickets > 0) lines.push(`  ${tickets} ticket${tickets === 1 ? '' : 's'}`);
     if (lines.length === 1) lines.push('  empty');
-    const older = efforts.length - 1;
-    if (older > 0) {
-      lines.push(`  ${older} older effort director${older === 1 ? 'y' : 'ies'}`);
+    const older = efforts.filter((dir) => dir !== live).reverse();
+    if (older.length > 0) {
+      const rest = older.length - 3;
+      lines.push(
+        `  other efforts: ${older.slice(0, 3).join(', ')}${rest > 0 ? ` (+${rest})` : ''}`,
+      );
     }
+  }
+  if (loose > 0) {
+    const s = loose === 1 ? '' : 's';
+    lines.push(
+      `  docs/plan/ holds ${loose} loose .md file${s} — artifacts belong in an effort directory`,
+    );
   }
   emit(lines.join('\n'));
 } catch (e) {
