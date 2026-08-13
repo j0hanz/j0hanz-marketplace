@@ -10,15 +10,12 @@ let event = '';
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
   event = String(payload.hook_event_name ?? '');
-  const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '').trim();
-  const prefixed = invoked.startsWith(PREFIX);
-  if (event === 'PreToolUse' && !prefixed) process.exit(0);
-  const skills = new Set(
-    readdirSync(new URL('../skills/', import.meta.url), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name),
-  );
-  if (!skills.has(prefixed ? invoked.slice(PREFIX.length) : invoked)) process.exit(0);
+  const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '')
+    .trim()
+    .replace(/^\//, '');
+  const mine =
+    event === 'UserPromptExpansion' || (event === 'PreToolUse' && invoked.startsWith(PREFIX));
+  if (!mine) process.exit(0);
   const root = join(process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd(), 'docs', 'plan');
   if (!existsSync(root)) process.exit(0);
   const efforts = readdirSync(root, { withFileTypes: true })
