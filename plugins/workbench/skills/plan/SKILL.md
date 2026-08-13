@@ -43,6 +43,7 @@ First matching row wins, read top to bottom.
 | Known, one file, no forks, no new behavior  | none — do it                                                                                                     |
 | Facts missing                               | [research](../research/SKILL.md) first, in background                                                            |
 | Look or behavior is the open question       | [prototype](../prototype/SKILL.md) → [write-specs](../write-specs/SKILL.md)                                      |
+| Behavior loose, no options on the table     | [ideation](../ideation/SKILL.md) → [grilling](../grilling/SKILL.md)                                              |
 | Behavior loose, user has opinions           | [grilling](../grilling/SKILL.md) → [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md) |
 | Behavior needs fixing, no forks left        | [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md)                                    |
 | Behavior fixed, route missing               | [write-plan](../write-plan/SKILL.md)                                                                             |

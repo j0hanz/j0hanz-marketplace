@@ -1,6 +1,6 @@
 ---
 name: grilling
-description: Grill the user relentlessly to settle every decision only they can make. Use on any 'grill' phrasing, or when a task needs the user own judgement to proceed. Not for facts a source can answer (research), or for a look-and-behavior question a rough artifact settles (prototype).
+description: Grill the user relentlessly to settle every decision only they can make. Use on any 'grill' phrasing, or when a task needs the user own judgement to proceed. Not for facts a source can answer (research), a look-and-behavior question a rough artifact settles (prototype), or options still to be generated (ideation).
 ---
 
 Interview the user relentlessly. Write the decisions to a file as a **map** — one node per decision, each naming what it waits on. Under a caller that already keeps a map, work in that one.
