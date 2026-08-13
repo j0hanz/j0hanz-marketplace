@@ -1,5 +1,5 @@
 ---
-name: writing-qa
+name: write-qa
 description: Create coverage-mapped QA test plans, manual cases, regression suites, and bug reports. Use when QA deliverables are requested, or when reviewing QA system for coherence.
 ---
 

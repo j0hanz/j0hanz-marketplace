@@ -1,5 +1,5 @@
 ---
-name: writing-skills
+name: write-skills
 description: Use when creating new skills, auditing existing skills, or reviewing skill system for coherence.
 ---
 

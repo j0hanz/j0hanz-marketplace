@@ -1,5 +1,5 @@
 ---
-name: writing-hooks
+name: write-hooks
 description: Use when writing hooks, auditing existing hooks, or reviewing hook system for coherence.
 ---
 

@@ -1,6 +1,6 @@
 # Glossary — Writing Skills
 
-Definitions for [`writing-skills`](SKILL.md), disclosed reference of that skill. `SKILL.md` carries the decisions and the mechanics; this file carries what each term means.
+Definitions for [`write-skills`](SKILL.md), disclosed reference of that skill. `SKILL.md` carries the decisions and the mechanics; this file carries what each term means.
 
 Terms grouped by axis: **Invocation** (how skill reached), **Information Hierarchy** (how content arranged), **Steering** (how agent runtime behaviour shaped), **Pruning** (how kept lean). Each failure mode lives beside lever that cures it, tagged _failure mode_.
 

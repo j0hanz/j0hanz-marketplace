@@ -20,7 +20,7 @@ Read target before rewriting word. Decide everything downstream, usually inferab
 - **One-shot ask** — intent and request, nothing else. Most rough prompts this, get worse when dressed up.
 - **System prompt** — read every turn, by model serving someone who never see it. State durable defaults that generalize past case that provoked them. Run long? Repeat single most-violated rule in one short line near end; position beat repetition of everything else.
 - **Agent instructions** (CLAUDE.md, agent definition, harness prompt) — read mid-run, nobody watching. Carry stop conditions, scope boundaries, tool and delegation policy, checkable definition of done.
-- **A skill** — not prompt but document loaded on demand, so levers are invocation, disclosure, pruning — not framing. Say so, hand to `/writing-skills`.
+- **A skill** — not prompt but document loaded on demand, so levers are invocation, disclosure, pruning — not framing. Say so, hand to `/write-skills`.
 
 **Model and harness.** Current Claude models all follow intent closely, so most of rewrite model-independent; what differ is which default need tuning. Opus 5 run long, narrate work, widen scope, delegate readily — rewrite aimed at it usually add length line and scope line, remove any verification line. Fable 5 punish enumeration hardest; one reasoned instruction worth more there than anywhere. Harness decide which dials exist at all: Claude Code and API expose effort and model choice, chat window not. Model unstated? Assume harness default, move on.
 

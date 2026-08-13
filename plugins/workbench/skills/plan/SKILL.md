@@ -13,13 +13,13 @@ argument-hint: '[what to plan]'
 
 Enter at the first link the ask needs, stop at the last one it earns — most asks use a slice, not the whole chain. The chain runs forward with two back-edges: [verify-specs](../verify-specs/SKILL.md) returns an unmet ID to [write-plan](../write-plan/SKILL.md) when the code is wrong and to [write-specs](../write-specs/SKILL.md) when the requirement is, and a STOP in [run-plan](../run-plan/SKILL.md) returns the same way.
 
-Skills run beside a link rather than in it: [research](../research/SKILL.md) feeds facts in, [prototype](../prototype/SKILL.md) settles a look-or-behavior question before the spec, [write-adr](../write-adr/SKILL.md) takes a settled decision out, [writing-qa](../writing-qa/SKILL.md) turns a spec into manual cases where the observation cannot be run, and [tdd](../tdd/SKILL.md) runs _inside_ [run-plan](../run-plan/SKILL.md) — on any step that adds behavior, and on any code written with no plan at all.
+Skills run beside a link rather than in it: [research](../research/SKILL.md) feeds facts in, [prototype](../prototype/SKILL.md) settles a look-or-behavior question before the spec, [write-adr](../write-adr/SKILL.md) takes a settled decision out, [write-qa](../write-qa/SKILL.md) turns a spec into manual cases where the observation cannot be run, and [tdd](../tdd/SKILL.md) runs _inside_ [run-plan](../run-plan/SKILL.md) — on any step that adds behavior, and on any code written with no plan at all.
 
 Three review the diff once code lands, each on its own axis, none on the others': [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure, [clean-code](../clean-code/SKILL.md) for readability.
 
 [frontier](../frontier/SKILL.md) replaces the front of the chain when the way to done is not visible yet.
 
-Two sit off the route entirely: [writing-skills](../writing-skills/SKILL.md) and [writing-hooks](../writing-hooks/SKILL.md) author the Claude Code extensions themselves, not the work they run on.
+Two sit off the route entirely: [write-skills](../write-skills/SKILL.md) and [write-hooks](../write-hooks/SKILL.md) author the Claude Code extensions themselves, not the work they run on.
 
 ## Size the ask
 
@@ -47,13 +47,13 @@ First matching row wins, read top to bottom.
 | Behavior settled, code to write, no plan   | [tdd](../tdd/SKILL.md)                                                                                           |
 | Plan written, not run                      | [run-plan](../run-plan/SKILL.md)                                                                                 |
 | Change landed against a spec               | [verify-specs](../verify-specs/SKILL.md)                                                                         |
-| Spec needs manual cases or a bug report    | [writing-qa](../writing-qa/SKILL.md)                                                                             |
+| Spec needs manual cases or a bug report    | [write-qa](../write-qa/SKILL.md)                                                                                 |
 | Code correctness or security in doubt      | [bug-hunt](../bug-hunt/SKILL.md)                                                                                 |
 | Branch diff, review structure              | [qc](../qc/SKILL.md)                                                                                             |
 | Readability only, behavior unchanged       | [clean-code](../clean-code/SKILL.md)                                                                             |
 | Decision settled, outlives the effort      | [write-adr](../write-adr/SKILL.md)                                                                               |
 | Fogged — too big for one session           | [frontier](../frontier/SKILL.md)                                                                                 |
-| Authoring a skill or a hook                | [writing-skills](../writing-skills/SKILL.md), [writing-hooks](../writing-hooks/SKILL.md)                         |
+| Authoring a skill or a hook                | [write-skills](../write-skills/SKILL.md), [write-hooks](../write-hooks/SKILL.md)                                 |
 
 Named an output document rather than a plan (proposal, RFC, PRD) — that is `writing-docs`, not this skill.
 
