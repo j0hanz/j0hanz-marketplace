@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 
@@ -20,14 +20,8 @@ try {
   );
   if (!skills.has(prefixed ? invoked.slice(PREFIX.length) : invoked)) process.exit(0);
   const root = join(process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd(), 'docs', 'plan');
-  let entries;
-  try {
-    entries = readdirSync(root, { withFileTypes: true });
-  } catch (e) {
-    if (e?.code !== 'ENOENT') throw e;
-    process.exit(0);
-  }
-  const efforts = entries
+  if (!existsSync(root)) process.exit(0);
+  const efforts = readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && EFFORT_DIR.test(entry.name))
     .map((entry) => entry.name)
     .sort();
