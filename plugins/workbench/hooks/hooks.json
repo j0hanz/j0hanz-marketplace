@@ -1,5 +1,4 @@
 {
-  "description": "Briefs the live docs/plan effort directory when a workbench skill runs. Requires node on PATH; without it the hook is inert and skills still run.",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/workbench-effort.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/brief.mjs\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs\"",
             "timeout": 5
           }
         ]
@@ -19,8 +28,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/workbench-effort.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/brief.mjs\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stale.mjs\"",
+            "timeout": 10
           }
         ]
       }
