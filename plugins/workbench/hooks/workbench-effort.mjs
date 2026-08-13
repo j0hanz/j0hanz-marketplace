@@ -1,9 +1,3 @@
-// fires:  PreToolUse (matcher Skill), UserPromptExpansion (matcher ^workbench:)
-// reads:  .tool_input.skill or .command_name, .cwd, ../skills/
-// emits:  the live effort directory, its stem, and the artifacts already in it
-// fails:  any error -> exit 0, no output, nothing changes
-// verify: node hooks/workbench-effort.mjs < payload.json; echo $?
-
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -13,7 +7,7 @@ const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map|hunt|test-plan|cases|regressi
 try {
   const payload = JSON.parse(readFileSync(0, 'utf8'));
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '').trim();
-  const scoped = /^workbench:(.+)$/.exec(invoked);
+  const scoped = /^(?:workbench:)?(.+)$/.exec(invoked);
   if (!scoped) process.exit(0);
 
   const skills = new Set(
@@ -23,7 +17,7 @@ try {
   );
   if (!skills.has(scoped[1])) process.exit(0);
 
-  const root = join(payload.cwd ?? process.cwd(), 'docs', 'plan');
+  const root = join(process.env.CLAUDE_PROJECT_DIR ?? payload.cwd ?? process.cwd(), 'docs', 'plan');
   const efforts = readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && EFFORT_DIR.test(entry.name))
     .map((entry) => entry.name)
