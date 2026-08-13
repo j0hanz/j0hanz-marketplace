@@ -130,7 +130,7 @@ export const theme = createTheme({
         root: { '&.Mui-focusVisible': focusRing },
       },
     },
-    MuiButton: { styleOverrides: { root: press } },
+    MuiButton: { styleOverrides: { root: { ...press, minHeight: 44 } } },
     MuiIconButton: { styleOverrides: { root: press, sizeMedium: { padding: 12 } } },
     MuiLink: { styleOverrides: { root: { '&.Mui-focusVisible': focusRing } } },
     MuiCard: { styleOverrides: { root: { borderColor: edge } } },
@@ -162,6 +162,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           ...press,
+          minHeight: 44,
           borderColor: edge,
           color: 'var(--mui-palette-text-secondary)',
           boxShadow: litIdle('bottom'),

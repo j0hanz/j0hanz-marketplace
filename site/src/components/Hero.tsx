@@ -59,7 +59,7 @@ export function Hero() {
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={{ xs: 1.5, sm: 2 }}
-              sx={{ width: 1, '--i': 2, '& .MuiButton-root': { minHeight: 44 } }}
+              sx={{ width: 1, '--i': 2 }}
               data-hero
             >
               <Button

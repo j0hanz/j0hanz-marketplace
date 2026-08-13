@@ -147,7 +147,6 @@ export function Nav() {
                   aria-current={active === link.href ? 'true' : undefined}
                   sx={{
                     display: { xs: 'none', md: 'inline-flex' },
-                    minHeight: 44,
                     color: 'text.secondary',
                     // The same bar the category filter and the open row wear:
                     // one width for one meaning, held transparent until lit.

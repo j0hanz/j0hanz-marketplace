@@ -182,7 +182,7 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           sx={{
             flexWrap: 'wrap',
             gap: `${RULE_WIDTH}px`,
-            '& .MuiToggleButton-root': { minHeight: 44, px: 1.5 },
+            '& .MuiToggleButton-root': { px: 1.5 },
             '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
               ml: 0,
               borderLeft: outline,
