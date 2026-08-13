@@ -1,6 +1,6 @@
 ---
 name: qc
-description: Review a branch diff for maintainability — hunt code-judo moves and fire the structural standards, return blocking comments. Use when asked to review the code quality or maintainability of a diff. Not for correctness bugs (bug-hunt) or test coverage (tdd, verify-specs).
+description: Review a branch diff for maintainability and return blocking comments. Use when asked to review the code quality or maintainability of a diff. Not for correctness bugs (bug-hunt) or test coverage (tdd, verify-specs).
 ---
 
 Dispatch a background agent (Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`) — you keep working while it reviews.

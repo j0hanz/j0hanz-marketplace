@@ -26,8 +26,7 @@ One hook, one job. Hook that gates _and_ logs = two hooks — fail differently, 
 | **rewrite** | changes payload in flight          | `PreToolUse`, `PostToolUse`, `MessageDisplay`         | `updatedInput` · `updatedToolOutput` · `displayContent`                      | emit nothing; original stands                                         |
 
 Last column load-bearing: blocking session cuz `jq` missing turns lint problem
-into stuck terminal. Hooks not security boundary anyway — `if` filter fails open by
-design, hook's `allow` overridden by any deny rule in permission system.
+into stuck terminal. Hooks not security boundary anyway — `if` filter fails open by design.
 
 **Done when:** name job in one word, say what hook must _not_ also do.
 
@@ -232,6 +231,8 @@ Outside plugin same shapes apply with `${CLAUDE_PROJECT_DIR}` and `.claude/setti
 Hooks in skill or agent frontmatter scoped to that component's lifetime; `once: true`
 honored _only_ in skill frontmatter. **`Stop` hook in agent frontmatter silently
 re-registered as `SubagentStop`** — write it expecting that payload.
+
+**Done when** jq named in hooks.json description and README, every ${CLAUDE_PLUGIN_ROOT} placeholder quoted in shell form or moved to exec-form args, Windows path resolves under Git Bash or a .ps1 twin ships with LF endings, no state written under plugin root, and frontmatter hooks state their lifecycle scope (Stop in agent frontmatter written for the SubagentStop payload).
 
 ## 7. Verify it fired
 

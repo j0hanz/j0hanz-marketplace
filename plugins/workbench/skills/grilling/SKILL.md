@@ -1,6 +1,6 @@
 ---
 name: grilling
-description: Grill the user relentlessly — numbered questions in rounds, each with a recommended answer — until every decision only they can make is settled and confirmed. Use on any "grill" phrasing, or when a task needs the user's own judgement to proceed. Not for facts a source can answer (research), or for a look-and-behavior question a rough artifact settles (prototype).
+description: Grill the user relentlessly to settle every decision only they can make. Use on any 'grill' phrasing, or when a task needs the user own judgement to proceed. Not for facts a source can answer (research), or for a look-and-behavior question a rough artifact settles (prototype).
 ---
 
 Interview the user relentlessly. Write the decisions to a file as a **map** — one node per decision, each naming what it waits on. Under a caller that already keeps a map, work in that one.
@@ -17,6 +17,6 @@ Write each question as markdown:
 
 Where every question in the round is a closed choice of four or fewer short options, ask the round through the **AskUserQuestion** tool instead.
 
-Finding _facts_ is your job — dispatch [research](../research/SKILL.md); put only the _decisions_ to the user. Every question in a round has been checked against the material first: one a source can answer is dispatched, not asked. A running dispatch is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the frontier now.
+Finding _facts_ is your job — dispatch [research](../research/SKILL.md); put only the _decisions_ to the user. Every question in a round has been checked against the material first. A running dispatch is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the frontier now.
 
 Done when every decision on the map is settled, a re-read of the map surfaces no new prerequisites, and the user has confirmed the answers as written. What a caller gets back is the map: every decision with the user's answer on it.

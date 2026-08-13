@@ -1,6 +1,6 @@
 ---
 name: write-specs
-description: Spec the observable behavior a change must deliver, fixed before any code or plan exists. Use when asked to spec a feature, or to capture what a built system already guarantees. Not for the execution route (write-plan), verifying a built system (verify-specs), or reader-facing prose documents (writing-docs).
+description: Spec the observable behavior a change must deliver. Use when asked to spec a feature, or to capture what a built system already guarantees. Not for the execution route (write-plan), verifying a built system (verify-specs), or reader-facing prose documents (writing-docs).
 ---
 
 # Write Specs
@@ -41,8 +41,6 @@ One obligation per statement, in the EARS pattern matching its trigger. `shall` 
 | Optional     | Where `<feature is included>`, the `<system>` shall `<response>`     | flagged or variant builds  |
 | Unwanted     | If `<trigger>`, then the `<system>` shall `<response>`               | errors, failures, abuse    |
 | Complex      | While `<state>`, when `<trigger>`, the `<system>` shall `<response>` | both, when both matter     |
-
-**Unwanted behavior** is the pattern that gets skipped and the one that ships broken.
 
 Quality claims carry a number and a measurement point — not "fast" but "within 200 ms at p95, measured at the API boundary".
 

@@ -2,7 +2,7 @@
 
 Part of [write-qa](SKILL.md), loaded when routing lands on a bug report — a defect observed in running software. Hunting bugs in a diff is [bug-hunt](../bug-hunt/SKILL.md); this template records what execution found.
 
-Filed at `docs/qa/BUG-NNN-<slug>.md` — see Referencing in `SKILL.md`.
+Filed under `docs/qa/` — see Referencing in `SKILL.md`.
 
 Severity is impact; priority (scale in `SKILL.md`) is scheduling urgency. Set both.
 

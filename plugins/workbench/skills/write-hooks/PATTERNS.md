@@ -79,7 +79,7 @@ exit 0
 
 ## 2. Gate — turn-end evidence, with a loop guard
 
-`stop_hook_active` check not optional. Without it, blocks until Claude Code overrides hook at 8 consecutive blocks.
+`stop_hook_active` check not optional. Without it, blocks until the built-in consecutive-block override (see Firing over and over).
 
 ```json
 "Stop": [{

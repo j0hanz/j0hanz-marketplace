@@ -1,6 +1,6 @@
 ---
 name: frontier
-description: 'Frontier: chart work too big for one session as a map of tickets — open decisions and what they wait on, resolved one at a time until the way to the destination is clear. Use when the way from a loose idea to done is not visible yet, or when resuming an existing map. Not for changes that fit one session (write-plan).'
+description: 'Frontier: chart work too big for one session as a map of tickets. Use when the way from a loose idea to done is not visible yet, or when resuming an existing map. Not for changes that fit one session (write-plan).'
 ---
 
 Loose idea arrive too big for one agent session, wrapped in **fog**: way from here to **destination** not visible yet. Finding that way is the work, not charging at destination. This skill chart way as **map** of tickets — each resolve one decision, or one thing a decision wait on — then work them until route clear. Every session take what sit at **frontier**: edge of known, decisions takeable right now.
@@ -28,9 +28,9 @@ Hold regardless of storage, and each defies what the moment would otherwise sugg
 - A **published** ticket is never deleted — close it with a resolution.
 - **Update** edits a ticket's Question body only, never its id or title: the title is the link, and retitling breaks every existing reference.
 - Update and re-block both clear any live claim — the question it was claimed under changed.
-- A **create-round** that was interrupted is rolled back, not finished: close each `initializing` ticket in it. A ticket that never published never joined the route.
-- Open, unclaimed tickets with an empty frontier is a **deadlock**, not finished work.
-- An in-progress `research` ticket returns to `open` on load — no subagent survives the session that launched it.
+- A **create-round** that was interrupted is rolled back, not finished: a ticket that never published never joined the route.
+- Open, unclaimed tickets with an empty frontier is not finished work.
+- No subagent survives the session that launched it.
 - Validate the blocker graph again after every redraw: a redraw can add an edge to an already-published ticket, and an added edge can close a cycle.
 - Research subagents are delegates; the parent session writes every record.
 

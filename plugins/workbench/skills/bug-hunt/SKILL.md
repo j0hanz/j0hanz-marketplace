@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Adversarial correctness pass over code just written — resolve the blast radius, hunt defects against a taxonomy, refute each candidate blind, report only what survives. Use when correctness or security is in doubt before shipping, or after an agent produced work. Not for readability (clean-code), structure and maintainability (qc), or checking a landed change against its spec (verify-specs).
+description: Adversarial correctness pass over code just written. Use when correctness or security is in doubt before shipping, or after an agent produced work. Not for readability (clean-code), structure and maintainability (qc), or checking a landed change against its spec (verify-specs).
 ---
 
 # Bug Hunt

@@ -19,7 +19,7 @@ Consequences include what got worse. The cost accepted is the one thing a reader
 
 An accepted record stays as written — its reasoning stood on facts true that day. Supersede instead: a new record, plus one line on the old one linking it.
 
-Done when every rule above is satisfied.
+Done when the record is titled as one decision statement, carries at least one rejected option with the line that lost it, states the decision as a commitment, and names the cost accepted in Consequences. (Line 20 governs the record later life — supersede, do not edit — and is not part of this check.)
 
 ## Referencing
 

@@ -31,7 +31,7 @@ Order the steps so the build stays passing between them: add the new path, switc
 
 Fill the template, then reread it as the executor. Wherever you filled a gap from memory, inline the missing fact.
 
-**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, and each STOP condition names a risk specific to this change.
+**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, each STOP condition names a risk specific to this change, and every Verify command has been run and produced its expected output.
 
 ## Referencing
 

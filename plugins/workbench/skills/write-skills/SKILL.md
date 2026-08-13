@@ -1,9 +1,9 @@
 ---
 name: write-skills
-description: Author a SKILL.md that fires predictably — invocation mode, description as pointer, what sits inline versus disclosed, and the failure modes that make a skill drift. Use when writing a new skill, auditing one that misfires or sprawls, or judging a skill set for coherence. Not for authoring hooks (write-hooks), CLAUDE.md agent memory, or reader-facing project docs.
+description: Author a SKILL.md that fires predictably. Use when writing a new skill, auditing one that misfires or sprawls, or judging a skill set for coherence. Not for authoring hooks (write-hooks), CLAUDE.md agent memory, or reader-facing project docs.
 ---
 
-Skill exists to wrangle determinism out of stochastic system. **Predictability** root virtue; every lever below serve it.
+**Predictability**.
 
 Bold terms each have heading in [`GLOSSARY.md`](GLOSSARY.md). Load it when auditing skill against full vocabulary, or when term below carry more weight than you can place. Given term as argument, answer from that entry alone.
 
@@ -63,19 +63,11 @@ Both cuts answer to coherence: one unit of work per skill. Cut too fine, several
 
 ## Pruning
 
-Keep each meaning in **single source of truth**: one authoritative place, so changing behaviour one-place edit.
-
-Environment source of truth too — `package.json` scripts, config files, directory layout, `--help` output. Skill restating it is **cache**. Cache what agent can't find by looking: unwritten convention, reason behind choice, gotcha no config confess. Leave one-file, one-command lookup to environment, where it can't go stale.
-
-Check every line for **relevance**: still bear on what skill do?
+Check every line for relevance.
 
 Then hunt **no-ops** sentence by sentence, not just line by line: run no-op test on each sentence in isolation; when one fail, delete whole sentence rather than trim words. Be aggressive — most prose that fail should go, not get rewritten. Test model-relative: two people disagreeing about no-op disagree about default, settle by running skill, not by debate.
 
 ## Leading words
-
-**Leading word** compact concept already living in model's pretraining agent think with while running skill (e.g. _lesson_, _fog of war_, _tracer bullets_). Repeat as token, never as sentence — accumulate distributed definition, anchor whole region of behaviour in fewest tokens by recruiting priors model already hold. Coin own only when you define it clearly: made-up word recruit no priors, you pay in definition tokens what pretrained word give free.
-
-Serve predictability twice. In body anchor _execution_: agent reach for same behaviour every time word appear. In pointer anchor _invocation_: when same word live in your prompts, docs, code, agent link shared language to skill, fire it more reliable.
 
 Hunt opportunity refactor skills use leading words. Triad spelled out at three sites (**duplication**), description spending sentence gesture at one idea — each passage beg collapse into single token. Examples include:
 
@@ -96,3 +88,5 @@ Symptom, then cure:
 - **No-op** — line change nothing versus default. Delete whole sentence. Weak leading word (_be thorough_ when agent already thorough-ish) is no-op; fix stronger word (_relentless_), not different technique.
 - **Menu** — different run pick different option at same fork, predictability die there. Name one default; demote rest to escape hatches, each with condition earning it ("use X; for scanned input, fall back to Y").
 - **Negation** — banned behaviour turn up more, not less: _don't think of an elephant_ names elephant. Prompt _positive_ — state target behaviour so banned one never spoken. Keep prohibition only as hard guardrail can't phrase positive, even then pair with what do instead.
+
+Done when every lever above applied — invocation picked, every pointer sharpened, hierarchy placed, every completion criterion checkable, split decided, every line relevance-checked, no-op hunted sentence by sentence, leading words coined, every failure mode confirmed absent. Bar binds whole body, not section subset.

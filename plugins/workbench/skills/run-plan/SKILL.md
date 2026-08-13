@@ -1,6 +1,6 @@
 ---
 name: run-plan
-description: Execute a written plan as its cold executor. Use when handed a plan file to carry out, or resuming one mid-flight. Not for writing the plan (write-plan).
+description: Execute a written plan. Use when handed a plan file to carry out, or resuming one mid-flight. Not for writing the plan (write-plan).
 ---
 
 # Run Plan
@@ -47,7 +47,7 @@ Repeat 2–3 until the steps run out.
 
 Run the **Done** checklist as commands and record each result under `## Done` at the foot of the run log. Report those results to the user, with the plan's Notes review points and every deviation the log holds. Then hand the landed change to the reviewers its risk earns, each on its own axis: [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure, and — where the Goal cites requirement IDs — [verify-specs](../verify-specs/SKILL.md) for behavior. The plan's Done proves the steps ran, not that the code is correct, the structure held, or the behavior arrived.
 
-**Done when** every Done box has a command result behind it and the user has the list.
+**Done when** every Done box has a command result behind it, the user has the list, and bug-hunt and qc have been handed the change (verify-specs too, where the Goal cites requirement IDs).
 
 ## Referencing
 

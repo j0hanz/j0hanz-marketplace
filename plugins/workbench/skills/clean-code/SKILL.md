@@ -1,11 +1,11 @@
 ---
 name: clean-code
-description: Readability pass over code that already works — naming, function size, comments, structure — behavior byte-for-byte unchanged, every function in scope carrying a verdict. Use when asked to clean up or tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt), structural and maintainability review of a branch (qc), or deleting over-engineering.
+description: Readability pass over code that already works — naming, function size, comments, structure — behavior byte-for-byte unchanged, every function in scope carrying a verdict. Use when asked to clean up or tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt) or structural and maintainability review of a branch (qc).
 ---
 
 # Clean Code
 
-Turn working code into code the next reader changes without fear. Behavior stays identical: every edit is a **rename**, an **extraction**, a **reorder**, or a deleted comment — plus the new code those need.
+Behavior stays identical: every edit is a **rename**, an **extraction**, a **reorder**, or a deleted comment — plus the new code those need.
 
 Cleaning applies the verdicts; reviewing reports them. Same pass either way, and the review mode skips steps 1 and 4.
 

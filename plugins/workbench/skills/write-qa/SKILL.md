@@ -1,6 +1,6 @@
 ---
 name: write-qa
-description: Create coverage-mapped QA deliverables — test plans, manual test cases, regression suites, and bug reports — every in-scope item traced to a check or a justified gap. Use when asked for a test plan, manual cases, a regression suite, or a defect write-up. Not for automated tests (tdd), hunting bugs in a diff (bug-hunt), or verifying a landed change against its spec (verify-specs).
+description: Create coverage-mapped QA deliverables — test plans, manual test cases, regression suites, and bug reports. Use when asked for a test plan, manual cases, a regression suite, or a bug report. Not for automated tests (tdd), hunting bugs in a diff (bug-hunt), or verifying a landed change against its spec (verify-specs).
 ---
 
 # Write QA
@@ -100,13 +100,9 @@ One prefix per type, carried in the case ID.
 
 Where a deliverable lives follows its lifetime, under the [referencing convention](../write-specs/SKILL.md#referencing).
 
-**Scoped to one change** — a test plan, its cases, and a Targeted or Sanity suite sit beside the spec in the dated per-change directory as `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md`. Where no change directory exists yet, this skill creates it, dated today.
+Per the referencing convention, change-scoped QA files (`<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md`) sit in the dated per-change directory; standing records sit at `docs/qa/`. Net-new here: standing QA filenames — bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
 
-`<name>.cases.md` is one file holding the whole set: `# Test Cases: <name>` over one `## TC-...` section per case, so a reader greps one file and the coverage map links to anchors inside it.
-
-**Standing records** — a bug outlives the run that found it, and a Full or Smoke suite outlives the release it gated. Both live at `docs/qa/`: bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
-
-Paths are relative to the file holding the link; IDs are cited by label and linked:
+`<name>.cases.md` collects the whole set into one file (structure in `test-case.md`); the coverage map links to anchors inside it.
 
 ```markdown
 case to requirement [`R2`](<name>.spec.md#requirements)

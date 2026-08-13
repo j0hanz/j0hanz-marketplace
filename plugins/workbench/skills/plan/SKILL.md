@@ -27,8 +27,10 @@ Four reads, in order:
 
 1. **Artifact already?** A written spec enters at [write-plan](../write-plan/SKILL.md), a written plan at [run-plan](../run-plan/SKILL.md), a landed change with a spec at [verify-specs](../verify-specs/SKILL.md). Sizing stops.
 2. **Fogged?** If the way from here to done is not visible — many sessions, fog over the middle — the route is [frontier](../frontier/SKILL.md) and sizing stops. It owns its own grilling and hands the spec work out at close.
-3. **Behavior settled?** Settled means **black-box** — a different implementation could be checked against it ([write-specs](../write-specs/SKILL.md)).
+3. **Behavior settled?** Settled means black-box — a different implementation could be checked against it, the kind of spec write-specs produces.
 4. **Facts present?** Unknown API, unread doc, unfamiliar library — the plan will be fiction without them. Every external name the ask mentions is either read this session or has a [research](../research/SKILL.md) dispatch running.
+
+Steps 3 and 4 are factors, not gates — read both, then the Routes table below selects the flow; sizing does not stop here.
 
 Ambiguous between two forks: ask one question. Reach [grilling](../grilling/SKILL.md) once the route is chosen and the decision map opens.
 
