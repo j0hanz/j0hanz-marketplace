@@ -25,12 +25,6 @@
       "category": "development"
     },
     {
-      "name": "craft",
-      "source": "./plugins/craft",
-      "description": "Author Claude Code extensions properly: what makes a skill predictable, and how to write, audit and debug hooks",
-      "category": "authoring"
-    },
-    {
       "name": "review",
       "source": "./plugins/review",
       "description": "Clean Code readability pass and a strict maintainability review, both behavior-preserving",
@@ -43,10 +37,10 @@
       "category": "productivity"
     },
     {
-      "name": "compass",
-      "source": "./plugins/compass",
-      "description": "Chart the way from a loose idea to landed work: grill out the decisions, spec the behavior, plan it, run it, verify it",
-      "category": "planning"
+      "name": "workbench",
+      "source": "./plugins/workbench",
+      "description": "Every tool for the job on one bench: decide, spec, plan, build test-first, review, verify — plus authoring the skills, hooks and QA docs you reach for next",
+      "category": "development"
     },
     {
       "name": "output-styles",

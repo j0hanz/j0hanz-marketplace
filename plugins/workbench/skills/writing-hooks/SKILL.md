@@ -1,6 +1,6 @@
 ---
 name: writing-hooks
-description: Author, audit, and debug Claude Code hooks — handler config in settings.json or a plugin's hooks.json, lifecycle events (PreToolUse, PostToolUse, SessionStart, Stop, …), matchers, exit codes, JSON output. Use when something should happen automatically on an event ("run X after every edit", "block Y before it runs", "load context at session start"), when reviewing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the plugin or skill that carries the hook.
+description: Use when writing hooks, auditing existing hooks, or reviewing hook system for coherence.
 ---
 
 # Writing hooks

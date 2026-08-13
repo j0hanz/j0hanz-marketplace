@@ -21,9 +21,9 @@ Claude Code plugins: skills and agents you can install into any project.
 /plugin install tutor@j0hanz-marketplace
 /plugin install css@j0hanz-marketplace
 /plugin install mcp-hub@j0hanz-marketplace
-/plugin install craft@j0hanz-marketplace
 /plugin install review@j0hanz-marketplace
 /plugin install prompt@j0hanz-marketplace
+/plugin install workbench@j0hanz-marketplace
 /plugin install output-styles@j0hanz-marketplace
 ```
 
@@ -70,12 +70,6 @@ MCP development skills for TypeScript SDK v2
 - Agents: `mcp-auditor`, `mcp-debugger`, `mcp-migrator`
 - Hooks: `SessionStart`
 
-### craft
-
-Author Claude Code extensions properly: what makes a skill predictable, and how to write, audit and debug hooks
-
-- Commands: `/craft:writing-hooks`, `/craft:writing-skills`
-
 ### review
 
 Clean Code readability pass and a strict maintainability review, both behavior-preserving
@@ -87,6 +81,13 @@ Clean Code readability pass and a strict maintainability review, both behavior-p
 Rewrites a rough, half-formed prompt into one that works on current Claude models
 
 - Commands: `/prompt:prompting`
+
+### workbench
+
+Every tool for the job on one bench: decide, spec, plan, build test-first, review, verify — plus authoring the skills, hooks and QA docs you reach for next
+
+- Commands: `/workbench:bug-hunt`, `/workbench:clean-code`, `/workbench:frontier`, `/workbench:grilling`, `/workbench:plan`, `/workbench:prototype`, `/workbench:qc`, `/workbench:research`, `/workbench:run-plan`, `/workbench:tdd`, `/workbench:verify-specs`, `/workbench:write-adr`, `/workbench:write-plan`, `/workbench:write-specs`, `/workbench:writing-hooks`, `/workbench:writing-qa`, `/workbench:writing-skills`
+- Hooks: `PreToolUse`, `UserPromptExpansion`
 
 ### output-styles
 

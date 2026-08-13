@@ -1,8 +1,8 @@
-// fires:  PreToolUse (matcher Skill), UserPromptExpansion (matcher ^compass:)
+// fires:  PreToolUse (matcher Skill), UserPromptExpansion (matcher ^workbench:)
 // reads:  .tool_input.skill or .command_name, .cwd, ../skills/
 // emits:  the live effort directory, its stem, and the artifacts already in it
 // fails:  any error -> exit 0, no output, nothing changes
-// verify: node hooks/compass-effort.mjs < payload.json; echo $?
+// verify: node hooks/workbench-effort.mjs < payload.json; echo $?
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map)\.md$/;
 try {
   const payload = JSON.parse(readFileSync(0, 'utf8'));
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '').trim();
-  const scoped = /^compass:(.+)$/.exec(invoked);
+  const scoped = /^workbench:(.+)$/.exec(invoked);
   if (!scoped) process.exit(0);
 
   const skills = new Set(
@@ -36,7 +36,7 @@ try {
     .sort();
   const stem = files.map((file) => file.match(ARTIFACT)?.[1]).find(Boolean);
 
-  const lines = [`compass effort directory: docs/plan/${live}/`];
+  const lines = [`workbench effort directory: docs/plan/${live}/`];
   lines.push(
     files.length > 0
       ? `  holds ${files.join(', ')}${stem ? ` — stem \`${stem}\`` : ''}`
