@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
-const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map)\.md$/;
+const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map|hunt|test-plan|cases|regression)\.md$/;
 
 try {
   const payload = JSON.parse(readFileSync(0, 'utf8'));

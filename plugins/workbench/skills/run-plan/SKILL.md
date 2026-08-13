@@ -45,7 +45,7 @@ Repeat 2–3 until the steps run out.
 
 ### 4. Close
 
-Run the **Done** checklist as commands and record each result under `## Done` at the foot of the run log. Report those results to the user, with the plan's Notes review points and every deviation the log holds. Where the Goal cites requirement IDs, the landed change goes to [verify-specs](../verify-specs/SKILL.md) for behavior and [qc](../qc/SKILL.md) for structure — the plan's Done proves the steps ran, not that the behavior arrived or the code stays clean.
+Run the **Done** checklist as commands and record each result under `## Done` at the foot of the run log. Report those results to the user, with the plan's Notes review points and every deviation the log holds. Then hand the landed change to the reviewers its risk earns, each on its own axis: [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure, and — where the Goal cites requirement IDs — [verify-specs](../verify-specs/SKILL.md) for behavior. The plan's Done proves the steps ran, not that the code is correct, the structure held, or the behavior arrived.
 
 **Done when** every Done box has a command result behind it and the user has the list.
 

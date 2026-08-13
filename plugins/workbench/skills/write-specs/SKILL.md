@@ -57,7 +57,7 @@ Scenarios use Given/When/Then, one per branch:
 
 ## Referencing
 
-A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.plan.md`, `<name>.run.md`, `<name>.verify.md`, and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)). This is the convention every skill downstream links to rather than restates.
+A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.plan.md`, `<name>.run.md`, `<name>.verify.md`, `<name>.hunt.md` ([bug-hunt](../bug-hunt/SKILL.md)), and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)). This is the convention every skill downstream links to rather than restates.
 
 A record that outlives the change that made it sits outside those directories: decisions at `docs/adr/` ([write-adr](../write-adr/SKILL.md)), QA standing records at `docs/qa/` ([write-qa](../write-qa/SKILL.md)). Where such a record is numbered, the number is `NNN-<slug>`, zero-padded, the next one found by scanning its directory.
 
