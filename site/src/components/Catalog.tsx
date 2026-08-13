@@ -115,12 +115,7 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
       setCategory(next);
       return;
     }
-    try {
-      document.startViewTransition(() => flushSync(() => setCategory(next)));
-    } catch (e) {
-      console.error('view transition failed', e);
-      setCategory(next);
-    }
+    document.startViewTransition(() => flushSync(() => setCategory(next))).ready.catch(() => {});
   };
 
   return (

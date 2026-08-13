@@ -3,14 +3,11 @@ import { readFileSync } from 'node:fs';
 import babel from '@rolldown/plugin-babel';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite';
-// Extension included: Vite's native config loader strips types rather than
-// bundling, so it resolves the real file rather than guessing at one.
-import { brand, ground, ink, paper, steel } from './site/src/theme/tokens.ts';
+import { brand, ground, ink, mono, paper, steel } from './site/src/theme/tokens.ts';
+import type { Site } from './site/src/site.ts';
 
 const DATA = new URL('./site/src/data/marketplace.json', import.meta.url);
 
-// Written without the leading '#': the favicon's data URI needs it escaped as
-// %23, the theme-color meta needs it bare, so each use site adds its own.
 const paint = {
   '%GROUND_LIGHT%': ground.light.slice(1),
   '%GROUND_DARK%': ground.dark.slice(1),
@@ -37,23 +34,7 @@ const ORIGIN = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 const THEME_SCRIPT_HASH = 'sha256-qtbieZlDsmW7yCtw/DDZy9Zdyb9cOgyCVPs9MC22EJs=';
 
-interface Entry {
-  displayName: string;
-  version: string;
-  summary: string;
-  homepage: string;
-}
-
-interface SiteData {
-  name: string;
-  pageTitle: string;
-  description: string;
-  repo: string;
-  repoUrl: string;
-  plugins: Entry[];
-}
-
-const jsonLd = (site: SiteData) =>
+const jsonLd = (site: Site) =>
   JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -80,13 +61,14 @@ const jsonLd = (site: SiteData) =>
 const siteMeta = (): Plugin => ({
   name: 'site-meta',
   transformIndexHtml(html, ctx) {
-    const site: SiteData = JSON.parse(readFileSync(DATA, 'utf8'));
+    const site: Site = JSON.parse(readFileSync(DATA, 'utf8'));
     let out = html
       .replaceAll('%PAGE_TITLE%', site.pageTitle)
       .replaceAll('%TITLE%', site.name)
       .replaceAll('%DESCRIPTION%', site.description)
       .replaceAll('%REPO%', site.repo);
-    for (const [token, hex] of Object.entries(paint)) out = out.replaceAll(token, hex);
+    for (const [token, value] of Object.entries({ ...paint, '%MONO%': mono }))
+      out = out.replaceAll(token, value);
     if (ctx.bundle) {
       const inline = out.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
       const hash = `sha256-${createHash('sha256').update(inline).digest('base64')}`;

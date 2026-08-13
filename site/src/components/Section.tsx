@@ -3,7 +3,7 @@ import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { drawable } from '../theme/tokens';
+import { drawable, mono } from '../theme/tokens';
 import { RevealOnEnter } from './RevealOnEnter';
 
 export function Section({
@@ -50,7 +50,7 @@ export function Section({
                 py: 0.25,
                 border: 1,
                 borderColor: 'divider',
-                fontFamily: 'var(--mui-font-family-mono, monospace)',
+                fontFamily: mono,
                 fontSize: '0.75rem',
                 lineHeight: 1.6,
               }}

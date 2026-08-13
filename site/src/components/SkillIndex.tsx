@@ -6,7 +6,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
+import Typography, { type TypographyProps } from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ExpandMoreIcon } from '../icons';
 import { countLabel, type Plugin } from '../site';
@@ -29,6 +29,11 @@ const counts = (plugin: Plugin) =>
     .join(', ');
 
 const tagSx = { ...tag, py: 0.5 } as const;
+
+/** Metadata voice beside a name: the kind of entry, or the hint it takes. */
+const Tag = (props: TypographyProps) => (
+  <Typography component="span" variant="caption" color="textSecondary" sx={tagSx} {...props} />
+);
 
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
@@ -109,30 +114,18 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                             >
                               {!skill.command && (
                                 <Tooltip title={MODEL_LOADED}>
-                                  <Typography
-                                    component="span"
-                                    variant="caption"
-                                    color="textSecondary"
-                                    tabIndex={0}
-                                    aria-label={`model-loaded. ${MODEL_LOADED}`}
-                                    sx={tagSx}
-                                  >
+                                  <Tag tabIndex={0} aria-label={`model-loaded. ${MODEL_LOADED}`}>
                                     model-loaded
-                                  </Typography>
+                                  </Tag>
                                 </Tooltip>
                               )}
                               <Typography component="code" variant="body2" sx={codeSx}>
                                 {skill.command ?? skill.name}
                               </Typography>
                               {skill.argumentHint && (
-                                <Typography
-                                  component="code"
-                                  variant="caption"
-                                  color="textSecondary"
-                                  sx={codeSx}
-                                >
+                                <Tag component="code" sx={codeSx}>
                                   {skill.argumentHint}
-                                </Typography>
+                                </Tag>
                               )}
                             </Stack>
                           }
@@ -157,14 +150,7 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                               <Typography component="code" variant="body2" sx={codeSx}>
                                 {agent.name}
                               </Typography>
-                              <Typography
-                                component="span"
-                                variant="caption"
-                                color="textSecondary"
-                                sx={tagSx}
-                              >
-                                agent
-                              </Typography>
+                              <Tag>agent</Tag>
                             </Stack>
                           }
                           secondary={agent.description}

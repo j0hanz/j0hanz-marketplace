@@ -30,11 +30,6 @@
   transform: none;
 }
 
-/* Content a filter put back, not content scrolled to: land it, don't reveal it. */
-:root[data-motion] [data-reveal][data-instant] {
-  transition: none;
-}
-
 /*
  * The site's one motion idea: structural rules draw themselves along their axis.
  * The transform sits on the pseudo-element that actually moves, so the browser
