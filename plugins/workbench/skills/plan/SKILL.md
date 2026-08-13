@@ -61,4 +61,4 @@ First matching row wins, read top to bottom.
 
 Named an output document rather than a plan (proposal, RFC, PRD) — that is `writing-docs`, not this skill.
 
-Done when the flow is named to the user in one line and its first skill is invoked.
+Done when the flow is named to the user in one line and its first skill is invoked — or, where that skill is user-invoked, named as the command to type.
