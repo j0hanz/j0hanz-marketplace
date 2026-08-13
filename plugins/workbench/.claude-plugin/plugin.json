@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "workbench",
   "displayName": "Workbench",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Every tool for the job on one bench: grill out the decisions, spec the behavior, write a plan a cold executor can follow, run it test-first, review the diff for bugs and structure, verify what shipped, and author the skills, hooks and QA docs you reach for next.",
   "author": {
     "name": "j0hanz",
