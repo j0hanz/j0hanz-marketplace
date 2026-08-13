@@ -1,0 +1,29 @@
+{
+  "description": "compass: names the live effort directory when a compass skill is invoked. Requires node on PATH; silent when docs/plan/ holds no effort directory.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/compass-effort.mjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "^compass:",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/compass-effort.mjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
