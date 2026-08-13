@@ -13,8 +13,11 @@ try {
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '')
     .trim()
     .replace(/^\//, '');
+  // command_name arrives prefixed (workbench:write-plan) or bare (write-plan).
   const mine =
-    event === 'UserPromptExpansion' || (event === 'PreToolUse' && invoked.startsWith(PREFIX));
+    invoked.startsWith(PREFIX) ||
+    (event === 'UserPromptExpansion' &&
+      existsSync(new URL(`../skills/${invoked}/SKILL.md`, import.meta.url)));
   if (!mine) process.exit(0);
   const root = join(process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd(), 'docs', 'plan');
   if (!existsSync(root)) process.exit(0);
@@ -51,6 +54,5 @@ try {
   );
 } catch (e) {
   const note = `workbench-effort hook: ${e?.message ?? e}`;
-  process.stdout.write(event === 'PreToolUse' ? JSON.stringify({ systemMessage: note }) : note);
-  process.exit(0);
+  process.stdout.write(JSON.stringify({ systemMessage: note }));
 }
