@@ -4,7 +4,7 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ExternalIcon, MarkIcon } from '../icons';
-import { site } from '../site';
+import { external, site } from '../site';
 import { RevealOnEnter } from './RevealOnEnter';
 
 const hitArea = { py: 0.3 };
@@ -28,8 +28,7 @@ export function Footer() {
               </Typography>
               <Link
                 href={`${site.repoUrl}/blob/main/LICENSE`}
-                target="_blank"
-                rel="noreferrer"
+                {...external}
                 variant="caption"
                 color="text.secondary"
                 underline="hover"
@@ -41,8 +40,7 @@ export function Footer() {
             </Stack>
             <Link
               href={site.repoUrl}
-              target="_blank"
-              rel="noreferrer"
+              {...external}
               variant="body2"
               color="text.secondary"
               underline="hover"

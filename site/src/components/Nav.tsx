@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { usePressedKey } from '../hooks/usePressedKey';
-import { site } from '../site';
+import { external, site } from '../site';
 import { accent, activeSx, drawable, litIdle, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
@@ -75,14 +75,7 @@ function MobileMenu({ active }: { active: string }) {
             {link.label}
           </MenuItem>
         ))}
-        <MenuItem
-          component="a"
-          href={site.repoUrl}
-          target="_blank"
-          rel="noreferrer"
-          onClick={close}
-          sx={menuItemSx}
-        >
+        <MenuItem component="a" href={site.repoUrl} {...external} onClick={close} sx={menuItemSx}>
           {/* The one row in this menu that leaves the page. */}
           GitHub
           <ExternalIcon />
@@ -162,9 +155,8 @@ export function Nav() {
             <IconButton
               color="inherit"
               href={site.repoUrl}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub"
+              {...external}
+              aria-label="GitHub (opens in a new tab)"
               sx={{ display: { xs: 'none', md: 'inline-flex' } }}
             >
               <GitHubIcon />

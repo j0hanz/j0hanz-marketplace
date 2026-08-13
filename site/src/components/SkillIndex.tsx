@@ -8,6 +8,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography, { type TypographyProps } from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import type { ReactNode } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { countLabel, type Plugin } from '../site';
 import { codeSx, lit, outline, tag } from '../theme/tokens';
@@ -34,6 +35,31 @@ const tagSx = { ...tag, py: 0.5 } as const;
 const Tag = (props: TypographyProps) => (
   <Typography component="span" variant="caption" color="textSecondary" sx={tagSx} {...props} />
 );
+
+/** The row shell: whatever the caller lines up on top, its description beneath. */
+function Entry({ description, children }: { description: string; children: ReactNode }) {
+  return (
+    <ListItem disableGutters alignItems="flex-start">
+      <ListItemText
+        slotProps={{
+          primary: { component: 'div' },
+          secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
+        }}
+        primary={
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: 'wrap', alignItems: 'center' }}
+          >
+            {children}
+          </Stack>
+        }
+        secondary={description}
+      />
+    </ListItem>
+  );
+}
 
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
@@ -99,63 +125,31 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
                   <List disablePadding>
                     {plugin.skills.map((skill) => (
-                      <ListItem key={skill.name} disableGutters alignItems="flex-start">
-                        <ListItemText
-                          slotProps={{
-                            primary: { component: 'div' },
-                            secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
-                          }}
-                          primary={
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              useFlexGap
-                              sx={{ flexWrap: 'wrap', alignItems: 'center' }}
-                            >
-                              {!skill.command && (
-                                <Tooltip title={MODEL_LOADED}>
-                                  <Tag tabIndex={0} aria-label={`model-loaded. ${MODEL_LOADED}`}>
-                                    model-loaded
-                                  </Tag>
-                                </Tooltip>
-                              )}
-                              <Typography component="code" variant="body2" sx={codeSx}>
-                                {skill.command ?? skill.name}
-                              </Typography>
-                              {skill.argumentHint && (
-                                <Tag component="code" sx={codeSx}>
-                                  {skill.argumentHint}
-                                </Tag>
-                              )}
-                            </Stack>
-                          }
-                          secondary={skill.description}
-                        />
-                      </ListItem>
+                      <Entry key={skill.name} description={skill.description}>
+                        {!skill.command && (
+                          <Tooltip title={MODEL_LOADED}>
+                            <Tag tabIndex={0} aria-label={`model-loaded. ${MODEL_LOADED}`}>
+                              model-loaded
+                            </Tag>
+                          </Tooltip>
+                        )}
+                        <Typography component="code" variant="body2" sx={codeSx}>
+                          {skill.command ?? skill.name}
+                        </Typography>
+                        {skill.argumentHint && (
+                          <Tag component="code" sx={codeSx}>
+                            {skill.argumentHint}
+                          </Tag>
+                        )}
+                      </Entry>
                     ))}
                     {plugin.agents.map((agent) => (
-                      <ListItem key={agent.name} disableGutters alignItems="flex-start">
-                        <ListItemText
-                          slotProps={{
-                            primary: { component: 'div' },
-                            secondary: { sx: { mt: 0.5, maxWidth: '72ch' } },
-                          }}
-                          primary={
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              useFlexGap
-                              sx={{ flexWrap: 'wrap', alignItems: 'center' }}
-                            >
-                              <Typography component="code" variant="body2" sx={codeSx}>
-                                {agent.name}
-                              </Typography>
-                              <Tag>agent</Tag>
-                            </Stack>
-                          }
-                          secondary={agent.description}
-                        />
-                      </ListItem>
+                      <Entry key={agent.name} description={agent.description}>
+                        <Typography component="code" variant="body2" sx={codeSx}>
+                          {agent.name}
+                        </Typography>
+                        <Tag>agent</Tag>
+                      </Entry>
                     ))}
                   </List>
                 </AccordionDetails>

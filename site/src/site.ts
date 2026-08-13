@@ -43,3 +43,6 @@ export const site: Site = raw;
 
 export const countLabel = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? '' : 's'}`;
+
+/** Anything that leaves the page wears these, plus a new-tab announcement. */
+export const external = { target: '_blank', rel: 'noreferrer' } as const;

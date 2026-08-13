@@ -5,7 +5,7 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
-import { site } from '../site';
+import { external, site } from '../site';
 import { mono, rule, tag } from '../theme/tokens';
 import { Command } from './Command';
 
@@ -76,8 +76,8 @@ export function Hero() {
                 size="large"
                 color="inherit"
                 href={site.repoUrl}
-                target="_blank"
-                rel="noreferrer"
+                {...external}
+                aria-label="GitHub (opens in a new tab)"
                 startIcon={<GitHubIcon />}
               >
                 GitHub

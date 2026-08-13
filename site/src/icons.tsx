@@ -104,6 +104,13 @@ export const SearchIcon = (props: SvgIconProps) => (
   </SvgIcon>
 );
 
+// SearchIcon's frame with an X inside: the search that came back with nothing.
+export const NoResultsIcon = (props: SvgIconProps) => (
+  <SvgIcon {...props}>
+    <path d="M3 3h14v14H3zm2 2v10h10V5zm4.59 3L5 7.41 6.41 6 11 10.59 13.59 8 15 9.41 12.41 12 15 14.59 13.59 16 11 13.41 8.41 16 7 14.59 9.59 12zm8.12 7.29 1.42-1.42-3-3-1.42 1.42z" />
+  </SvgIcon>
+);
+
 export const CloseIcon = (props: SvgIconProps) => (
   <SvgIcon {...props}>
     <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
