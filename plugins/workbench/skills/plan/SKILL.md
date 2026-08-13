@@ -57,6 +57,7 @@ First matching row wins, read top to bottom.
 | Decision settled, outlives the effort       | [write-adr](../write-adr/SKILL.md)                                                                               |
 | Fogged — too big for one session            | [frontier](../frontier/SKILL.md)                                                                                 |
 | Authoring a skill or a hook                 | [write-skills](../write-skills/SKILL.md), [write-hooks](../write-hooks/SKILL.md)                                 |
+| Session ending, work unfinished             | [handoff](../handoff/SKILL.md)                                                                                   |
 
 Named an output document rather than a plan (proposal, RFC, PRD) — that is `writing-docs`, not this skill.
 
