@@ -21,6 +21,8 @@ Three review the diff once code lands, each on its own axis, none on the others'
 
 Two sit off the route entirely: [write-skills](../write-skills/SKILL.md) and [write-hooks](../write-hooks/SKILL.md) author the Claude Code extensions themselves, not the work they run on.
 
+Four skills join the chain. [refactor](../refactor/SKILL.md) enters at a behavior-preserving structure change — behavior is settled, so it bypasses write-specs and write-plan, executes the move with tests as the net, and hands to [qc](../qc/SKILL.md). [diagnose](../diagnose/SKILL.md) enters at a reported symptom whose cause is unknown — it reproduces and narrows by running the code, then hands the cause and repro to [write-plan](../write-plan/SKILL.md). [spec-hunt](../spec-hunt/SKILL.md) and [plan-hunt](../plan-hunt/SKILL.md) are opt-in adversarial passes, each sitting after its authoring skill — spec-hunt after write-specs, plan-hunt after write-plan — and handing a marked artifact back to it; they mirror [bug-hunt](../bug-hunt/SKILL.md), which reviews a diff, not an in-progress artifact.
+
 ## Size the ask
 
 Four reads, in order:
@@ -47,10 +49,12 @@ First matching row wins, read top to bottom.
 | Behavior loose, user has opinions           | [grilling](../grilling/SKILL.md) → [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md) |
 | Behavior needs fixing, no forks left        | [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md)                                    |
 | Behavior fixed, route missing               | [write-plan](../write-plan/SKILL.md)                                                                             |
+| Behavior-preserving structure change        | [refactor](../refactor/SKILL.md) → [qc](../qc/SKILL.md)                                                          |
 | Behavior settled, code to write, no plan    | [tdd](../tdd/SKILL.md)                                                                                           |
 | Plan written, not run                       | [run-plan](../run-plan/SKILL.md)                                                                                 |
 | Change landed against a spec                | [verify-specs](../verify-specs/SKILL.md)                                                                         |
 | Test plan, manual cases, suite, bug report  | [write-qa](../write-qa/SKILL.md)                                                                                 |
+| Reported symptom, cause unknown             | [diagnose](../diagnose/SKILL.md) → [write-plan](../write-plan/SKILL.md)                                          |
 | Code correctness or security in doubt       | [bug-hunt](../bug-hunt/SKILL.md)                                                                                 |
 | Branch diff, review structure               | [qc](../qc/SKILL.md)                                                                                             |
 | Readability only, behavior unchanged        | [clean-code](../clean-code/SKILL.md)                                                                             |
