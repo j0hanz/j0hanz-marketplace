@@ -129,6 +129,16 @@
           animation: none;
         }
       }
+      /* The error outcome of the initial load, flipped on by the watchdog in
+         the theme script: the bar stops promising, the skeleton stops waiting,
+         and the stalled block below carries the visit instead. */
+      :root[data-stalled] .shell::after {
+        width: 100%;
+        animation: none;
+      }
+      :root[data-stalled] .skel {
+        display: none;
+      }
       /* Styles the <noscript> fallback at the end of <body>. The shell is a
          wait; without scripting there is nothing to wait for, so that block
          also stops the loading bar and this carries the page instead. */
@@ -157,7 +167,8 @@
       /* Page skeleton: reserves the hero and grid the shell does not, so a slow
          load fills the blank with intent instead of ground. Fades in at 300ms
          so a fast mount never paints it; createRoot empties #root on mount, so
-         it is only ever the gap. Reduced-motion hides it rather than shimmer. */
+         it is only ever the gap. Reduced motion keeps the same placeholder,
+         static: the layout is still promised, the wait just doesn't move. */
       .skel {
         max-width: 1200px;
         margin: 0 auto;
@@ -251,7 +262,13 @@
       }
       @media (prefers-reduced-motion: reduce) {
         .skel {
-          display: none;
+          animation: none;
+        }
+        .skel-line,
+        .skel-panel,
+        .skel-card {
+          animation: none;
+          background-image: none;
         }
       }
     </style>
@@ -262,6 +279,11 @@
       returning visitor who chose dark under a light OS gets a light nav bar that
       flips as React arrives. Storage keys are MUI's defaults; anything other than
       an explicit choice — 'system', unset, junk — falls back to the OS.
+
+      The second half is the load's error outcome. The shell bar below promises
+      a mount; if none has come 10s in, data-stalled stops the bar and the
+      skeleton, and the stalled block steps in with a way out. App sets
+      data-ready on mount, so a page that was merely slow never shows it.
     -->
     <script>
       try {
@@ -270,6 +292,12 @@
           mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         document.documentElement.classList.add(mode);
       } catch (e) {}
+      setTimeout(function () {
+        if ('ready' in document.documentElement.dataset) return;
+        document.documentElement.dataset.stalled = '';
+        var stalled = document.getElementById('stalled');
+        if (stalled) stalled.hidden = false;
+      }, 10000);
     </script>
   </head>
   <body>
@@ -304,6 +332,22 @@
           <span class="skel-card"></span>
           <span class="skel-card"></span>
         </div>
+      </div>
+      <!-- The load's error outcome, revealed by the watchdog when React has not
+           mounted 10s in. createRoot empties #root on mount, so a page that
+           arrives late still never shows it. Same deal as the noscript below:
+           the visit should end with the command it came for. -->
+      <div class="fallback" id="stalled" role="status" hidden>
+        <p>
+          The page is taking longer than it should. <a href="">Reload it</a>, or check the
+          connection.
+        </p>
+        <p>Adding the marketplace does not need this page:</p>
+        <code>/plugin marketplace add %REPO%</code>
+        <p>
+          Every plugin, and what each one ships, is listed at
+          <a href="https://github.com/%REPO%">github.com/%REPO%</a>.
+        </p>
       </div>
     </div>
     <!--

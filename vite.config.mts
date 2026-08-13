@@ -35,7 +35,7 @@ const ORIGIN = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/`
   : '';
 
-const THEME_SCRIPT_HASH = 'sha256-mr5w0PfwtqX+AzOutYW6156IpnwUWi121zAijce5DIs=';
+const THEME_SCRIPT_HASH = 'sha256-qtbieZlDsmW7yCtw/DDZy9Zdyb9cOgyCVPs9MC22EJs=';
 
 interface Entry {
   displayName: string;
