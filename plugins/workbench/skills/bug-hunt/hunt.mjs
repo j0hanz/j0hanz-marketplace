@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync, readdirSync } from 'node:fs';
 import { join, extname, relative, resolve, sep } from 'node:path';
+import { parseArgs } from 'node:util';
 
 const SKIP_DIR = new Set([
   '.git',
@@ -78,9 +79,10 @@ const FAMILY = {
 const family = (p) => FAMILY[extname(p)] ?? 'other';
 
 // Each tell names a place to look, never a finding. `only` scopes it to the
-// families where it means something, and `whole` runs it against the whole file
-// rather than a line — a tag that fires on healthy code trains the reader to
-// skip the whole list, and a promise chain spreads its .catch over four lines.
+// families where it means something. Every tell runs against the whole file
+// rather than line by line — a tag that fires on healthy code trains the reader
+// to skip the list, and the shapes worth tagging spread over lines: an empty
+// catch sits on two, a promise chain carries its .catch four down.
 const TELLS = [
   { tag: 'SWALLOWED', re: /catch\s*(\([^)]*\))?\s*\{\s*\}|except[^:\n]*:\s*pass\b|rescue\s+nil\b/ },
   {
@@ -91,7 +93,7 @@ const TELLS = [
     tag: 'ESCAPE',
     re: /\bas\s+any\b|@ts-ignore|@ts-expect-error|#\s*type:\s*ignore|\.unwrap\(\)|\bpanic!\(/,
   },
-  { tag: 'UNAWAITED', re: /\.then\((?![\s\S]{0,300}?\.catch)/, only: ['js'], whole: true },
+  { tag: 'UNAWAITED', re: /\.then\((?![\s\S]{0,300}?\.catch)/, only: ['js'] },
   {
     tag: 'SECRET',
     re: /(api[_-]?key|secret|passwd|password|token|private[_-]?key)\s*[:=]\s*["'][^"'\s]{8,}["']/i,
@@ -113,21 +115,33 @@ const EXPORTS = [
   /^\s*pub\s+(?:async\s+)?(?:fn|struct|enum|trait)\s+([A-Za-z_]\w*)/,
 ];
 
+// PROBE_LIMIT and COMMON_WORD_FILES are quoted back in the sentences that
+// disclose them, so each reads one name — a cap that drifts from its own
+// disclosure turns the brief into a liar. TAG_WIDTH derives from the tags
+// themselves: add a tag and the column stays aligned.
+const MIN_SYMBOL_LENGTH = 4;
+const PROBE_LIMIT = 40;
+const COMMON_WORD_FILES = 15;
+const CALLERS_SHOWN = 8;
+const TELLS_SHOWN = 120;
+const ONE_PASS_FILES = 40;
+const ONE_PASS_LINES = 6000;
+const TAG_WIDTH = Math.max(...TELLS.map((t) => t.tag.length));
+
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const were = (n) => (n === 1 ? 'was' : 'were');
 
 // stderr piped, not inherited: resolving the default branch probes refs that are
 // expected to be missing, and those fatals are not the user's problem.
-const gitRaw = (...args) =>
+// trimEnd, never trim: `status --porcelain` leads with a status column whose
+// first char is a space for an unstaged edit, and stripping it shifts every path
+// left by one. Trailing newline is all any caller here needs gone.
+const git = (...args) =>
   execFileSync('git', args, {
     encoding: 'utf8',
     maxBuffer: 32 << 20,
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-// Trimmed by default — every caller but `status --porcelain` wants one value.
-// Porcelain leads with a status column whose first char is a space for an
-// unstaged edit, and trimming it shifts every path left by one.
-const git = (...args) => gitRaw(...args).trim();
+  }).trimEnd();
 
 const auditable = (p) =>
   CODE.has(extname(p)) &&
@@ -149,10 +163,28 @@ function walk(dir, out = []) {
 // `from` is the directory the user invoked in — named paths are relative to it,
 // while everything else here is relative to the repo root we already chdir'd to.
 function resolveScope(args, from) {
-  const sinceAt = args.indexOf('--since');
-  const named = args.filter(
-    (a, i) => !a.startsWith('--') && !(sinceAt !== -1 && i === sinceAt + 1),
-  );
+  // strict: an unknown flag or a `--since` with no ref throws here rather than
+  // being dropped on the floor, which would silently audit some other scope.
+  let since, named;
+  try {
+    const parsed = parseArgs({
+      args,
+      options: { since: { type: 'string' } },
+      allowPositionals: true,
+    });
+    since = parsed.values.since;
+    named = parsed.positionals;
+  } catch (e) {
+    console.error(e.message);
+    process.exit(2);
+  }
+
+  // Named paths win over --since, and a scope silently overriding another is the
+  // failure the strict parse above exists to prevent. Ask instead.
+  if (named.length > 0 && since !== undefined) {
+    console.error('name paths or pass --since, not both');
+    process.exit(2);
+  }
 
   if (named.length > 0) {
     const files = [];
@@ -171,21 +203,21 @@ function resolveScope(args, from) {
     }
     return { rule: `named on the command line (${named.join(', ')})`, files };
   }
-  if (sinceAt !== -1) {
-    const ref = args[sinceAt + 1];
-    if (!ref) {
+  if (since !== undefined) {
+    if (!since) {
       console.error('--since needs a ref');
       process.exit(2);
     }
     return {
-      rule: `changed since ${ref}`,
-      files: git('diff', '--name-only', `${ref}..HEAD`).split('\n'),
+      rule: `changed since ${since}`,
+      files: git('diff', '--name-only', `${since}..HEAD`).split('\n'),
     };
   }
 
   // Porcelain v1: two status chars, a space, then the path. A `D` in either
-  // column means the file is gone — counting it puts a 0-line entry in scope.
-  const dirty = gitRaw('status', '--porcelain')
+  // column means the file is gone — keeping it only buys an unreadable-file
+  // line in the brief for a deletion there is nothing left to audit.
+  const dirty = git('status', '--porcelain')
     .split('\n')
     .map((l) => /^(..) (.*)$/.exec(l))
     .filter((m) => m && !m[1].includes('D'))
@@ -218,68 +250,82 @@ function resolveScope(args, from) {
   return null;
 }
 
-function tells(files) {
-  const hits = [];
-  for (const file of files) {
-    let text;
+// Scope names the paths; this opens them, once, for every pass that follows. A
+// file that will not open leaves by name rather than riding along as a 0-line
+// entry nobody audits.
+function readScope(paths) {
+  const source = new Map();
+  const unreadable = [];
+  for (const file of new Set(paths.filter(Boolean).filter(auditable))) {
     try {
-      text = readFileSync(file, 'utf8');
+      source.set(file, readFileSync(file, 'utf8'));
     } catch {
-      continue;
+      unreadable.push(file);
     }
+  }
+  return { source, unreadable };
+}
+
+function tells(source) {
+  // Keyed, not pushed: a whole-file scan matches per occurrence, and one tag
+  // twice on one line is one place to look, not two.
+  const found = new Map();
+  for (const [file, text] of source) {
     const fam = family(file);
     const lines = text.split('\n');
-    for (const { tag, re, only, whole } of TELLS) {
+    // Offsets once per file. Slicing the prefix per match to count newlines is
+    // quadratic, and a marker on every line of a 20k-line file is 20k matches.
+    const starts = [];
+    let at = 0;
+    for (const line of lines) {
+      starts.push(at);
+      at += line.length + 1;
+    }
+    for (const { tag, re, only } of TELLS) {
       if (only && !only.includes(fam)) continue;
-      if (whole) {
-        for (const m of text.matchAll(new RegExp(re.source, `${re.flags}g`))) {
-          const line = text.slice(0, m.index).split('\n').length;
-          hits.push({ file, line, text: lines[line - 1] ?? '', tag });
-        }
-      } else {
-        lines.forEach((line, i) => {
-          if (line.length <= 500 && re.test(line))
-            hits.push({ file, line: i + 1, text: line, tag });
-        });
+      // matchAll walks forward, so the cursor only ever advances — one pass over
+      // the offsets per tell, not one per match. Reset it with the tell.
+      let cursor = 0;
+      for (const m of text.matchAll(new RegExp(re.source, `${re.flags}g`))) {
+        while (cursor + 1 < starts.length && starts[cursor + 1] <= m.index) cursor += 1;
+        const line = cursor + 1;
+        found.set(`${file}:${line}:${tag}`, { file, line, text: lines[line - 1] ?? '', tag });
       }
     }
   }
+  const hits = [...found.values()];
   // Read order, not tell order — the reader walks a file top to bottom.
   hits.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
-  return hits.map((h) => `${h.file}:${h.line}  ${h.tag.padEnd(9)} ${h.text.trim().slice(0, 90)}`);
+  return hits.map(
+    (hit) =>
+      `${hit.file}:${hit.line}  ${hit.tag.padEnd(TAG_WIDTH)} ${hit.text.trim().slice(0, 90)}`,
+  );
 }
 
-function blastRadius(files) {
+function blastRadius(source) {
   const symbols = new Map();
-  for (const file of files) {
-    let lines;
-    try {
-      lines = readFileSync(file, 'utf8').split('\n');
-    } catch {
-      continue;
-    }
-    for (const line of lines) {
+  for (const [file, text] of source) {
+    for (const line of text.split('\n')) {
       for (const re of EXPORTS) {
         const name = re.exec(line)?.[1];
-        if (name && name.length >= 4) symbols.set(name, file);
+        if (name && name.length >= MIN_SYMBOL_LENGTH) symbols.set(name, file);
       }
     }
   }
 
   // Longest names first: a distinctive symbol earns the scan, `get` does not.
-  const probes = [...symbols.keys()]
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 40)
+  const ranked = [...symbols.keys()].sort((a, b) => b.length - a.length);
+  const probes = ranked
+    .slice(0, PROBE_LIMIT)
     .map((name) => [name, new RegExp(`\\b${name}\\b`), family(symbols.get(name))]);
 
-  const changed = new Set(files);
-  const universe = walk(process.cwd()).filter((p) => !changed.has(p));
+  const universe = walk(process.cwd()).filter((file) => !source.has(file));
   const callers = new Map();
-  for (const path of universe) {
-    const fam = family(path);
+  for (const file of universe) {
+    const fam = family(file);
     let text;
     try {
-      text = readFileSync(path, 'utf8');
+      text = readFileSync(file, 'utf8');
     } catch {
       continue;
     }
@@ -287,7 +333,7 @@ function blastRadius(files) {
       if (owner !== fam) continue;
       if (re.test(text)) {
         if (!callers.has(name)) callers.set(name, []);
-        callers.get(name).push(path);
+        callers.get(name).push(file);
       }
     }
   }
@@ -296,17 +342,17 @@ function blastRadius(files) {
   // it beats a stoplist: the threshold tunes itself to whatever the repo names.
   let generic = 0;
   for (const [name, paths] of callers) {
-    if (paths.length > 15) {
+    if (paths.length > COMMON_WORD_FILES) {
       callers.delete(name);
       generic += 1;
     }
   }
-  return { symbols, callers, generic };
+  return { symbols, callers, generic, unprobed: ranked.length - probes.length };
 }
 
 // Git reports paths from the repo root, so the whole run works from there.
-// Left at the invocation directory, every readFileSync below misses and the
-// brief reports a full changed set at zero lines — wrong, and silently so.
+// Left at the invocation directory, every read below misses and the brief
+// reports the whole changed set unreadable — loud, but for the wrong reason.
 const invokedIn = process.cwd();
 try {
   process.chdir(git('rev-parse', '--show-toplevel'));
@@ -324,66 +370,73 @@ if (!scope) {
   process.exit(2);
 }
 
-const files = [...new Set(scope.files.filter(Boolean).filter(auditable))];
-const sized = files.map((f) => {
-  try {
-    return [f, readFileSync(f, 'utf8').split('\n').length];
-  } catch {
-    return [f, 0];
-  }
-});
-const total = sized.reduce((n, [, l]) => n + l, 0);
+const { source, unreadable } = readScope(scope.files);
+const changed = [...source].map(([file, text]) => [file, text.split('\n').length]);
+const total = changed.reduce((n, [, lines]) => n + lines, 0);
 
-const out = [];
-out.push(
-  `## Scope\n\n${scope.rule} — ${plural(files.length, 'file')}, ${plural(total, 'line')} to read.`,
+const brief = [];
+brief.push(
+  `## Scope\n\n${scope.rule} — ${plural(changed.length, 'file')}, ${plural(total, 'line')} to read.`,
 );
-if (files.length === 0) {
-  out.push('\nNothing auditable in scope. Stop and say so.');
-  console.log(out.join('\n'));
+if (unreadable.length > 0) {
+  brief.push(
+    `\n${plural(unreadable.length, 'file')} in scope could not be read and left the audit:`,
+  );
+  for (const file of unreadable) brief.push(`    ${file}`);
+}
+if (changed.length === 0) {
+  brief.push('\nNothing auditable in scope. Stop and say so.');
+  console.log(brief.join('\n'));
   process.exit(0);
 }
-if (files.length > 40 || total > 6000) {
-  out.push(
+if (changed.length > ONE_PASS_FILES || total > ONE_PASS_LINES) {
+  brief.push(
     `\nOver one pass. Hunt the highest-risk subset first — external input, auth, money,\n` +
       `persistence, deletion — and name in the report exactly what you left unread.`,
   );
 }
 
-out.push(`\n## Changed\n`);
-for (const [f, l] of sized.sort((a, b) => b[1] - a[1])) out.push(`${f}  (${plural(l, 'line')})`);
+brief.push(`\n## Changed\n`);
+for (const [file, lines] of changed.sort((a, b) => b[1] - a[1]))
+  brief.push(`${file}  (${plural(lines, 'line')})`);
 
-const { symbols, callers, generic } = blastRadius(files);
-out.push(`\n## Blast radius\n`);
+const { symbols, callers, generic, unprobed } = blastRadius(source);
+brief.push(`\n## Blast radius\n`);
 if (callers.size === 0) {
-  out.push(
+  brief.push(
     symbols.size === 0
       ? 'No exported symbols found in the changed set — grep the contracts by hand.'
-      : `${plural(symbols.size, 'exported symbol')}, no callers outside the changed set.`,
+      : `${plural(symbols.size - unprobed, 'exported symbol')} probed, no callers outside the changed set.`,
   );
 } else {
-  out.push('Read enough of each caller to judge the changed contract, then stop.\n');
+  brief.push('Read enough of each caller to judge the changed contract, then stop.\n');
   for (const [name, paths] of [...callers].sort((a, b) => b[1].length - a[1].length)) {
-    out.push(`${name}  (${symbols.get(name)})`);
-    for (const p of paths.slice(0, 8)) out.push(`    ${p}`);
-    if (paths.length > 8) out.push(`    …and ${paths.length - 8} more`);
+    brief.push(`${name}  (${symbols.get(name)})`);
+    for (const caller of paths.slice(0, CALLERS_SHOWN)) brief.push(`    ${caller}`);
+    if (paths.length > CALLERS_SHOWN) brief.push(`    …and ${paths.length - CALLERS_SHOWN} more`);
   }
 }
 if (generic > 0) {
-  out.push(
-    `\n${plural(generic, 'symbol')} hit more than 15 files and ${generic === 1 ? 'was' : 'were'}` +
+  brief.push(
+    `\n${plural(generic, 'symbol')} hit more than ${COMMON_WORD_FILES} files and ${were(generic)}` +
       ` dropped as common words. Grep them by hand if the change touched their contract.`,
   );
 }
+if (unprobed > 0) {
+  brief.push(
+    `\n${plural(unprobed, 'shorter symbol')} fell past the ${PROBE_LIMIT}-symbol probe limit and` +
+      ` ${were(unprobed)} never scanned for callers. Grep them by hand.`,
+  );
+}
 
-const hits = tells(files);
-out.push(`\n## Tells\n`);
-out.push(
+const hits = tells(source);
+brief.push(`\n## Tells\n`);
+brief.push(
   hits.length === 0
     ? 'None. The taxonomy still applies — most defects carry no grep signature.'
     : `${plural(hits.length, 'place')} to look. Each is a question, not a finding.\n`,
 );
-for (const h of hits.slice(0, 120)) out.push(h);
-if (hits.length > 120) out.push(`…and ${hits.length - 120} more`);
+for (const hit of hits.slice(0, TELLS_SHOWN)) brief.push(hit);
+if (hits.length > TELLS_SHOWN) brief.push(`…and ${hits.length - TELLS_SHOWN} more`);
 
-console.log(out.join('\n'));
+console.log(brief.join('\n'));
