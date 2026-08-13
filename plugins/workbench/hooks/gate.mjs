@@ -25,9 +25,8 @@ export const misplacement = (filePath, project) => {
   if (parts && correctlyPlaced(parts)) return null;
 
   const stem = match[1];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA');
   const corrected = join(root, stemHome(root, stem) ?? `${today}-${stem}`, base);
-  if (resolve(corrected) === abs) return null;
 
   const where = relative(project, corrected).replace(/\\/g, '/');
   return {

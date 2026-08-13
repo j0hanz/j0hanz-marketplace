@@ -301,7 +301,7 @@ Without `asyncRewake`, output waits for next user turn. `.ts` filter lives in sc
 # --- preamble ---
 # fires:  PreToolUse · matcher Bash · if Bash(npm install *)
 # reads:  .tool_input (the whole object)
-# emits:  ask + updatedInput carrying --save-exact
+# emits:  allow + updatedInput carrying --save-exact, plus systemMessage naming rewrite
 # fails:  exit 0, silent — the original command stands
 # verify: bash hooks/pin-installs.sh < last-payload.json | jq .
 
@@ -310,15 +310,23 @@ cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
 case "$cmd" in *--save-exact*) exit 0 ;; esac
 
 # updatedInput REPLACES the entire input object — merge, never rebuild from scratch.
-jq -c --arg new "$cmd --save-exact" '{hookSpecificOutput: {
-  hookEventName: "PreToolUse",
-  permissionDecision: "ask",
-  permissionDecisionReason: "Pinning this install to an exact version.",
-  updatedInput: (.tool_input + {command: $new})
-}}' <<<"$input"
+jq -c --arg new "$cmd --save-exact" '{
+  hookSpecificOutput: {
+    hookEventName: "PreToolUse",
+    permissionDecision: "allow",
+    permissionDecisionReason: "Pinning this install to an exact version.",
+    updatedInput: (.tool_input + {command: $new})
+  },
+  systemMessage: ("workbench: pinned install — " + $new)
+}' <<<"$input"
 ```
 
-`ask`, not `allow`: rewrite nobody sees is rewrite nobody can catch, `ask` shows modified command in prompt.
+`allow`, not `ask`: `updatedInput` honored **only** with `allow` (SKILL.md step 5), so `ask`
+here shows prompt and silently drops rewrite — install runs unpinned, hook reports success.
+Rewrite nobody sees is rewrite nobody can catch, so `systemMessage` names it in transcript.
+`allow` also skips permission prompt this call would otherwise get — rewrite hook that must
+keep prompt cannot carry `updatedInput` at all; put corrected value in reason, let agent
+reissue.
 
 ---
 

@@ -32,7 +32,7 @@ const newestMtime = (dir, depth = 0) => {
   return best;
 };
 
-export const stalenessNote = (pluginRoot, project) => {
+const stalenessNote = (pluginRoot, project) => {
   if (!pluginRoot || !CACHED.test(pluginRoot)) return null;
   let manifest;
   try {

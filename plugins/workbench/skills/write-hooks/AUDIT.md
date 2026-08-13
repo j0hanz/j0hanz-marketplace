@@ -34,8 +34,10 @@ bash path/to/hook.sh < payload.json; echo "exit=$?"
 
 Fix in this order, cuz earlier defect sits, more it silently costs.
 
-1. **Guards that don't guard** — exit 1 instead of 2; `set -e` with unguarded `grep`; `deny`
-   carrying `updatedInput`; `allow` mistaken for security grant.
+1. **Guards that don't guard** — exit 1 instead of 2; `set -e` with unguarded `grep`; any
+   decision other than `allow` carrying `updatedInput` (`ask`, `escalate` and `deny` all
+   drop rewrite silently, so hook reports success and original stands); `allow` mistaken
+   for security grant.
 2. **Hooks that never fire** — `if` on non-tool event; `mcp__server` with no `__.*`;
    unanchored regex matcher; matcher compared against something other than what author
    assumed; `Stop` hook in agent frontmatter still written for `Stop` (SKILL.md step 6).
