@@ -1,26 +1,11 @@
 // fires:  PreToolUse (matcher Skill), UserPromptExpansion (matcher ^compass:)
-// reads:  .tool_input.skill or .command_name, .cwd
+// reads:  .tool_input.skill or .command_name, .cwd, ../skills/
 // emits:  the live effort directory, its stem, and the artifacts already in it
 // fails:  any error -> exit 0, no output, nothing changes
 // verify: node hooks/compass-effort.mjs < payload.json; echo $?
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-
-const SKILLS = new Set([
-  'frontier',
-  'grilling',
-  'plan',
-  'prototype',
-  'qc',
-  'research',
-  'run-plan',
-  'tdd',
-  'verify-specs',
-  'write-adr',
-  'write-plan',
-  'write-specs',
-]);
 
 const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
 const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map)\.md$/;
@@ -29,7 +14,14 @@ try {
   const payload = JSON.parse(readFileSync(0, 'utf8'));
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '').trim();
   const scoped = /^compass:(.+)$/.exec(invoked);
-  if (!scoped || !SKILLS.has(scoped[1])) process.exit(0);
+  if (!scoped) process.exit(0);
+
+  const skills = new Set(
+    readdirSync(new URL('../skills/', import.meta.url), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+  );
+  if (!skills.has(scoped[1])) process.exit(0);
 
   const root = join(payload.cwd ?? process.cwd(), 'docs', 'plan');
   const efforts = readdirSync(root, { withFileTypes: true })
