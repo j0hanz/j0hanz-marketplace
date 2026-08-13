@@ -6,18 +6,28 @@ const PREFIX = 'workbench:';
 const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
 const ARTIFACT = /^(.+)\.(spec|plan|run|verify|map|hunt|test-plan|cases|regression)\.md$/;
 
+let event = '';
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
+  event = String(payload.hook_event_name ?? '');
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '').trim();
-  if (!invoked.startsWith(PREFIX)) process.exit(0);
+  const prefixed = invoked.startsWith(PREFIX);
+  if (event === 'PreToolUse' && !prefixed) process.exit(0);
   const skills = new Set(
     readdirSync(new URL('../skills/', import.meta.url), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name),
   );
-  if (!skills.has(invoked.slice(PREFIX.length))) process.exit(0);
+  if (!skills.has(prefixed ? invoked.slice(PREFIX.length) : invoked)) process.exit(0);
   const root = join(process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd(), 'docs', 'plan');
-  const efforts = readdirSync(root, { withFileTypes: true })
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch (e) {
+    if (e?.code !== 'ENOENT') throw e;
+    process.exit(0);
+  }
+  const efforts = entries
     .filter((entry) => entry.isDirectory() && EFFORT_DIR.test(entry.name))
     .map((entry) => entry.name)
     .sort();
@@ -39,7 +49,7 @@ try {
   }
   const message = lines.join('\n');
   process.stdout.write(
-    payload.hook_event_name === 'PreToolUse'
+    event === 'PreToolUse'
       ? JSON.stringify({
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
@@ -48,6 +58,8 @@ try {
         })
       : message,
   );
-} catch {
+} catch (e) {
+  const note = `workbench-effort hook: ${e?.message ?? e}`;
+  process.stdout.write(event === 'PreToolUse' ? JSON.stringify({ systemMessage: note }) : note);
   process.exit(0);
 }

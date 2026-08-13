@@ -14,7 +14,7 @@
     ],
     "UserPromptExpansion": [
       {
-        "matcher": "^workbench:",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
