@@ -23,7 +23,7 @@ One hook, one job. Hook that gates _and_ logs = two hooks — fail differently, 
 | **gate**    | decides whether something proceeds | `PreToolUse`, `PermissionRequest`, `Stop`             | `permissionDecision` · `decision:"block"`                                    | exit 0 + `systemMessage`. **Gate that cannot evaluate must not deny** |
 | **brief**   | puts facts in agent's context      | `SessionStart`, `UserPromptSubmit`, `PostToolBatch`   | `hookSpecificOutput.additionalContext`                                       | emit nothing                                                          |
 | **reflex**  | side effect only, decides nothing  | `PostToolUse` (`async`), `Notification`, `SessionEnd` | none synchronously — `async` + `asyncRewake` still reaches agent (pattern 6) | emit nothing                                                          |
-| **rewrite** | changes payload in flight          | `PreToolUse`, `PostToolUse`, `MessageDisplay`         | `updatedInput` · `updatedToolOutput` · `displayContent`                      | emit nothing; original stands                                         |
+| **rewrite** | changes payload in flight          | `PreToolUse`, `PostToolUse`, `MessageDisplay`         | `updatedInput` (needs `allow`) · `updatedToolOutput` · `displayContent`      | emit nothing; original stands                                         |
 
 Last column load-bearing: blocking session cuz `jq` missing turns lint problem
 into stuck terminal. Hooks not security boundary anyway — `if` filter fails open by design.
@@ -183,9 +183,9 @@ Rules that fall out of that table:
 - Deny reason names the **repair**: "Use `rg`, not `grep` — respects .gitignore here" beats
   "blocked by policy". Refusal with no alternative gets retried verbatim. `PreToolUse` also
   accepts `additionalContext`, so gate can explain itself without denying.
-- `updatedInput` honored with `allow` or `ask` (on `PermissionRequest`: `allow` only); other
-  combos undocumented — pair it with explicit decision. `deny` plus `updatedInput`
-  drops rewrite.
+- `updatedInput` honored **only** with `permissionDecision: "allow"`. `ask`, `escalate` and
+  `deny` all drop rewrite silently — gate that both prompts and corrects path cannot exist.
+  Want prompt, put corrected path in `permissionDecisionReason` and let agent reissue.
 - Hooks run with **no controlling terminal**; `/dev/tty` fails. Emit `terminalSequence` instead
   — OSC `0`/`1`/`2`/`9`/`99`/`777` and BEL only, anything else drops whole field.
 - stdout must be **only** JSON object. Shell profile echoing on startup corrupts it;

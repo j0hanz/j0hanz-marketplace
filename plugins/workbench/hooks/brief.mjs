@@ -1,7 +1,14 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
-import { ARTIFACT, effortRoot, listEfforts, liveEffort } from './effort.mjs';
+import {
+  ARTIFACT,
+  CONVENTION,
+  effortRoot,
+  listEfforts,
+  liveEffort,
+  projectRoot,
+} from './effort.mjs';
 
 const PREFIX = 'workbench:';
 const CHAIN = ['spec', 'plan', 'run', 'verify'];
@@ -27,16 +34,13 @@ try {
     (event === 'UserPromptExpansion' &&
       existsSync(new URL(`../skills/${invoked}/SKILL.md`, import.meta.url)));
   if (!mine) process.exit(0);
-  const root = effortRoot(payload);
+  const root = effortRoot(projectRoot(payload));
   const entries = existsSync(root) ? readdirSync(root, { withFileTypes: true }) : [];
   const efforts = listEfforts(root);
   const loose = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length;
   const lines = [];
   if (efforts.length === 0) {
-    lines.push(
-      'workbench effort directory: none under docs/plan/',
-      '  convention: docs/plan/YYYY-MM-DD-<name>/ holds <name>.spec.md, <name>.plan.md, <name>.run.md, <name>.verify.md',
-    );
+    lines.push('workbench effort directory: none under docs/plan/', `  convention: ${CONVENTION}`);
   } else {
     const live = liveEffort(root, efforts);
     const files = readdirSync(join(root, live))
