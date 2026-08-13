@@ -86,7 +86,7 @@ Rewrites a rough, half-formed prompt into one that works on current Claude model
 
 Every tool for the job on one bench: decide, spec, plan, build test-first, review, verify — plus authoring the skills, hooks and QA docs you reach for next
 
-- Commands: `/workbench:bug-hunt`, `/workbench:clean-code`, `/workbench:frontier`, `/workbench:grilling`, `/workbench:plan`, `/workbench:prototype`, `/workbench:qc`, `/workbench:research`, `/workbench:run-plan`, `/workbench:tdd`, `/workbench:verify-specs`, `/workbench:write-adr`, `/workbench:write-hooks`, `/workbench:write-plan`, `/workbench:write-qa`, `/workbench:write-skills`, `/workbench:write-specs`
+- Commands: `/workbench:architecture-audit`, `/workbench:bug-hunt`, `/workbench:clean-code`, `/workbench:frontier`, `/workbench:grilling`, `/workbench:plan`, `/workbench:prototype`, `/workbench:qc`, `/workbench:research`, `/workbench:run-plan`, `/workbench:tdd`, `/workbench:verify-specs`, `/workbench:write-adr`, `/workbench:write-hooks`, `/workbench:write-plan`, `/workbench:write-qa`, `/workbench:write-skills`, `/workbench:write-specs`
 - Hooks: `PreToolUse`, `UserPromptExpansion`
 
 ### output-styles

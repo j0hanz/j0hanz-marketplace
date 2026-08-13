@@ -17,7 +17,7 @@ Skills run beside a link rather than in it: [research](../research/SKILL.md) fee
 
 Three review the diff once code lands, each on its own axis, none on the others': [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure, [clean-code](../clean-code/SKILL.md) for readability.
 
-[frontier](../frontier/SKILL.md) replaces the front of the chain when the way to done is not visible yet.
+[frontier](../frontier/SKILL.md) replaces the front of the chain when the way to done is not visible yet. [architecture-audit](../architecture-audit/SKILL.md) sits before the chain rather than on it — whole repo, no diff — and feeds one finding to [write-plan](../write-plan/SKILL.md) or the whole list to [frontier](../frontier/SKILL.md).
 
 Two sit off the route entirely: [write-skills](../write-skills/SKILL.md) and [write-hooks](../write-hooks/SKILL.md) author the Claude Code extensions themselves, not the work they run on.
 
@@ -38,24 +38,25 @@ Ambiguous between two forks: ask one question. Reach [grilling](../grilling/SKIL
 
 First matching row wins, read top to bottom.
 
-| Ask                                        | Flow                                                                                                             |
-| :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
-| Known, one file, no forks, no new behavior | none — do it                                                                                                     |
-| Facts missing                              | [research](../research/SKILL.md) first, in background                                                            |
-| Look or behavior is the open question      | [prototype](../prototype/SKILL.md) → [write-specs](../write-specs/SKILL.md)                                      |
-| Behavior loose, user has opinions          | [grilling](../grilling/SKILL.md) → [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md) |
-| Behavior needs fixing, no forks left       | [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md)                                    |
-| Behavior fixed, route missing              | [write-plan](../write-plan/SKILL.md)                                                                             |
-| Behavior settled, code to write, no plan   | [tdd](../tdd/SKILL.md)                                                                                           |
-| Plan written, not run                      | [run-plan](../run-plan/SKILL.md)                                                                                 |
-| Change landed against a spec               | [verify-specs](../verify-specs/SKILL.md)                                                                         |
-| Test plan, manual cases, suite, bug report | [write-qa](../write-qa/SKILL.md)                                                                                 |
-| Code correctness or security in doubt      | [bug-hunt](../bug-hunt/SKILL.md)                                                                                 |
-| Branch diff, review structure              | [qc](../qc/SKILL.md)                                                                                             |
-| Readability only, behavior unchanged       | [clean-code](../clean-code/SKILL.md)                                                                             |
-| Decision settled, outlives the effort      | [write-adr](../write-adr/SKILL.md)                                                                               |
-| Fogged — too big for one session           | [frontier](../frontier/SKILL.md)                                                                                 |
-| Authoring a skill or a hook                | [write-skills](../write-skills/SKILL.md), [write-hooks](../write-hooks/SKILL.md)                                 |
+| Ask                                         | Flow                                                                                                             |
+| :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- |
+| Known, one file, no forks, no new behavior  | none — do it                                                                                                     |
+| Facts missing                               | [research](../research/SKILL.md) first, in background                                                            |
+| Look or behavior is the open question       | [prototype](../prototype/SKILL.md) → [write-specs](../write-specs/SKILL.md)                                      |
+| Behavior loose, user has opinions           | [grilling](../grilling/SKILL.md) → [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md) |
+| Behavior needs fixing, no forks left        | [write-specs](../write-specs/SKILL.md) → [write-plan](../write-plan/SKILL.md)                                    |
+| Behavior fixed, route missing               | [write-plan](../write-plan/SKILL.md)                                                                             |
+| Behavior settled, code to write, no plan    | [tdd](../tdd/SKILL.md)                                                                                           |
+| Plan written, not run                       | [run-plan](../run-plan/SKILL.md)                                                                                 |
+| Change landed against a spec                | [verify-specs](../verify-specs/SKILL.md)                                                                         |
+| Test plan, manual cases, suite, bug report  | [write-qa](../write-qa/SKILL.md)                                                                                 |
+| Code correctness or security in doubt       | [bug-hunt](../bug-hunt/SKILL.md)                                                                                 |
+| Branch diff, review structure               | [qc](../qc/SKILL.md)                                                                                             |
+| Readability only, behavior unchanged        | [clean-code](../clean-code/SKILL.md)                                                                             |
+| Whole repo, the shape itself is the problem | [architecture-audit](../architecture-audit/SKILL.md)                                                             |
+| Decision settled, outlives the effort       | [write-adr](../write-adr/SKILL.md)                                                                               |
+| Fogged — too big for one session            | [frontier](../frontier/SKILL.md)                                                                                 |
+| Authoring a skill or a hook                 | [write-skills](../write-skills/SKILL.md), [write-hooks](../write-hooks/SKILL.md)                                 |
 
 Named an output document rather than a plan (proposal, RFC, PRD) — that is `writing-docs`, not this skill.
 
