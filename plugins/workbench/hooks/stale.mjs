@@ -5,9 +5,10 @@ import { projectRoot } from './effort.mjs';
 
 const SKIP = new Set(['node_modules', '.git', '.venv', '__pycache__']);
 const CACHED = /[\\/]plugins[\\/]cache[\\/]/;
+const MAX_DEPTH = 8;
 
 export const newest = (dir, depth = 0) => {
-  if (depth > 8) return 0;
+  if (depth > MAX_DEPTH) return 0;
   let best = 0;
   let entries;
   try {
@@ -63,14 +64,14 @@ if (import.meta.filename === process.argv[1]) {
   try {
     const payload = JSON.parse((await text(process.stdin)) || '{}');
     if (payload.stop_hook_active) process.exit(0);
-    const said = payload.transcript_path ? `${payload.transcript_path}.workbench-stale` : null;
-    if (said) {
+    const marker = payload.transcript_path ? `${payload.transcript_path}.workbench-stale` : null;
+    if (marker) {
       try {
-        statSync(said);
+        statSync(marker);
         process.exit(0);
       } catch {}
       try {
-        appendFileSync(said, 'checked\n');
+        appendFileSync(marker, 'checked\n');
       } catch {}
     }
     const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || dirname(import.meta.dirname);

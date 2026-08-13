@@ -2,10 +2,16 @@ import { text } from 'node:stream/consumers';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ARTIFACT, EFFORT_DIR, effortRoot, listEfforts, liveEffort } from './effort.mjs';
 
-const inside = (from, to) => {
+const segmentsInside = (from, to) => {
   const rel = relative(from, to);
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) ? rel.split(/[\\/]/) : null;
 };
+
+const ALLOWED_SUBDIRS = new Set(['tickets']);
+
+const correctlyPlaced = (parts) =>
+  EFFORT_DIR.test(parts[0]) &&
+  (parts.length === 2 || (parts.length === 3 && ALLOWED_SUBDIRS.has(parts[1])));
 
 export const classify = (filePath, root) => {
   try {
@@ -15,13 +21,10 @@ export const classify = (filePath, root) => {
     if (!match) return null;
 
     const abs = resolve(filePath);
-    if (!inside(dirname(dirname(root)), abs)) return null;
+    if (!segmentsInside(dirname(dirname(root)), abs)) return null;
 
-    const parts = inside(root, abs);
-    if (parts && EFFORT_DIR.test(parts[0])) {
-      if (parts.length === 2) return null;
-      if (parts.length === 3 && parts[1] === 'tickets') return null;
-    }
+    const parts = segmentsInside(root, abs);
+    if (parts && correctlyPlaced(parts)) return null;
 
     const live = liveEffort(root, listEfforts(root));
     const dir = live ?? `${new Date().toISOString().slice(0, 10)}-${match[1]}`;

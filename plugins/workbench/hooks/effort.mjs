@@ -21,7 +21,7 @@ export const listEfforts = (root) => {
 
 export const liveEffort = (root, efforts) => {
   if (efforts.length === 0) return null;
-  const touched = (dir) => {
+  const newestMtime = (dir) => {
     try {
       return readdirSync(join(root, dir))
         .filter((file) => file.endsWith('.md'))
@@ -31,6 +31,6 @@ export const liveEffort = (root, efforts) => {
     }
   };
   return efforts
-    .map((dir) => [dir, touched(dir)])
+    .map((dir) => [dir, newestMtime(dir)])
     .reduce((best, pair) => (pair[1] >= best[1] ? pair : best))[0];
 };
