@@ -20,6 +20,7 @@ Claude Code plugins: skills and agents you can install into any project.
 ```text
 /plugin install tutor@j0hanz-marketplace
 /plugin install css@j0hanz-marketplace
+/plugin install frontend@j0hanz-marketplace
 /plugin install mcp-hub@j0hanz-marketplace
 /plugin install review@j0hanz-marketplace
 /plugin install prompt@j0hanz-marketplace
@@ -60,6 +61,12 @@ Stops agents wrecking your CSS: refuses writes carrying provable defects, advise
 
 - Commands: `/css:css-audit`, `/css:css-craft`, `/css:motion-craft`
 - Hooks: `PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`
+
+### frontend
+
+Designs and reviews frontend UI: invents art-directed page direction from a brief, shapes perceived wait with the right loading pattern, and audits UI code against web interface guidelines
+
+- Commands: `/frontend:frontend-design`, `/frontend:perceived-wait`, `/frontend:web-design-guidelines`
 
 ### mcp-hub
 

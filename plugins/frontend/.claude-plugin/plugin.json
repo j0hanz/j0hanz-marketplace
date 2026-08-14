@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "frontend",
+  "displayName": "Frontend",
+  "version": "0.1.0",
+  "description": "Designs and reviews frontend UI: invents art-directed page direction from a brief (one self-contained HTML page, no build step), shapes perceived wait with the right loading pattern, and audits UI code against web interface guidelines.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": ["frontend", "ui", "user-interface"]
+}

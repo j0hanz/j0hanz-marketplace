@@ -19,6 +19,12 @@
       "category": "frontend"
     },
     {
+      "name": "frontend",
+      "source": "./plugins/frontend",
+      "description": "Designs and reviews frontend UI: invents art-directed page direction from a brief, shapes perceived wait with the right loading pattern, and audits UI code against web interface guidelines",
+      "category": "frontend"
+    },
+    {
       "name": "mcp-hub",
       "source": "./plugins/mcp-hub",
       "description": "MCP development skills for TypeScript SDK v2",
