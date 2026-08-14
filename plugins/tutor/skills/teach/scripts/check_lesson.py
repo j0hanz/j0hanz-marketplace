@@ -311,11 +311,6 @@ class DocParser(HTMLParser):
                 break
 
 
-def read_file(path):
-    with open(path, encoding="utf-8") as f:
-        return f.read()
-
-
 def check_css(line, css):
     """Offline rules on one CSS block. Every block owes these independently —
     one remote reference anywhere breaks rendering with the cable out."""
@@ -989,7 +984,8 @@ def main(argv):
         return 2
 
     try:
-        text = read_file(path)
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
     except OSError as e:
         print(f"{path}: parse - cannot read file: {e}", file=sys.stderr)
         return 2
@@ -1044,7 +1040,8 @@ def _linked_css(parser, html_dir, self_mode):
         css_text = None
         for cand in candidates:
             try:
-                css_text = read_file(cand)
+                with open(cand, encoding="utf-8") as f:
+                    css_text = f.read()
                 break
             except OSError:
                 continue

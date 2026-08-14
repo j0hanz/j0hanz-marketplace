@@ -280,13 +280,6 @@ def _record_title(body: str) -> str:
     return "(no title)"
 
 
-def save_record(rec: RecordDict, changed: set[str]) -> None:
-    out = serialize_frontmatter(
-        rec["fm"], rec["raw"], rec["body"], rec["quotes"], changed
-    )
-    write_text(rec["path"], out)
-
-
 # --- spacing ----------------------------------------------------------------
 def resolve_spacing(notes_text: str) -> tuple[float, float, str]:
     """NOTES.md spacing: (exact shape) > built-in. Returns (d, c, source)."""
@@ -1028,7 +1021,12 @@ def score_open_cold_open(cwd: str, result_line: str) -> tuple[list[dict], str]:
     # gates. Crash after records-saved but before ledger-delete leaves the
     # ledger open plus updated records — a re-run re-applies, acceptable.
     for rec, _, changed in plan:
-        save_record(rec, changed)
+        write_text(
+            rec["path"],
+            serialize_frontmatter(
+                rec["fm"], rec["raw"], rec["body"], rec["quotes"], changed
+            ),
+        )
     write_text(os.path.join(cwd, "NOTES.md"), delete_ledger_line(notes))
     rows = [
         {

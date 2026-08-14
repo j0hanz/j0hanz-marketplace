@@ -39,7 +39,6 @@ export default [
       'site/src/data',
       'plugins/**',
       'scripts/build-site-data.mjs',
-      'scripts/build-site-data.test.mjs',
       'scripts/validate.mjs',
     ],
   },
@@ -71,17 +70,10 @@ export default [
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'eslint.config.js'],
+    files: ['eslint.config.js'],
     languageOptions: {
       ...sharedLanguageOptions,
       globals: { ...globals.node },
-    },
-  },
-  {
-    files: ['site/src/**/*.ts', 'site/src/**/*.tsx'],
-    rules: {
-      // Encourage explicit return types on exported hooks/utilities.
-      // (Babel parser can't enforce noImplicitAny; tsc handles that.)
     },
   },
   deMorgan.configs.recommended,

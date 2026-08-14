@@ -1,13 +1,13 @@
 import raw from './data/marketplace.json';
 
-export interface Skill {
+interface Skill {
   name: string;
   description: string;
   argumentHint?: string;
   command?: string;
 }
 
-export interface Agent {
+interface Agent {
   name: string;
   description: string;
 }
