@@ -261,40 +261,37 @@ function walk(dir, out = []) {
   return out;
 }
 
-// A `run:` value is either inline or a block scalar; both forms carry the command
-// that gates the merge, and taking only the inline one drops every multi-line step.
-function runSteps(text) {
-  const out = [];
+function* blocks(text, anchor) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i += 1) {
-    const m = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(lines[i]);
+    const m = anchor.exec(lines[i]);
     if (!m) continue;
     const indent = m[1].length;
-    const inline = m[2].trim();
-    if (inline && !/^[|>]/.test(inline)) {
-      out.push(inline);
-      continue;
-    }
+    const body = [];
     for (let j = i + 1; j < lines.length; j += 1) {
       if (!lines[j].trim()) continue;
       if (lines[j].length - lines[j].trimStart().length <= indent) break;
-      out.push(lines[j].trim());
+      body.push(lines[j]);
     }
+    yield [m, body];
+  }
+}
+
+function runSteps(text) {
+  const out = [];
+  for (const [m, body] of blocks(text, /^(\s*)(?:-\s+)?run:\s*(.*)$/)) {
+    const inline = m[2].trim();
+    if (inline && !/^[|>]/.test(inline)) out.push(inline);
+    else out.push(...body.map((line) => line.trim()));
   }
   return out;
 }
 
 function scriptSteps(text) {
   const out = [];
-  const lines = text.split('\n');
-  for (let i = 0; i < lines.length; i += 1) {
-    const m = /^(\s*)(?:before_script|script|after_script):\s*$/.exec(lines[i]);
-    if (!m) continue;
-    const indent = m[1].length;
-    for (let j = i + 1; j < lines.length; j += 1) {
-      if (!lines[j].trim()) continue;
-      if (lines[j].length - lines[j].trimStart().length <= indent) break;
-      const item = /^\s*-\s+(.*)$/.exec(lines[j]);
+  for (const [, body] of blocks(text, /^(\s*)(?:before_script|script|after_script):\s*$/)) {
+    for (const line of body) {
+      const item = /^\s*-\s+(.*)$/.exec(line);
       if (item) out.push(item[1].trim().replace(/^["']|["']$/g, ''));
     }
   }
@@ -316,7 +313,7 @@ if (top) process.chdir(top);
 
 const files = walk(process.cwd());
 const at = new Set(files);
-const has = (p) => at.has(p) || files.some((f) => f === p || f.startsWith(`${p}/`));
+const has = (p) => at.has(p) || files.some((f) => f.startsWith(`${p}/`));
 
 const brief = [];
 const leads = [];
