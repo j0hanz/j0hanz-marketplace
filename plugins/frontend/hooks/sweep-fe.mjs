@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { text } from 'node:stream/consumers';
@@ -76,19 +75,38 @@ const dirtyFrontendFiles = (cwd) =>
   git(cwd, ['status', '--porcelain', '-z', '--no-renames', '-uall'])
     .split('\0')
     .filter(Boolean)
+    // A deleted path has nothing left to review. `--no-renames` splits a rename into its two
+    // halves, so dropping the deleted one still leaves the new path listed.
+    .filter((entry) => entry[0] !== 'D' && entry[1] !== 'D')
     .map((entry) => entry.slice(3))
     .filter((name) => FE_EXT.has(extname(name).toLowerCase()));
 
-// The marker is the once-per-file-set gate; its name is the whole payload, so it stays empty.
-// `wx` makes claiming it atomic.
-const claim = (marker) => {
+// One ledger per session, holding the paths already reported — so a file added later nags on its
+// own rather than re-nagging every file alongside it.
+const ledgerFile = (id) =>
+  join(tmpdir(), `frontend-sweep-${String(id).replace(/[^\w-]/g, '_')}.txt`);
+
+// Status paths are repo-relative, and the pid fallback below can hand two repos the same ledger,
+// so the repo root is part of the key rather than part of the filename.
+const ledgerKey = (root, file) => `${root}\t${file}`;
+
+const alreadySaid = (ledger) => {
   try {
-    writeFileSync(marker, '', { flag: 'wx' });
-  } catch (err) {
-    if (err.code === 'EEXIST') return false;
-    // The gate itself is unavailable (unwritable tmpdir). Nag rather than go silent.
+    return new Set(readFileSync(ledger, 'utf8').split('\n').filter(Boolean));
+  } catch {
+    return new Set();
   }
-  return true;
+};
+
+// ponytail: read-then-append, not a lock — two Stop hooks racing inside one session would both
+// report. Stop is serialized per session, so this stays a read-then-append until it isn't.
+const record = (ledger, keys) => {
+  try {
+    appendFileSync(ledger, keys.join('\n') + '\n');
+  } catch {
+    // The ledger is unwritable (unwritable tmpdir). These files nag again next turn — repeating
+    // beats going silent.
+  }
 };
 
 const listing = (files) =>
@@ -102,16 +120,25 @@ const main = async () => {
   if (payload.stop_hook_active) return;
   const cwd = payload.cwd || process.cwd();
   const root = git(cwd, ['rev-parse', '--show-toplevel']).trim();
-  if (!root || !isFrontendProject(root)) return;
+  if (!root) return;
 
-  const files = [...new Set(dirtyFrontendFiles(cwd))].sort();
+  // Cheapest gate first: a turn that changed no FE file is the common one, and it costs a single
+  // git probe to leave. Project detection reads package.json and walks the index, so it waits
+  // until there is something to report.
+  const dirty = [...new Set(dirtyFrontendFiles(cwd))].sort();
+  if (dirty.length === 0) return;
+
+  // No session id (a bare invocation) falls back to the caller's pid, so sessions never share a ledger.
+  const ledger = ledgerFile(payload.session_id || process.ppid);
+  const said = alreadySaid(ledger);
+  const files = dirty.filter((f) => !said.has(ledgerKey(root, f)));
   if (files.length === 0) return;
 
-  // No session id (a bare invocation) falls back to the caller's pid, so sessions never share a gate.
-  const key = createHash('sha1')
-    .update(`${payload.session_id || process.ppid}\n${files.join('\n')}`)
-    .digest('hex');
-  if (!claim(join(tmpdir(), `frontend-sweep-${key}.txt`))) return;
+  if (!isFrontendProject(root)) return;
+  record(
+    ledger,
+    files.map((f) => ledgerKey(root, f)),
+  );
 
   const systemMessage = [
     `frontend: ${files.length} changed FE file${files.length === 1 ? '' : 's'} — run frontend:guidelines`,

@@ -10,7 +10,7 @@ const HOOK = fileURLToPath(new URL('../hooks/sweep-fe.mjs', import.meta.url));
 
 const markers = () => new Set(readdirSync(tmpdir()).filter((f) => f.startsWith('frontend-sweep-')));
 
-// The hook gates on a marker named after a hash it owns, so the only safe cleanup is by difference.
+// The hook names its ledger after a session id it owns, so the only safe cleanup is by difference.
 const before = markers();
 test.after(() => {
   for (const f of markers()) if (!before.has(f)) rmSync(join(tmpdir(), f), { force: true });
@@ -20,6 +20,8 @@ test.after(() => {
 const repo = (files) => {
   const dir = mkdtempSync(join(tmpdir(), 'fe-sweep-test-'));
   execFileSync('git', ['init', '-q'], { cwd: dir });
+  // Otherwise `git add` warns about LF→CRLF on Windows, and the noise reads as a failing run.
+  execFileSync('git', ['config', 'core.autocrlf', 'false'], { cwd: dir });
   for (const [name, body] of Object.entries(files)) {
     mkdirSync(dirname(join(dir, name)), { recursive: true });
     writeFileSync(join(dir, name), body);
@@ -35,7 +37,7 @@ const run = (cwd, session_id) => runRaw(cwd, JSON.stringify({ cwd, session_id })
 
 const session = (name) => `fe-sweep-test-${process.pid}-${name}`;
 
-test('a frontend repo with dirty FE files is reported once per file set', () => {
+test('a frontend repo reports each dirty FE file once per session', () => {
   const dir = repo({
     'package.json': '{"dependencies":{"react":"19.0.0"}}',
     'App.tsx': 'export const App = () => null;\n',
@@ -51,7 +53,59 @@ test('a frontend repo with dirty FE files is reported once per file set', () => 
     assert.doesNotMatch(first.systemMessage, /notes\.md/);
     assert.doesNotMatch(first.systemMessage, /package\.json/);
 
-    assert.equal(run(dir, session('once')), '', 'same file set in same session stays silent');
+    assert.equal(run(dir, session('once')), '', 'the same files in the same session stay silent');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a file changed after a report nags on its own, not alongside the ones already said', () => {
+  const dir = repo({ 'package.json': '{"dependencies":{"react":"19.0.0"}}', 'App.tsx': 'x\n' });
+  try {
+    assert.match(JSON.parse(run(dir, session('added'))).systemMessage, /1 changed FE file —/);
+
+    writeFileSync(join(dir, 'Card.tsx'), 'y\n');
+    const second = JSON.parse(run(dir, session('added')));
+    assert.match(second.systemMessage, /1 changed FE file —/);
+    assert.match(second.systemMessage, /- Card\.tsx/);
+    assert.doesNotMatch(second.systemMessage, /App\.tsx/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('two repos sharing the pid-fallback ledger do not suppress each other', () => {
+  const fe = () =>
+    repo({ 'package.json': '{"dependencies":{"react":"19.0.0"}}', 'App.tsx': 'x\n' });
+  const one = fe();
+  const two = fe();
+  try {
+    // No session id, so both runs key the ledger on the same parent pid — only the repo root
+    // separates one repo's `App.tsx` from the other's.
+    const said = (dir) => JSON.parse(runRaw(dir, JSON.stringify({ cwd: dir }))).systemMessage;
+    assert.match(said(one), /- App\.tsx/);
+    assert.match(said(two), /- App\.tsx/, 'the second repo is not silenced by the first');
+  } finally {
+    rmSync(one, { recursive: true, force: true });
+    rmSync(two, { recursive: true, force: true });
+  }
+});
+
+test('a deleted FE file is not reported', () => {
+  const dir = repo({
+    'package.json': '{"dependencies":{"react":"19.0.0"}}',
+    'App.tsx': 'x\n',
+    'app.css': 'a{}\n',
+  });
+  try {
+    // Staged, then removed from the worktree: `git status` reports it as `AD`.
+    execFileSync('git', ['add', 'App.tsx'], { cwd: dir });
+    rmSync(join(dir, 'App.tsx'));
+
+    const out = JSON.parse(run(dir, session('deleted')));
+    assert.match(out.systemMessage, /1 changed FE file —/);
+    assert.match(out.systemMessage, /- app\.css/);
+    assert.doesNotMatch(out.systemMessage, /App\.tsx/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

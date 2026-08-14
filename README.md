@@ -67,6 +67,7 @@ Stops agents wrecking your CSS: refuses writes carrying provable defects, advise
 Designs and reviews frontend UI: invents art-directed page direction from a brief, shapes perceived wait with the right loading pattern, and audits UI code against web interface guidelines
 
 - Commands: `/frontend:design`, `/frontend:guidelines`, `/frontend:wait`
+- Hooks: `Stop`
 
 ### mcp-hub
 
