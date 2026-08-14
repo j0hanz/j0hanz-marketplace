@@ -143,10 +143,31 @@ imperative — which is as much a fact as a repo file, and earns the same path.
 | Test command run before commit, enforced only by habit | PreToolUse   |
 
 Ship only what a repo fact demands — a scaffolded `.claude/` is a filled-in template one
-directory up. Hooks land in `.claude/hooks/` with the
-registration block in `.claude/settings.json`; skills in `.claude/skills/<name>/SKILL.md`.
-This skill picks **whether and where**; [write-hooks](../write-hooks/SKILL.md) and
+directory up. Hooks land in `.claude/hooks/` with the registration block in
+`.claude/settings.json`; skills in `.claude/skills/<name>/SKILL.md`. This skill picks
+**whether and where**; [write-hooks](../write-hooks/SKILL.md) and
 [write-skills](../write-skills/SKILL.md) pick **how** and own the authoring in full.
+
+The registration block is event → array of matcher-groups, each `{ matcher?, hooks: [...] }`
+— the inner `hooks` array is required, not the command object directly. A flat
+`"Stop": [{ "type": ..., "command": ... }]` fails the schema with `Missing property "hooks"`.
+A `Stop` hook (matcher ignored) registers as:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"<repo>/.claude/hooks/<name>.sh\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This skill points write-hooks at the lead; it does not author the handler.
 
 **Done when** each one shipped cites its repo fact and the user's yes, and is authored by
 the skill that owns it — or none is, and the user is told the repo showed no reason for
