@@ -4,6 +4,7 @@ import { text } from 'node:stream/consumers';
 import {
   ARTIFACT,
   CONVENTION,
+  EFFORT_DIR,
   effortRoot,
   listEfforts,
   liveEffort,
@@ -37,7 +38,11 @@ try {
   const root = effortRoot(projectRoot(payload));
   const entries = existsSync(root) ? readdirSync(root, { withFileTypes: true }) : [];
   const efforts = listEfforts(root);
-  const loose = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).length;
+  // Only artifacts are misplaced here — a README.md under docs/plan/ is nobody's business.
+  const loose = entries.filter((entry) => entry.isFile() && ARTIFACT.test(entry.name)).length;
+  const strays = entries
+    .filter((entry) => entry.isDirectory() && !EFFORT_DIR.test(entry.name))
+    .map((entry) => entry.name);
   const lines = [];
   if (efforts.length === 0) {
     lines.push('workbench effort directory: none under docs/plan/', `  convention: ${CONVENTION}`);
@@ -85,8 +90,11 @@ try {
   if (loose > 0) {
     const s = loose === 1 ? '' : 's';
     lines.push(
-      `  docs/plan/ holds ${loose} loose .md file${s} — artifacts belong in an effort directory`,
+      `  docs/plan/ holds ${loose} loose artifact${s} — artifacts belong in an effort directory`,
     );
+  }
+  if (strays.length > 0) {
+    lines.push(`  not a dated effort directory: ${strays.map((dir) => `${dir}/`).join(', ')}`);
   }
   emit(lines.join('\n'));
 } catch (e) {
