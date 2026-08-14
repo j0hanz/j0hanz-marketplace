@@ -1,6 +1,6 @@
 ---
 name: init
-description: Bootstrap a repo's Claude Code context — a root CLAUDE.md, and the decision on whether hooks or skills earn a place.
+description: Bootstrap a repo's Claude Code context — a root CLAUDE.md, and the decision on whether hooks or skills earn a place; hook candidates surface from session history and memory.
 disable-model-invocation: true
 ---
 
@@ -28,6 +28,12 @@ looks for it.
 The brief is aim, not lines: **leads** — the questions its facts raise but cannot answer.
 Most of it fails rent on sight; a framework readable from `package.json` never belonged
 in `CLAUDE.md`.
+
+A `## Hook leads` section closes the one gap a repo walk has: it cannot see what
+you already do by hand. The probe samples recent session transcripts under
+`~/.claude` and reads memory, surfacing commands repeated across sessions and
+imperatives left in memory as hook candidates — each citing its fact. These are
+step 2's Hook question; no extra reading, the probe already parsed them.
 
 Then read. Not the repo — the four places a floor line actually comes from:
 
@@ -59,6 +65,11 @@ Four classes earn a question:
 - **Contradiction** — two lines of an existing `CLAUDE.md` disagree, or a second doctrine
   file says otherwise. Quote both, ask which stands.
 - **Hook** — the mistake made twice. Which rule has to hold every time, whoever is typing?
+  The brief's `## Hook leads` are the candidates: a command repeated across recent
+  sessions, an imperative in memory, or a configured tool no gate runs (the
+  Surprises/Gates already flagged that one). Present each viable lead as an option
+  carrying the hook event the probe proposed — `SessionStart`, `PreToolUse`, or
+  `Stop`. Ask even with no leads; a hook worth one may be invisible to the probe.
 - **Skill** — the procedure with judgement in it. Which one gets explained to a human more
   than once a month? Options are **skill** (hand off to [write-skills](../write-skills/SKILL.md)),
   **floor-line** (a line in `CLAUDE.md` is the procedure), or **neither** — never bundle line
@@ -122,6 +133,14 @@ deleted, moved behind a link, or resolved by the user's answer.
 
 An enforcer the brief names (`husky`, `pre-commit`) already handles the rule — a parallel
 hook is redundant. The hook candidate is the ungated-tooling lead, not the enforcer.
+A `## Hook leads` candidate cites its own fact — a session repeat or a memory
+imperative — which is as much a fact as a repo file, and earns the same path.
+
+| Hook lead shows                                        | Event        |
+| :----------------------------------------------------- | :----------- |
+| `git status` / `git diff` run every session start      | SessionStart |
+| Format/lint command run repeatedly before stop         | Stop         |
+| Test command run before commit, enforced only by habit | PreToolUse   |
 
 Ship only what a repo fact demands — a scaffolded `.claude/` is a filled-in template one
 directory up. Hooks land in `.claude/hooks/` with the

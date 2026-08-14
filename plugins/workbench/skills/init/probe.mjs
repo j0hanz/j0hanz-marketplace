@@ -3,8 +3,8 @@
 // emits:  the brief — stack, commands, gates, surprises, context already here, grill leads
 // fails:  exit 1 when the path will not open
 
-import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs';
-import { basename, dirname, extname, resolve } from 'node:path';
+import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import { BARE_CI, NOISE, RUNNER, runSteps, scriptSteps, SETUP } from '../../lib/ci.mjs';
 import { git, plural, walk } from '../../lib/repo.mjs';
 
@@ -20,6 +20,14 @@ const LANGS_SHOWN = 6;
 const TREES_SHOWN = 5;
 const PROCEDURES_SHOWN = 5;
 const LOG_COUNT = 30;
+// Hook leads read outside the repo — session transcripts and memory live under
+// ~/.claude. Every cap below is disclosed in the section, because a probe that
+// truncates in silence reads as "this is all there is".
+const SESSION_LIMIT = 8;
+const SESSION_BYTES = 1 << 20;
+const CMD_THRESHOLD = 3;
+const MEM_LEADS = 5;
+const HOOK_LEADS_SHOWN = 12;
 
 const LANG = {
   '.ts': 'TypeScript',
@@ -217,6 +225,24 @@ function head(p) {
     fd = openSync(p, 'r');
     const buf = Buffer.alloc(HEAD_BYTES);
     const n = readSync(fd, buf, 0, HEAD_BYTES, 0);
+    return buf.subarray(0, n).toString('utf8');
+  } catch {
+    return '';
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+// Sessions are capped at a sampled head — a 6MB transcript parsed in full on
+// every init would make the probe slow, and the hook-worthy verb is a repeated
+// command, which a sample catches as well as the whole. Same shape as `head`
+// at a caller-chosen width.
+function sampleHead(p, bytes) {
+  let fd;
+  try {
+    fd = openSync(p, 'r');
+    const buf = Buffer.alloc(bytes);
+    const n = readSync(fd, buf, 0, bytes, 0);
     return buf.subarray(0, n).toString('utf8');
   } catch {
     return '';
@@ -522,6 +548,120 @@ if (scanned >= HEAD_SCANS) {
     `\nStopped scanning headers at ${HEAD_SCANS} files — later generated trees are unseen.`,
   );
 }
+
+// ── Hook leads ───────────────────────────────────────────────────────────────
+// A repo walk cannot see what the user already does by hand every session, and
+// that is the one source a hook earns. A command run repeatedly across recent
+// sessions, or an imperative left in memory, is the cost of not having a hook —
+// a lead, not a recommendation. Each cites its fact; the grill decides which
+// earns one. Every cap is disclosed: truncation in silence reads as "this is
+// all there is", the one thing a probe must never say.
+brief.push('\n## Hook leads\n');
+const hookLeads = [];
+const HOME = process.env.HOME || process.env.USERPROFILE;
+const encoded = HOME && resolve(process.cwd()).replace(/[:\\/]/g, '-');
+const sessionDir = encoded && join(HOME, '.claude', 'projects', encoded);
+
+let sessionFiles = [];
+if (sessionDir) {
+  try {
+    sessionFiles = readdirSync(sessionDir)
+      .filter((f) => f.endsWith('.jsonl'))
+      .map((f) => ({ f, t: statSync(join(sessionDir, f)).mtimeMs }))
+      .sort((a, b) => b.t - a.t)
+      .slice(0, SESSION_LIMIT);
+  } catch {
+    sessionFiles = [];
+  }
+}
+
+// First token of a shell command is noise (cd, env assignments, chained &&);
+// the hook-worthy verb lives anywhere in the line, so these match unanchored.
+// A word boundary keeps `git` out of `gitman`. Each pair is [matcher, event]
+// — the event is the hook moment that would run it automatically.
+const HOOK_CMDS = [
+  [/\bgit\s+(status|diff|log|branch)\b/, 'SessionStart'],
+  [/\bnpx\s+(prettier|eslint|biome)\b/, 'Stop'],
+  [/\bpnpm\s+(test|lint|format|build)\b/, 'Stop'],
+  [/\byarn\s+(test|lint|format)\b/, 'Stop'],
+  [/\bnpm\s+run\s+(test|lint|format|build)\b/, 'Stop'],
+  [/\bnpm\s+test\b/, 'PreToolUse'],
+  [/\b(pytest|ruff|black)\b/, 'Stop'],
+];
+const cmdCount = new Map();
+for (const { f } of sessionFiles) {
+  const text = sampleHead(join(sessionDir, f), SESSION_BYTES);
+  for (const line of text.split('\n')) {
+    if (line.length > 8192) continue; // attachments embed whole skill bodies
+    let o;
+    try {
+      o = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (o.type !== 'assistant' || !Array.isArray(o.message?.content)) continue;
+    for (const c of o.message.content) {
+      if (c.type !== 'tool_use' || (c.name !== 'Bash' && c.name !== 'PowerShell')) continue;
+      const cmd = String(c.input?.command ?? '');
+      for (const [re, event] of HOOK_CMDS) {
+        const m = re.exec(cmd);
+        if (m) {
+          const key = m[0].replace(/\s+/g, ' ').trim();
+          cmdCount.set(key, { n: (cmdCount.get(key)?.n ?? 0) + 1, event });
+          break;
+        }
+      }
+    }
+  }
+}
+for (const [cmd, { n, event }] of [...cmdCount].sort((a, b) => b[1].n - a[1].n)) {
+  if (n < CMD_THRESHOLD) continue;
+  hookLeads.push(`\`${cmd}\` ${n}× — ${event}.`);
+}
+
+// Memory: a feedback or project file that says "always run X" is a rule the
+// user already enforces by hand — the exact thing a hook is. Imperative
+// sentences only; a memory with no imperative is a fact, not a rule. Read
+// directly, not via `read`, so a path outside the repo never lands in the
+// unreadable-repo-file list.
+const memoryDir = sessionDir && join(sessionDir, 'memory');
+let memFiles = [];
+try {
+  memFiles = readdirSync(memoryDir).filter((f) => /\.md$/.test(f));
+} catch {
+  memFiles = [];
+}
+let memLeads = 0;
+for (const f of memFiles) {
+  if (memLeads >= MEM_LEADS) break;
+  let text = '';
+  try {
+    text = readFileSync(join(memoryDir, f), 'utf8');
+  } catch {
+    continue;
+  }
+  const fm = /^---\n([\s\S]*?)\n---/.exec(text);
+  const type = fm ? /type:\s*(\w+)/.exec(fm[1])?.[1] : undefined;
+  if (type !== 'feedback' && type !== 'project') continue;
+  const body = text.slice(fm ? fm[0].length : 0);
+  const imperatives =
+    body.match(/[^.\n]*\b(?:always|never|must|do not|don't)\b[^.\n]*[.\n]/gi) ?? [];
+  for (const s of imperatives) {
+    if (memLeads >= MEM_LEADS) break;
+    let clean = s.trim().replace(/\s+/g, ' ');
+    if (clean.length > 110) clean = clean.slice(0, 110).replace(/\s\S*$/, '');
+    if (clean.length > 14) {
+      hookLeads.push(`memory (${type}): "${clean}"`);
+      memLeads += 1;
+    }
+  }
+}
+
+brief.push(hookLeads.length > 0 ? hookLeads.slice(0, HOOK_LEADS_SHOWN).join('\n') : 'None.');
+if (sessionFiles.length > 0)
+  brief.push(
+    `\nSampled ${plural(sessionFiles.length, 'recent session')}, first ${SESSION_BYTES >> 10}KB each — older sessions and later commands unseen.`,
+  );
 
 // ── Context already here ────────────────────────────────────────────────────
 brief.push('\n## Context already here\n');
