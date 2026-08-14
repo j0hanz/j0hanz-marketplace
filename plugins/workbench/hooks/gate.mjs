@@ -11,7 +11,7 @@ const correctlyPlaced = (parts) =>
   EFFORT_DIR.test(parts[0]) &&
   (parts.length === 2 || (parts.length === 3 && parts[1] === 'tickets'));
 
-export const misplacement = (filePath, project) => {
+const misplacement = (filePath, project) => {
   if (typeof filePath !== 'string' || !filePath) return null;
   const base = basename(filePath);
   const match = base.match(ARTIFACT);
