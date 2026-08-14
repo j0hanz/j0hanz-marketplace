@@ -3,29 +3,11 @@
 // emits:  the brief — scope, changed set, blast radius, tells
 // fails:  exit 2 when scope cannot be resolved without asking; exit 1 on no git
 
-import { execFileSync } from 'node:child_process';
-import { readFileSync, statSync, readdirSync } from 'node:fs';
-import { join, extname, relative, resolve, sep } from 'node:path';
+import { readFileSync, statSync } from 'node:fs';
+import { extname, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
+import { git, plural, SKIP_DIR, walk } from '../../lib/repo.mjs';
 
-const SKIP_DIR = new Set([
-  '.git',
-  'node_modules',
-  'vendor',
-  'dist',
-  'build',
-  'target',
-  '.venv',
-  'venv',
-  '__pycache__',
-  'coverage',
-  '.next',
-  '.nuxt',
-  '.svelte-kit',
-  'out',
-  'bin',
-  'obj',
-]);
 // Only patterns a CODE extension can actually reach — `auditable` gates on
 // CODE first, so lockfiles and snapshots never get this far.
 const SKIP_FILE = /\.min\.\w+$|\.generated\./;
@@ -110,56 +92,12 @@ const ONE_PASS_FILES = 40;
 const ONE_PASS_LINES = 6000;
 const TAG_WIDTH = Math.max(...TELLS.map((t) => t.tag.length));
 
-const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const were = (n) => (n === 1 ? 'was' : 'were');
-
-// stderr piped, not inherited: resolving the default branch probes refs that are
-// expected to be missing, and those fatals are not the user's problem.
-// trimEnd, never trim: `status --porcelain` leads with a status column whose
-// first char is a space for an unstaged edit, and stripping it shifts every path
-// left by one. Trailing newline is all any caller here needs gone.
-// quotePath=false on every call: by default git octal-escapes any path outside
-// ASCII — `"st\303\244der.ts"` — and stripping the quotes leaves a name that does
-// not open, so the file drops out of the audit for having a non-English filename.
-const git = (...args) =>
-  execFileSync('git', ['-c', 'core.quotePath=false', ...args], {
-    encoding: 'utf8',
-    maxBuffer: 32 << 20,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trimEnd();
 
 const auditable = (p) =>
   CODE.has(extname(p)) &&
   !SKIP_FILE.test(p.split('/').pop()) &&
   !p.split('/').some((part) => SKIP_DIR.has(part));
-
-// A named directory under the repo root is walked twice — once to resolve scope,
-// once for the caller scan — and one unreadable directory warning twice reads as
-// two problems.
-const warned = new Set();
-
-function walk(dir, out = []) {
-  // One directory the process cannot open would otherwise throw from under the
-  // whole-repo scan, and the brief prints in one go at the end — a crash here
-  // costs every section. Loud on stderr, out of the brief on stdout.
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    if (!warned.has(dir)) console.error(`unreadable directory, not scanned: ${dir}`);
-    warned.add(dir);
-    return out;
-  }
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIR.has(entry.name)) walk(join(dir, entry.name), out);
-    } else {
-      const p = relative(process.cwd(), join(dir, entry.name)).split(sep).join('/');
-      if (auditable(p)) out.push(p);
-    }
-  }
-  return out;
-}
 
 // `from` is the directory the user invoked in — named paths are relative to it,
 // while everything else here is relative to the repo root we already chdir'd to.
@@ -199,7 +137,9 @@ function resolveScope(args, from) {
         process.exit(2);
       }
       files.push(
-        ...(stat.isDirectory() ? walk(abs) : [relative(process.cwd(), abs).split(sep).join('/')]),
+        ...(stat.isDirectory()
+          ? walk(abs, { keep: auditable })
+          : [relative(process.cwd(), abs).split(sep).join('/')]),
       );
     }
     return { rule: `named on the command line (${named.join(', ')})`, files };
@@ -353,7 +293,7 @@ function blastRadius(source) {
     .slice(0, PROBE_LIMIT)
     .map((name) => [name, probe(name), new Set([...symbols.get(name)].map(family))]);
 
-  const universe = walk(process.cwd()).filter((file) => !source.has(file));
+  const universe = walk(process.cwd(), { keep: auditable }).filter((file) => !source.has(file));
   const callers = new Map();
   for (const file of universe) {
     const fam = family(file);

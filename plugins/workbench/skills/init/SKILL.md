@@ -25,8 +25,10 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/init/probe.mjs"
 It reads manifests, lockfiles, CI, root config, procedure docs, the last 30 commit
 subjects, and whatever agent context is already installed, then emits the brief: stack,
 declared commands, what CI actually gates on, mechanical surprises, and **leads** — the
-questions its facts raise but cannot answer. Pass a directory to probe one other than the
-working directory; every cap it hit is disclosed in the section that hit it.
+questions its facts raise but cannot answer. Bare, it reports the whole repo from its
+root, wherever you invoke it. Pass a directory and the brief covers that directory alone —
+which is what a monorepo package needs before its own `CLAUDE.md` gets written. Every cap
+it hit is disclosed in the section that hit it.
 
 The brief is raw material, not lines. Most of it fails the test on sight — a framework
 readable from `package.json` never belonged in `CLAUDE.md`. What it buys is aim: it names
