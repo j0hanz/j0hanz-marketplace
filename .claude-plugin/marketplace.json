@@ -27,7 +27,7 @@
     {
       "name": "review",
       "source": "./plugins/review",
-      "description": "Clean Code readability pass and a strict maintainability review, both behavior-preserving",
+      "description": "One strict behavior-preserving review of a diff: how the code reads, and how it is shaped",
       "category": "quality"
     },
     {

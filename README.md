@@ -34,7 +34,7 @@ Claude Code plugins: skills and agents you can install into any project.
 ```text
 /tutor:teach
 /css:css-audit
-/review:clean-code
+/review:code-quality-review
 ```
 
 Or browse everything installed with `/plugin`. To remove one:
@@ -72,9 +72,9 @@ MCP development skills for TypeScript SDK v2
 
 ### review
 
-Clean Code readability pass and a strict maintainability review, both behavior-preserving
+One strict behavior-preserving review of a diff: how the code reads, and how it is shaped
 
-- Commands: `/review:clean-code`, `/review:code-quality-review`
+- Commands: `/review:code-quality-review`
 
 ### prompt
 

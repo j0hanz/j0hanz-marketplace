@@ -2,7 +2,7 @@
 name: prompting
 description: Rebuild a rough prompt into one paste-ready block.
 disable-model-invocation: true
-argument-hint: "<rough prompt>"
+argument-hint: '<rough prompt>'
 ---
 
 # Prompting
