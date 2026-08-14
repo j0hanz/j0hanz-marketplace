@@ -16,11 +16,13 @@ Read what prompt for before rewriting word — usually inferable from where it g
 - **One-shot ask** — intent and request, nothing else. Most rough prompts; get worse in costume.
 - **System prompt** — durable defaults that generalize past case that provoked them, served every turn to someone who never sees it. Long-running? Restate single most-violated rule once, near end — rule model drifts from by default; stylistic and format rules drift more than content.
 
-**Done when:** target type resolved (inferred, or focused question sent); harness supply — system text, tools, effort control — identified; any inference stated in Changed note.
+Note what the harness already supplies — system text, tools, effort control — so Rebuild can cut restatements of it.
+
+**Done when:** target type resolved (inferred, or focused question sent); harness supply identified; any inference stated in Changed note.
 
 ## Rebuild
 
-Pull each of three **levers** — **intent**, **scope**, **shape** — from rough text and context; where value missing, mark assumed reading `[in brackets]` for user to confirm, or state low-risk assumption in Changed note and keep prompt clean. When two readings produce structurally different deliverables (different output type, scope, or recipient), make one focused question the complete response before rebuilding; don't fire when one reading clearly likeliest.
+Pull each of three **levers** — **intent**, **scope**, **shape** — from rough text and context; where a value is missing, state the low-risk assumption in the Changed note and keep the prompt clean — mark `[in brackets]` only when the user must confirm before use. When two readings produce structurally different deliverables (different output type, scope, or recipient), make one focused question the complete response before rebuilding; ask only when readings genuinely diverge — if one is clearly likeliest, assume it.
 
 **Subtract** before adding. When phrase sits in two levers (e.g. "be thorough" both contradiction half and restated default), keep half carrying task-specific constraint, cut generic half.
 
