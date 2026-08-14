@@ -156,7 +156,7 @@ Before finalizing anything, reconcile from a fresh map read: every published clo
 
 Close only after fresh read show nothing left to decide before someone go do the thing, every child ticket closed, no ticket left `initializing`, **Not yet specified** empty. Add closure record — next handoff plus any execution-contract evidence — then set map closed.
 
-Name the next executable handoff per [plan](../plan/SKILL.md): [write-specs](../write-specs/SKILL.md) where behavior still need fixing, otherwise [write-plan](../write-plan/SKILL.md). Add a [write-adr](../write-adr/SKILL.md) handoff alongside it for any decision outliving the map. Link the artifact where one already exist — it land beside map, in same effort directory.
+Name the next executable handoff: [write-specs](../write-specs/SKILL.md) where behavior still need fixing, otherwise [write-plan](../write-plan/SKILL.md). Add a [write-adr](../write-adr/SKILL.md) handoff alongside it for any decision outliving the map. Link the artifact where one already exist — it land beside map, in same effort directory.
 
 ## Research dispatch
 

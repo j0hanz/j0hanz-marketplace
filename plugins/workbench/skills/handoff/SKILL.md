@@ -19,7 +19,7 @@ Write from the repo, not from memory — `git status` read, every file you cite 
 
 A dead end carries the reason it died. "Tried X" invites a second run at X; "X fails because the API returns Y" closes it.
 
-Route to one skill, not a list — [plan](../plan/SKILL.md)'s Routes table picks it. Write it as the command the next session types, `/workbench:run-plan`, since part of the bench is user-invoked and fires no other way.
+Route to one skill, not a list — the one whose entry condition the unfinished work actually meets. Write it as the command the next session types, `/workbench:run-plan`, since part of the bench is user-invoked and fires no other way.
 
 Secrets follow the [write-plan rule](../write-plan/SKILL.md#secrets): name the `file:line` and the credential type, recommend rotation. Personal data goes the same way — the location, not the value.
 

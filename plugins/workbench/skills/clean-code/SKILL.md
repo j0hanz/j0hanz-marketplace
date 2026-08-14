@@ -86,7 +86,7 @@ Run the same tests and diff the output against step 1.
 
 ## Handing off
 
-This skill is one of three that read a landed diff, each on its own axis and none on the others' ([plan](../plan/SKILL.md)). A verdict that turns out to need more than a rename leaves this pass rather than stretching it:
+This skill is one of three that read a landed diff, each on its own axis and none on the others' — [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure. A verdict that turns out to need more than a rename leaves this pass rather than stretching it:
 
 | What the walk surfaced                               | Hands to                             |
 | :--------------------------------------------------- | :----------------------------------- |

@@ -7,7 +7,7 @@ description: Execute a behavior-preserving structural move — characterize the 
 
 Move **structure** with **behavior locked**. The net is a test green before the move and green after — never a judgment that "this looks the same."
 
-Behavior is settled here, and that is what lets you touch structure without a spec or a plan. You enter from [plan](../plan/SKILL.md)'s "behavior-preserving structure change" route or a [qc](../qc/SKILL.md) recommendation, and you bypass [write-specs](../write-specs/SKILL.md) and [write-plan](../write-plan/SKILL.md) — there is no new behavior to specify or route.
+Behavior is settled here, and that is what lets you touch structure without a spec or a plan. You enter at a behavior-preserving structure change or a [qc](../qc/SKILL.md) recommendation, and you bypass [write-specs](../write-specs/SKILL.md) and [write-plan](../write-plan/SKILL.md) — there is no new behavior to specify or route.
 
 A refactor that changes observable behavior is a bug wearing a refactor's clothes. The test net is what catches it.
 
