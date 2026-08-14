@@ -121,7 +121,7 @@ const isFrontendProject = (root) => {
   return false;
 };
 
-// Returns dirty frontend file paths, or null when cwd is not a git repo / git missing.
+// Returns dirty frontend file paths. Git failure -> [] (fail open, stay silent).
 const dirtyFrontendFiles = (cwd) => {
   let out;
   try {
@@ -134,7 +134,7 @@ const dirtyFrontendFiles = (cwd) => {
       maxBuffer: 1 << 20,
     });
   } catch {
-    return null;
+    return [];
   }
   const files = [];
   for (const entry of out.split('\0')) {
@@ -155,7 +155,7 @@ const main = async () => {
   const root = gitRoot(cwd);
   if (!root || !isFrontendProject(root)) return; // inert outside frontend repos
   const files = dirtyFrontendFiles(cwd);
-  if (!files || files.length === 0) return;
+  if (files.length === 0) return;
 
   const sorted = [...new Set(files)].sort();
   // Re-warn only when the dirty FE set changes; stays quiet across Stops that
