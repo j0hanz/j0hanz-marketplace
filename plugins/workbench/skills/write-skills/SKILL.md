@@ -1,7 +1,6 @@
 ---
 name: write-skills
 description: Use when you need to write a new skill or audit an existing one.
-disable-model-invocation: true
 ---
 
 **Predictability**.
