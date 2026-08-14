@@ -218,26 +218,7 @@ const parse = (p) => {
 
 // Whole-file reads across a repo to find a header is most of the run's cost for
 // none of its value — the marker lives in the first few lines or nowhere.
-function head(p) {
-  const HEAD_BYTES = 2048;
-  let fd;
-  try {
-    fd = openSync(p, 'r');
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const n = readSync(fd, buf, 0, HEAD_BYTES, 0);
-    return buf.subarray(0, n).toString('utf8');
-  } catch {
-    return '';
-  } finally {
-    if (fd !== undefined) closeSync(fd);
-  }
-}
-
-// Sessions are capped at a sampled head — a 6MB transcript parsed in full on
-// every init would make the probe slow, and the hook-worthy verb is a repeated
-// command, which a sample catches as well as the whole. Same shape as `head`
-// at a caller-chosen width.
-function sampleHead(p, bytes) {
+function head(p, bytes = 2048) {
   let fd;
   try {
     fd = openSync(p, 'r');
@@ -297,25 +278,24 @@ for (const file of files) {
 const ranked = [...census].sort((a, b) => b[1] - a[1]).slice(0, LANGS_SHOWN);
 
 if (files.length >= FILE_LIMIT) {
-  brief.push(`Scope: stopped at ${FILE_LIMIT} files — anything past that was never walked.\n`);
+  brief.push(`Scope: stopped at ${FILE_LIMIT} files.\n`);
 }
 brief.push('## Stack\n');
 brief.push(
   ranked.length > 0
     ? ranked.map(([lang, n]) => `${lang} (${n})`).join(' · ')
-    : 'No source files in a language this probe classifies.',
+    : 'No classified source files.',
 );
 if (census.size > LANGS_SHOWN) brief.push(`…and ${census.size - LANGS_SHOWN} more languages`);
 
 const managers = Object.entries(LOCKS).filter(([lock]) => at.has(lock));
 for (const [lock, [name, isDefault]] of managers) {
-  brief.push(`package manager: ${name}  (${lock})${isDefault ? '  — language default' : ''}`);
+  brief.push(`package manager: ${name} (${lock})${isDefault ? ' (default)' : ''}`);
 }
 if (managers.length === 0) brief.push('package manager: no lockfile at the root');
 if (managers.length > 1) {
   leads.push(
-    `${managers.map(([lock]) => lock).join(' and ')} are both tracked — which manager is` +
-      ' authoritative, and is the other one stale?',
+    `${managers.map(([lock]) => lock).join(' and ')} both tracked — which is authoritative, is the other stale?`,
   );
 }
 
@@ -333,10 +313,7 @@ if (workspace.length > 0 || nested.length > 1) {
     `workspaces: ${workspace.join(', ') || 'nested manifests only'}` +
       ` — ${plural(nested.length, 'nested package.json')}`,
   );
-  leads.push(
-    'Workspace repo — does a bare test or build run at the root, or does every command need a' +
-      ' package filter?',
-  );
+  leads.push('Workspace repo — do bare test/build run at root, or need a package filter?');
 }
 
 const deps = { ...(root?.dependencies ?? {}), ...(root?.devDependencies ?? {}) };
@@ -350,10 +327,10 @@ const found = SIGNALS.filter((name) => {
     manifests.some((text) => new RegExp(`(^|[/"'\\s])${esc}([/"'\\s=<>~^]|$)`, 'm').test(text))
   );
 });
-if (found.length > 0) brief.push(`dependencies of note: ${found.join(', ')}`);
+if (found.length > 0) brief.push(`deps: ${found.join(', ')}`);
 
 const tooling = files.filter((f) => !f.includes('/') && TOOLING.some((re) => re.test(f))).sort();
-if (tooling.length > 0) brief.push(`config at the root: ${tooling.join(', ')}`);
+if (tooling.length > 0) brief.push(`root config: ${tooling.join(', ')}`);
 
 // ── Commands ────────────────────────────────────────────────────────────────
 const declared = new Map();
@@ -375,8 +352,8 @@ brief.push('\n## Commands\n');
 if (declared.size === 0) {
   brief.push(
     unparsed.length > 0
-      ? `${unparsed.join(', ')} would not parse — declared commands unread, not absent.`
-      : 'Nothing declared — every invocation is typed by hand, so CI below is the only record.',
+      ? `${unparsed.join(', ')} unparseable — commands unread, not absent.`
+      : 'Nothing declared — commands typed by hand; CI is the only record.',
   );
 } else {
   for (const [name, [body, source]] of [...declared].slice(0, SCRIPTS_SHOWN)) {
@@ -405,12 +382,11 @@ if (at.has('.gitlab-ci.yml')) {
 
 brief.push('\n## Gates\n');
 if (gates.size === 0) {
-  brief.push('No CI commands found — nothing mechanical gates a merge, so ask what does.');
+  brief.push('No CI — nothing gates a merge. Ask what does.');
   if (declared.size > 0) {
     leads.push('No CI gate — which of the declared commands has to pass before a change lands?');
   }
 } else {
-  brief.push('What actually gates a merge. Anything marked runs only in CI.\n');
   // The script name has to follow a runner to count as declared — bare containment
   // marks `pnpm exec playwright test` as the `test` script and hides the one CI-only
   // command in the file, which is the command this section exists to surface.
@@ -427,8 +403,8 @@ if (gates.size === 0) {
   if (gates.size > GATES_SHOWN) brief.push(`…and ${gates.size - GATES_SHOWN} more`);
   if (only.length > 0) {
     leads.push(
-      `CI runs \`${clip(only[0], 40)}\`${only.length > 1 ? ` and ${only.length - 1} more` : ''} that no` +
-        ' declared command runs — should it be runnable locally, or is CI the only place it belongs?',
+      `CI runs \`${clip(only[0], 40)}\`${only.length > 1 ? ` and ${only.length - 1} more` : ''} not in` +
+        ' declared commands — runnable locally, or CI-only?',
     );
   }
   brief.push(`\nfrom ${[...new Set(gates.values())].join(', ')}`);
@@ -448,19 +424,16 @@ if (gates.size === 0) {
   });
   if (ungated.length > 0) {
     leads.push(
-      `${ungated.join(', ')} configured but no CI command runs it — should the linter be enforced` +
-        ' mechanically, or is it advisory?',
+      `${ungated.join(', ')} configured but no CI runs it — enforce mechanically, or advisory?`,
     );
   }
 }
 
 // ── Surprises ───────────────────────────────────────────────────────────────
 brief.push('\n## Surprises\n');
-brief.push('Candidates. Each one still needs its file opened before it earns a line.\n');
 const surprises = [];
 
-if (unparsed.length > 0)
-  surprises.push(`did not parse, so nothing was read from: ${unparsed.join(', ')}`);
+if (unparsed.length > 0) surprises.push(`unparseable: ${unparsed.join(', ')}`);
 
 const trees = new Map();
 let scanned = 0;
@@ -475,8 +448,8 @@ for (const file of files) {
 }
 const treeDirs = [...trees.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
 for (const [dir, n] of treeDirs.slice(0, TREES_SHOWN)) {
-  surprises.push(`generated tree: ${dir}/  — ${plural(n, 'file')} carry a do-not-edit header`);
-  leads.push(`${dir}/ looks generated — never hand-edited, and what regenerates it?`);
+  surprises.push(`generated: ${dir}/ (${plural(n, 'do-not-edit file')})`);
+  leads.push(`${dir}/ generated — what regenerates it?`);
 }
 if (treeDirs.length > TREES_SHOWN)
   surprises.push(`…and ${treeDirs.length - TREES_SHOWN} more generated trees`);
@@ -514,7 +487,7 @@ if (subjects.length > 0) {
   const n = subjects.filter((s) => CONVENTIONAL.test(s)).length;
   surprises.push(`commit subjects: ${n}/${subjects.length} conventional`);
   if (n >= subjects.length * 0.6 && n < subjects.length) {
-    leads.push('Most commits are conventional, some are not — is the format a rule or a habit?');
+    leads.push('Most commits conventional, some not — rule or habit?');
   }
 }
 
@@ -532,21 +505,15 @@ for (const doc of procedures.slice(0, PROCEDURES_SHOWN)) {
   const steps = (read(doc) ?? '').split('\n').filter((l) => /^\s*\d+\.\s/.test(l)).length;
   if (steps < 4) continue;
   surprises.push(`${doc} — ${plural(steps, 'numbered step')}`);
-  leads.push(`${doc} is a ${steps}-step procedure — worth a skill, or does nobody run it by hand?`);
+  leads.push(`${doc}: ${steps}-step procedure — skill candidate, or never run by hand?`);
 }
 if (procedures.length > PROCEDURES_SHOWN) {
-  surprises.push(`…and ${procedures.length - PROCEDURES_SHOWN} more procedure docs not opened`);
+  surprises.push(`…and ${procedures.length - PROCEDURES_SHOWN} more`);
 }
 
-brief.push(
-  surprises.length > 0
-    ? surprises.join('\n')
-    : 'None mechanical. The surprises that matter most are the ones only the user knows.',
-);
+brief.push(surprises.length > 0 ? surprises.join('\n') : 'None mechanical.');
 if (scanned >= HEAD_SCANS) {
-  brief.push(
-    `\nStopped scanning headers at ${HEAD_SCANS} files — later generated trees are unseen.`,
-  );
+  brief.push(`\nStopped at ${HEAD_SCANS} headers.`);
 }
 
 // ── Hook leads ───────────────────────────────────────────────────────────────
@@ -590,7 +557,7 @@ const HOOK_CMDS = [
 ];
 const cmdCount = new Map();
 for (const { f } of sessionFiles) {
-  const text = sampleHead(join(sessionDir, f), SESSION_BYTES);
+  const text = head(join(sessionDir, f), SESSION_BYTES);
   for (const line of text.split('\n')) {
     if (line.length > 8192) continue; // attachments embed whole skill bodies
     let o;
@@ -659,9 +626,7 @@ for (const f of memFiles) {
 
 brief.push(hookLeads.length > 0 ? hookLeads.slice(0, HOOK_LEADS_SHOWN).join('\n') : 'None.');
 if (sessionFiles.length > 0)
-  brief.push(
-    `\nSampled ${plural(sessionFiles.length, 'recent session')}, first ${SESSION_BYTES >> 10}KB each — older sessions and later commands unseen.`,
-  );
+  brief.push(`\nSampled ${sessionFiles.length} sessions, ${SESSION_BYTES >> 10}KB each.`);
 
 // ── Context already here ────────────────────────────────────────────────────
 brief.push('\n## Context already here\n');
@@ -696,30 +661,23 @@ if (settings) {
   const events = Object.keys(settings.hooks ?? {});
   context.push(`.claude/settings.json  hooks: ${events.join(', ') || 'none'}`);
 }
-brief.push(context.length > 0 ? context.join('\n') : 'None. This is a first pass.');
+brief.push(context.length > 0 ? context.join('\n') : 'None.');
 // Last, because this section is the last to read a file — reported in Surprises it
 // would name only the files the earlier sections happened to reach.
 if (unreadable.length > 0) {
-  brief.push(`\nFound but would not open, so nothing was read from: ${unreadable.join(', ')}`);
+  brief.push(`\nunreadable: ${unreadable.join(', ')}`);
 }
 if (context.filter((l) => !l.startsWith('.claude/')).length > 1) {
-  leads.push(
-    'More than one doctrine file is already here — which one is authoritative, and should the' +
-      ' others point at it rather than repeat it?',
-  );
+  leads.push('Multiple doctrine files — which is authoritative, should the rest point at it?');
 }
 
 // ── Leads ───────────────────────────────────────────────────────────────────
 brief.push('\n## Leads\n');
 if (leads.length === 0) {
   brief.push(
-    'Nothing mechanical raised a question. Grill on what the repo cannot show: what broke',
+    "Nothing mechanical raised a question. Grill on what the repo can't show: last breakage, newcomer mistakes, rules worth enforcing.",
   );
-  brief.push('last, what a newcomer gets wrong, which rule is worth enforcing.');
 } else {
-  brief.push(
-    "Each names the fact that raised it. Facts are yours to settle; these are the user's.\n",
-  );
   for (const lead of leads.slice(0, LEADS_SHOWN)) brief.push(`- ${lead}`);
   if (leads.length > LEADS_SHOWN) brief.push(`…and ${leads.length - LEADS_SHOWN} more`);
 }
