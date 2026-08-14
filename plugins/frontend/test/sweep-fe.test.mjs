@@ -173,7 +173,7 @@ test('a nested framework config alone marks the project frontend', () => {
   }
 });
 
-test('the listing caps at 20 files and names the remainder', () => {
+test('the listing caps at 20 files and the remainder drains next turn', () => {
   const files = { 'package.json': '{"dependencies":{"vue":"3.0.0"}}' };
   for (let i = 0; i < 23; i++) files[`c${String(i).padStart(2, '0')}.css`] = 'a{}\n';
   const dir = repo(files);
@@ -184,6 +184,14 @@ test('the listing caps at 20 files and names the remainder', () => {
     assert.match(out.systemMessage, /\n {2}…and 3 more$/);
     assert.match(out.systemMessage, /- c00\.css/);
     assert.doesNotMatch(out.systemMessage, /- c20\.css/);
+
+    // Only the 20 named were recorded, so the three the cap withheld are named on their own turn
+    // rather than being silenced by a report that never listed them.
+    const rest = JSON.parse(run(dir, session('cap')));
+    assert.match(rest.systemMessage, /^frontend: 3 changed FE files —/m);
+    assert.match(rest.systemMessage, /- c20\.css/);
+    assert.match(rest.systemMessage, /- c22\.css/);
+    assert.doesNotMatch(rest.systemMessage, /- c00\.css/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -194,6 +202,23 @@ test('one dirty FE file is singular', () => {
   try {
     const out = JSON.parse(run(dir, session('one')));
     assert.match(out.systemMessage, /1 changed FE file —/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('an explicit module extension is tooling, not UI', () => {
+  const dir = repo({
+    'package.json': '{"dependencies":{"react":"19.0.0"}}',
+    'build.mjs': 'x\n',
+    'legacy.cjs': 'x\n',
+    'App.jsx': 'x\n',
+  });
+  try {
+    const out = JSON.parse(run(dir, session('module-ext')));
+    assert.match(out.systemMessage, /1 changed FE file —/);
+    assert.match(out.systemMessage, /- App\.jsx/);
+    assert.doesNotMatch(out.systemMessage, /build\.mjs|legacy\.cjs/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
