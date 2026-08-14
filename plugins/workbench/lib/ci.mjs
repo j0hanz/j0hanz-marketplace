@@ -5,13 +5,16 @@
 
 const NOISE = /^(echo|cd|export|set|source|#|sleep|ls|cat|mkdir|true|pwd)\b/;
 // Fetching dependencies is every repo's CI, not this repo's gate. RUNNER is what
-// separates a declared script from a command that merely contains its name.
+// separates a declared script from a command that merely contains its name. `run`
+// requires a preceding manager (npm/pnpm/yarn/bun), so `docker run test` is not the
+// `test` script — bare `run` would match any runner.
 const SETUP = /\b(install|sync|restore|fetch|download|checkout|login|setup)\b/;
 // `ci` is the one setup word that is also a suffix every repo names a gate with:
 // `\bci\b` matches `pnpm test:ci` and `make verify-ci` and hides the CI-only
 // command the Gates section exists to surface. It is only setup after a manager.
 const BARE_CI = /^(npm|yarn|pnpm|bun)\s+ci\b/;
-const RUNNER = '(?:run|run-script|make|just|npm|pnpm|yarn|bun|npx|uv|poetry|cargo|go)\\s+';
+const RUNNER =
+  '(?:(?<=(?:npm|pnpm|yarn|bun)\\s)run|run-script|make|just|npm|pnpm|yarn|bun|npx|uv|poetry|cargo|go)\\s+';
 
 function* blocks(text, anchor) {
   // A CRLF checkout is the default on Windows. Left in place, the trailing \r

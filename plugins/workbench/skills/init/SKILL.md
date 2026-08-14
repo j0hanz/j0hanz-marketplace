@@ -1,19 +1,18 @@
 ---
 name: init
-description: Bootstrap a repo's Claude Code context — a root CLAUDE.md, plus the hooks or skills the repo shows a reason for.
+description: Bootstrap a repo's Claude Code context — a root CLAUDE.md, and the decision on whether hooks or skills earn a place.
 disable-model-invocation: true
 ---
 
 # Init
 
-`CLAUDE.md` is a **floor**, not a survey. It loads on every request in this repo from now
+`CLAUDE.md` is a **floor**. It loads on every request in this repo from now
 on, so every line is **rent**. One test prices it:
 
 > **Would a strong model behave worse without this line?**
 
 A **surprise** pays rent — a fact no capability recovers, because it is not in the repo to
-be read. Everything a capable model already does, and everything the repo already says
-about itself, fails.
+be read.
 
 ## 1. Probe, then open what it points at
 
@@ -23,24 +22,22 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/init/probe.mjs"
 
 Bare, it reports the whole repo from its git root, wherever you invoke it. Append the
 directory the invocation carried, when it carried one, and the brief covers that directory
-alone — which is what a monorepo package needs before its own `CLAUDE.md`. Every cap it hit
-is disclosed in the section that hit it.
+alone — which is what a monorepo package needs before its own `CLAUDE.md`. Every cap it hit is disclosed, at the point a reader
+looks for it.
 
-The brief is aim, not lines: stack, declared commands, what CI gates on, mechanical
-surprises, and **leads** — the questions its facts raise but cannot answer. Most of it
-fails rent on sight; a framework readable from `package.json` never belonged in
-`CLAUDE.md`.
+The brief is aim, not lines: **leads** — the questions its facts raise but cannot answer.
+Most of it fails rent on sight; a framework readable from `package.json` never belonged
+in `CLAUDE.md`.
 
 Then read. Not the repo — the four places a floor line actually comes from:
 
 - `README` and `docs/` — the purpose line, and what the repo already says about itself.
 - The **body** behind each declared command. A wrapper, a required order, a workspace
-  filter lives in the body; the name shows none of it.
-- Every file the Surprises section named, plus the commits themselves where it says a
+  filter lives in the body; the name shows none of it. The brief inlines npm bodies; for
+  Makefile, justfile, and composer it names the source — open that for the body.
+- Every file or directory the Surprises section named, plus the commits themselves where it says a
   convention is only mostly held.
 - The existing `CLAUDE.md` and agent context, line by line, where the brief found one.
-
-A line you believe rather than read is a guess that outlives you.
 
 **Done when** every candidate line traces to a file you opened, and each one you could not
 confirm there is dropped.
@@ -68,8 +65,8 @@ Four classes earn a question:
   and skill into one option. The choice is settled here, not reopened at step 4.
 
 The last three ask even when the brief surfaced no candidate — gotcha, hook, and skill
-all have no other source, and a repo that wants none says so in one click. Never ask what
-the probe answered; that spends the round-trip on nothing.
+all have no other source, and a repo that wants none says so in one click. Ask only what
+the probe can't reach — the round-trip is the point.
 
 **Done when** every lead is settled or dropped with the user's reason on it, and the
 gotcha, hook, and skill questions each carry an answer — the user's "none" counts.
@@ -99,7 +96,7 @@ Five die — delete the sentence, do not rewrite it:
   vocabulary instead, which drift slower than paths.
 
 True but occasional is a move, not a cut: one conversational link line in `CLAUDE.md`, body
-in `docs/` or a skill. A link, not an order to read it.
+in `docs/` or a skill.
 
 **No file yet** — write root `CLAUDE.md` from what survived, headings only over sections
 that have content. A plain npm repo with nothing surprising in it earns four lines, and
@@ -123,8 +120,11 @@ deleted, moved behind a link, or resolved by the user's answer.
 | Procedure repeated with judgement in it — release, migration, review pass    | skill  |
 | Neither                                                                      | none   |
 
-Ship nothing you cannot point at the repo fact that demanded it — a scaffolded `.claude/`
-is a filled-in template one directory up. Hooks land in `.claude/hooks/` with the
+An enforcer the brief names (`husky`, `pre-commit`) already handles the rule — a parallel
+hook is redundant. The hook candidate is the ungated-tooling lead, not the enforcer.
+
+Ship only what a repo fact demands — a scaffolded `.claude/` is a filled-in template one
+directory up. Hooks land in `.claude/hooks/` with the
 registration block in `.claude/settings.json`; skills in `.claude/skills/<name>/SKILL.md`.
 This skill picks **whether and where**; [write-hooks](../write-hooks/SKILL.md) and
 [write-skills](../write-skills/SKILL.md) pick **how** and own the authoring in full.
