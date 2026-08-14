@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: 'Test-first: build behavior through the red-green loop. Use when asked to work test-first, to decide what to mock, or to judge whether a test earns its place. Not for throwaway code built to react to (prototype), or for proving a landed change met its spec (verify-specs).'
+description: 'Test-first: build behavior through the red-green loop. Use when writing code that adds new behavior, when asked to work test-first, to decide what to mock, or to judge whether a test earns its place. Not for throwaway code built to react to (prototype), or for proving a landed change met its spec (verify-specs).'
 ---
 
 # Test-Driven Development

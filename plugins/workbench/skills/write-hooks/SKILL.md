@@ -1,6 +1,6 @@
 ---
 name: write-hooks
-description: Author a Claude Code hook that fires on the right event and fails safe. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the skill or plugin that carries the hook ([write-skills](../write-skills/SKILL.md)), nor for permissions and env-var config in settings.json (update-config) — write-hooks authors the hook handler and its registration block; update-config the rest of the settings file.
+description: Author a Claude Code hook that fires on the right event and fails safe. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the skill or plugin that carries the hook ([write-skills](../write-skills/SKILL.md)) — write-hooks authors the hook handler and its registration block, and nothing else in settings.json.
 ---
 
 # Writing hooks

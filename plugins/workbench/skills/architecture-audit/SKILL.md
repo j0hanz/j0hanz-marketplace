@@ -1,6 +1,6 @@
 ---
 name: architecture-audit
-description: Rank a repo's structural debt by churn. Not for a diff's structure (qc), readability (clean-code), correctness (bug-hunt), or an effort already scoped (frontier). Route from plan when unsure.
+description: Rank a repo's structural debt by churn, worst first, each finding carrying the restructure that takes it out.
 disable-model-invocation: true
 ---
 

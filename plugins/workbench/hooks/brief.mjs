@@ -13,15 +13,19 @@ import {
 
 const PREFIX = 'workbench:';
 const CHAIN = ['spec', 'plan', 'run', 'verify'];
+// The stage a stem is missing names the skill that produces it, so state reads as a route.
+const NEXT = { spec: 'write-specs', plan: 'write-plan', run: 'run-plan', verify: 'verify-specs' };
 
 let event = '';
+// UserPromptExpansion replaces the prompt text, so it takes the message raw; every other
+// event carries it as context.
 const emit = (message) =>
   process.stdout.write(
-    event === 'PreToolUse'
-      ? JSON.stringify({
-          hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: message },
-        })
-      : message,
+    event === 'UserPromptExpansion' || !event
+      ? message
+      : JSON.stringify({
+          hookSpecificOutput: { hookEventName: event, additionalContext: message },
+        }),
   );
 
 try {
@@ -30,7 +34,10 @@ try {
   const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '')
     .trim()
     .replace(/^\//, '');
+  // On every prompt the brief lands before the skill choice, not after it — but only when
+  // it has something to route. The silence gate below is what keeps that free.
   const mine =
+    event === 'UserPromptSubmit' ||
     invoked.startsWith(PREFIX) ||
     (event === 'UserPromptExpansion' &&
       existsSync(new URL(`../skills/${invoked}/SKILL.md`, import.meta.url)));
@@ -44,6 +51,7 @@ try {
     .filter((entry) => entry.isDirectory() && !EFFORT_DIR.test(entry.name))
     .map((entry) => entry.name);
   const lines = [];
+  let incomplete = false;
   if (efforts.length === 0) {
     lines.push('workbench effort directory: none under docs/plan/', `  convention: ${CONVENTION}`);
   } else {
@@ -65,10 +73,13 @@ try {
         ...CHAIN.filter((stage) => kinds.has(stage)),
         ...[...kinds].filter((stage) => !CHAIN.includes(stage)).sort(),
       ];
-      const started = CHAIN.some((stage) => kinds.has(stage));
-      const missing = started ? CHAIN.filter((stage) => !kinds.has(stage)) : [];
+      // Only stages past the furthest one reached are pending. A stage the route skipped on
+      // purpose — diagnose bypasses spec — is behind, and routing back to it is wrong.
+      const reached = CHAIN.reduce((best, stage, index) => (kinds.has(stage) ? index : best), -1);
+      const missing = reached < 0 ? [] : CHAIN.slice(reached + 1);
+      if (missing.length > 0) incomplete = true;
       lines.push(
-        `  stem \`${stem}\`: ${has.join(', ')}${missing.length > 0 ? ` — no ${missing.join(', ')}` : ''}`,
+        `  stem \`${stem}\`: ${has.join(', ')}${missing.length > 0 ? ` — no ${missing.join(', ')}; next \`/workbench:${NEXT[missing[0]]}\`` : ''}`,
       );
     }
     const other = files.filter((file) => !ARTIFACT.test(file));
@@ -95,6 +106,11 @@ try {
   }
   if (strays.length > 0) {
     lines.push(`  not a dated effort directory: ${strays.map((dir) => `${dir}/`).join(', ')}`);
+  }
+  // An unasked-for brief on every prompt is rent. Charge it only where there is a route to
+  // name or a misplaced artifact to report; an explicit invocation always gets the state.
+  if (event === 'UserPromptSubmit' && !incomplete && loose === 0 && strays.length === 0) {
+    process.exit(0);
   }
   emit(lines.join('\n'));
 } catch (e) {
