@@ -1,15 +1,13 @@
 ---
 name: diagnose
-description: Reproduce a reported symptom and narrow to its root cause by running the code — bisect commits or narrow inputs, not static tracing. Use when a bug's cause is unknown and must be reproduced before fixing. Not for static correctness review (bug-hunt), reading sources (research), or writing the fix (write-plan).
+description: Reproduce a reported symptom and narrow to its root cause by running the code — bisect commits or narrow inputs. Use when a bug's cause is unknown and must be reproduced before fixing. Not for static correctness review (bug-hunt), reading sources (research), or writing the fix (write-plan).
 ---
 
 # Diagnose
 
 A reported symptom is a cause's shadow, and the first plausible cause is usually wrong. diagnose **reproduces before it names** — it runs the code to make the symptom happen, then narrows by running more, until the cause is pinned to a line or a state. A cause named without a reproduction is a guess, and a guessed cause fixes the symptom for one input and leaves the bug for the next.
 
-It is the runtime skill [bug-hunt](../bug-hunt/SKILL.md) is not: bug-hunt traces statically and never executes; diagnose runs. It is not [research](../research/SKILL.md) (reading sources, not running them) and not [write-plan](../write-plan/SKILL.md) (the fix, not the cause).
-
-Use it when a bug's cause is unknown and must be reproduced before anyone fixes it: a flaky test, a crash only in production, a wrong result on one input.
+Triggers: a flaky test, a crash only in production, a wrong result on one input.
 
 ## Steps
 
@@ -27,7 +25,7 @@ Before any hypothesis, make the symptom happen. A reproduction is a command, a s
 
 With a reproduction, narrow to the root cause by **running the code**, not by reading it alone. Two levers:
 
-- **Bisect commits** — `git bisect` between the last known-good and the failing commit. The run is the oracle: each checked-out commit either reproduces (bad) or does not (good). The commit that flips is where the cause entered.
+- **Bisect commits** — `git bisect` between the last known-good and the failing commit. The run is the oracle; the commit that flips is where the cause entered.
 - **Narrow inputs** — shrink the reproduction to the minimal input that still fails. Remove everything that does not change the outcome; the smallest failing case is the cause's shadow at its sharpest.
 
 Static reading guides the run — it tells you where to bisect and what to strip — but a cause reached by reading alone, with no run to confirm, is a hypothesis, not a pin. Run to confirm.
@@ -54,13 +52,6 @@ A bug worth a standing check — one that would recur undetected without a test 
 A bug that cannot recur once fixed, or whose repro is too slow to keep, can skip this — name why.
 
 **Done when** the repro is routed to write-qa when regression-worthy (with the reason when not), alongside the write-plan handoff.
-
-## Hard rules
-
-- **Never name a cause without a reproduction.** A cause for a symptom you have not reproduced is a guess. Step 1 routes away when it will not reproduce.
-- **Never name a cause with no runnable system.** No run, no diagnose — route to bug-hunt or the user.
-- **Never write the fix.** The fix is [run-plan](../run-plan/SKILL.md)/[tdd](../tdd/SKILL.md)'s axis. diagnose ends at the cause and the repro.
-- **Run to confirm, read to guide.** A cause reached by static tracing alone is a hypothesis; the run is what pins it.
 
 ## Referencing
 

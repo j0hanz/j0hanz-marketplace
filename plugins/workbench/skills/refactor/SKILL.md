@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Execute a behavior-preserving structural move — characterize the behavior with a green test first, then move structure with tests as the net. Use when restructuring code whose observable behavior must not change. Not for readability (clean-code), adding behavior (run-plan, tdd), or reviewing structure (qc).
+description: Execute a behavior-preserving structural move — characterize the behavior with a green test first, then move structure with tests as the net. Use when restructuring code whose observable behavior must not change. Not for readability (clean-code), adding behavior (write-plan, tdd), or reviewing structure (qc).
 ---
 
 # Refactor
@@ -26,7 +26,7 @@ Before any structure changes, establish a **green net** that captures the behavi
 
 ### 2. Move the structure
 
-Execute the move: a **rename**, an **extraction**, a **reorder**, or a **deleted comment** — the vocabulary [clean-code](../clean-code/SKILL.md) uses, at the scale [qc](../qc/SKILL.md) would recommend. One move at a time; run the net after each. Green stays green between moves.
+Execute the move: a **rename**, an **extraction**, or a **reorder** — the vocabulary [clean-code](../clean-code/SKILL.md) uses, at the scale [qc](../qc/SKILL.md) would recommend. One move at a time; run the net after each. Green stays green between moves.
 
 A move that cannot finish with the net green stops here — it is not behavior-preserving, and you are at step 3's decline.
 
@@ -48,14 +48,6 @@ A move that needs new or changed behavior to make sense — a new branch, a diff
 Structure moved, behavior held, net green: hand the change to [qc](../qc/SKILL.md) to review the **new structure** — the move may be behavior-preserving and still be ugly, mislayered, or indirected past readability. qc is the axis for that; refactor is not.
 
 **Done when** the change is handed to qc with the move named and the net result recorded.
-
-## Hard rules
-
-- **Never add or change observable behavior.** A refactor that does is a bug. The net catches it; reverting catches it; declining the move before it runs prevents it.
-- **Never edit a test to make it pass.** A characterization test encodes current behavior; editing it to match a move's result disables the net. Red means revert the move.
-- **Tests green before and after.** No green net, no move — step 1 hands off instead.
-- **Characterize, do not assert desired behavior.** A characterization test that encodes what the code _should_ do rather than what it _does_ do is a regression test, not a net, and it will lie about a move's safety.
-- **Behavior-changing moves are declined, not forced.** They go to write-plan, worked as tdd.
 
 ## Referencing
 

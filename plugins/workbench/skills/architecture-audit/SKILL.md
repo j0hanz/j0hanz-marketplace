@@ -23,7 +23,7 @@ Fan out [research](../research/SKILL.md) in directory mode, one dispatch per zon
 
 Direction is the one thing a probe cannot see: a cycle between two zones is invisible from inside either. Walk the cross-zone imports yourself, each edge against the declared rules from step 1 — an edge a rule forbids is **Drift** and needs no further argument, an edge no rule mentions argues for itself. Ownerless concept is cross-zone the same way — a probe flags local duplication, but only the merge in step 3 can confirm no owner elsewhere.
 
-Probes return candidates, never rankings.
+Probes return candidates; ranking is step 3's.
 
 **Done when** every zone carries a probe return or a written skip, every cross-zone import edge has a direction recorded, and every candidate cites a `file:line` a probe actually opened.
 
@@ -41,7 +41,7 @@ Then order by what the move buys against the churn it disturbs. Where two buy th
 
 Chat is the deliverable. Follow [the report](#the-report).
 
-**Done when** the table reads in one screen, every finding below it carries its sketch and its `file:line` evidence, and Coverage names every zone that went unread.
+**Done when** the table reads in one screen, every finding below it carries its sketch, its `file:line` evidence, what it rests on, the move in one sentence, its size, and its cost, the top finding carries the move it rejected and why, and Coverage names every zone that went unread.
 
 ## Shapes
 
@@ -66,7 +66,7 @@ A move reaches the report by clearing all four.
 - **Churn, or it does not ship** — code nobody touches earns no restructure.
 - **The record rules, both ways** — read the declared set from step 1 before calling a boundary wrong. Where a record blesses the shape and the friction is real regardless, the finding is a decision to reopen ([write-adr](../write-adr/SKILL.md)), not a defect. Where a record forbids the shape and the code does it anyway, that is **Drift**.
 
-**Drift answers to churn alone.** The record already settles the boundary, so gates 2 and 4 are met by citing it, and restoring a boundary the repo declared is allowed to add code. Gate 3 still binds — a violated rule in code nobody touches is a lint waiver, not an audit finding.
+Drift answers to churn alone — gates 2 and 4 are met by citing the record, and restoring a boundary the repo declared is allowed to add code. Gate 3 still binds — a violated rule in code nobody touches is a lint waiver, not an audit finding.
 
 ## The report
 
@@ -105,4 +105,4 @@ Where it goes depends on how much of the list gets taken.
 | One finding, worth doing now                 | [write-plan](../write-plan/SKILL.md) |
 | Several, spanning sessions                   | [frontier](../frontier/SKILL.md)     |
 | A boundary that turns out to be a decision   | [write-adr](../write-adr/SKILL.md)   |
-| A move whose shape is still an open question | [grilling](../grilling/SKILL.md)     |
+| A move whose shape is still an open question | [ideation](../ideation/SKILL.md)     |

@@ -27,11 +27,11 @@ Its own pass over the finished set — contradictions and missing story behavior
 
 Per requirement, name the single observation that proves it false, on the page beside its ID; [verify-specs](../verify-specs/SKILL.md) runs it once the change lands. If you cannot name one, it is prose — rewrite until a black-box observer could fail it. Then read the set once as a whole.
 
-**Done when** every requirement carries its falsifying observation, every story in Users and stories names the requirement IDs that deliver it, and every marker appears in the open-questions list.
+**Done when** every requirement carries its falsifying observation, no two requirements contradict (the same input cannot satisfy two specifying mutually exclusive responses), every story in Users and stories names the requirement IDs that deliver it, and every marker appears in the open-questions list.
 
 ## Requirement syntax
 
-One obligation per statement, in the EARS pattern matching its trigger. `shall` is the load-bearing verb.
+One obligation per statement — the gate is the falsifier in step 3. The EARS patterns below match a statement to its trigger; `shall` marks the obligation.
 
 | Pattern      | Template                                                             | Use for                    |
 | ------------ | -------------------------------------------------------------------- | -------------------------- |
@@ -55,7 +55,7 @@ Scenarios use Given/When/Then, one per branch:
 
 ## Referencing
 
-A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.plan.md`, `<name>.run.md`, `<name>.verify.md`, `<name>.hunt.md` ([bug-hunt](../bug-hunt/SKILL.md)), and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)). This is the convention every skill downstream links to rather than restates.
+A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.plan.md`, `<name>.run.md`, `<name>.verify.md`, `<name>.hunt.md` ([bug-hunt](../bug-hunt/SKILL.md)), and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)).
 
 A record that outlives the change that made it sits outside those directories: decisions at `docs/adr/` ([write-adr](../write-adr/SKILL.md)), QA standing records at `docs/qa/` ([write-qa](../write-qa/SKILL.md)). Where such a record is numbered, the number is `NNN-<slug>`, zero-padded, the next one found by scanning its directory.
 
@@ -87,9 +87,11 @@ Requirement IDs are cited by label and linked to their section. Terms the spec d
 
 ## Why
 
-2–5 sentences. The problem, who hits it, what it costs today, what is true once
-this exists. Intent is what lets a correct judgment call happen later when a
-requirement turns out to be underspecified.
+2–5 sentences. For a proposed change: the problem, who hits it, what it costs
+today, what is true once this exists. For an existing system: the guarantee,
+who depends on it, what a change risks without it. Intent is what lets a
+correct judgment call happen later when a requirement turns out to be
+underspecified.
 
 ## Users and stories
 

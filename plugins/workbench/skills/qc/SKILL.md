@@ -1,17 +1,15 @@
 ---
 name: qc
-description: Review a branch diff for maintainability and return blocking comments. Use when asked to review the code quality or maintainability of a diff. Not for correctness bugs (bug-hunt) or test coverage (tdd, verify-specs).
+description: Review a branch diff for maintainability and return blocking comments. Use when asked to review the maintainability of a diff. Not for correctness bugs (bug-hunt) or test coverage (tdd, verify-specs).
 ---
 
-Dispatch a background agent (Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`) — you keep working while it reviews.
+Dispatch the review to a background subagent — you keep working while it reviews.
 
-Fill in the refs and pass the template as the agent's prompt.
+Fill in the refs (hand the subagent refs so it opens the files itself; inline the diff text only where the base ref is unavailable) and pass the template as the agent's prompt.
 
 ```text
 <diff>
-{`git diff $(git merge-base HEAD origin/main)..HEAD`, or the refs and files to
-review — hand over refs so you open the files yourself; inline the diff text
-only where the base ref is unavailable}
+{the refs and files to review, or the inline diff if the base ref is unavailable}
 </diff>
 
 <standards>
@@ -59,4 +57,4 @@ when every standard is clear and nothing blocking remains.
 </output>
 ```
 
-Relay the review when it returns — the agent's report reaches you, not the user. Acting on it is the next change, and it enters the chain at [write-plan](../write-plan/SKILL.md) like any other.
+Relay the review when it returns — the agent's report reaches you, not the user. Acting on it is the next change, at [write-plan](../write-plan/SKILL.md).

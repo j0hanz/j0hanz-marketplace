@@ -5,7 +5,7 @@ description: Prototype the open question — fire a **spike**, a cheap rough art
 
 # Prototype
 
-A prototype is a **spike**: one cheap shot fired to see where a question lands, then discarded.
+A prototype is a **spike**.
 
 The medium is whatever exposes the open question cheapest:
 

@@ -63,4 +63,4 @@ Build the suite from the **coverage map** of the **blast radius**.
 **Next steps:** [list]
 ```
 
-After each run, remove obsolete checks, add **repro** cases for bugs found, refresh test data, and re-check the blast radius against the latest change set.
+When updating an existing suite: remove obsolete checks, add **repro** cases for bugs found, refresh test data, and re-check the blast radius against the latest change set.

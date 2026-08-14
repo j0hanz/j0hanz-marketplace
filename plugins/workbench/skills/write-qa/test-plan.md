@@ -38,9 +38,9 @@ Part of [write-qa](SKILL.md), loaded when routing lands on a test plan. The prio
 
 ## Coverage map
 
-| Requirement or surface | State, contract, or risk                              | Dimension                           | Planned test or suite | Status                            |
-| ---------------------- | ----------------------------------------------------- | ----------------------------------- | --------------------- | --------------------------------- |
-| [Item]                 | [Transition, integration, failure, retry, dependency] | [Type - see Test types in SKILL.md] | [Test ID or scenario] | Planned / Covered / Justified gap |
+| Requirement or surface | State, contract, or risk                              | Type                         | Planned test or suite | Status                            |
+| ---------------------- | ----------------------------------------------------- | ---------------------------- | --------------------- | --------------------------------- |
+| [Item]                 | [Transition, integration, failure, retry, dependency] | [see Test types in SKILL.md] | [Test ID or scenario] | Planned / Covered / Justified gap |
 
 ## Strategy
 

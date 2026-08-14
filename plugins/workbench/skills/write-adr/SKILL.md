@@ -1,6 +1,6 @@
 ---
 name: write-adr
-description: Record a settled decision as an ADR — a durable record the next spec can quote. Use when the decision will outlive the effort that made it. Not for behavior a change must deliver (write-specs), or decisions still under test (grilling).
+description: Record a settled decision as an ADR. Use when the decision will outlive the effort that made it. Not for behavior a change must deliver (write-specs), or decisions not yet settled (grilling).
 ---
 
 # Write ADR
@@ -23,7 +23,7 @@ Done when the record is titled as one decision statement, carries at least one r
 
 ## Referencing
 
-Records live at `docs/adr/NNN-<slug>.md` under the [referencing convention](../write-specs/SKILL.md#referencing) — outside the per-change directories, because a decision outlives the change that made it.
+Records live under the [referencing convention](../write-specs/SKILL.md#referencing), outside the per-change directories — a decision outlives the change that made it.
 
 Paths are relative **to the record**:
 

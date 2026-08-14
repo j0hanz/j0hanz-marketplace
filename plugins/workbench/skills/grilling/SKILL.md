@@ -3,9 +3,9 @@ name: grilling
 description: Grill the user relentlessly to settle every decision only they can make. Use on any 'grill' phrasing, or when a task needs the user own judgement to proceed. Not for facts a source can answer (research), a look-and-behavior question a rough artifact settles (prototype), or options still to be generated (ideation).
 ---
 
-Interview the user relentlessly. Write the decisions to a file as a **map** — one node per decision, each naming what it waits on. Under a caller that already keeps a map, work in that one.
+Grill the user relentlessly. Write the decisions to a file as a **map** — one node per decision, each naming its prerequisite. Under a caller that already keeps a map, work in that one.
 
-Work the map in **rounds**. The **settled set** is every decision whose prerequisites are already settled. Ask the whole settled set in one round — a round is one user round-trip, and splitting it costs a turn per split for no new information. Then wait for the user's answers before the next round.
+Work the map in **rounds**. The **settled set** is every decision whose prerequisites are already settled. Ask the whole settled set in one round — a round is one user round-trip, and splitting it costs a turn per split for no new information.
 
 Write each question as markdown:
 

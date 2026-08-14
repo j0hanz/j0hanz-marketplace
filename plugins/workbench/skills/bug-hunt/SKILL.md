@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Adversarial correctness pass over code just written. Use when correctness or security is in doubt before shipping, or after an agent produced work. Not for readability (clean-code), structure and maintainability (qc), or checking a landed change against its spec (verify-specs).
+description: Adversarial correctness pass over code just written. Use when correctness or security is in doubt before shipping, or after an agent produced work. Not for reproducing a reported symptom (diagnose), readability (clean-code), structure and maintainability (qc), or checking a landed change against its spec (verify-specs).
 ---
 
 # Bug Hunt
@@ -19,7 +19,7 @@ The report has one job — trustworthy enough to act on **without re-reading the
 node "${CLAUDE_PLUGIN_ROOT}/skills/bug-hunt/hunt.mjs"
 ```
 
-It resolves scope, sizes the read, greps every exported symbol for callers outside the changed set, and tags mechanical **tells**. Pass paths or `--since <ref>` to override; exit 2 means a clean tree on the default branch, where nothing resolves on its own — ask which, then re-run.
+It resolves scope, sizes the read, greps every exported symbol for callers outside the changed set, and tags mechanical **tells**. Pass paths or `--since <ref>` to override; exit 2 means scope could not be resolved without asking — the message names which (clean tree, bad ref, conflicting flags) — ask or correct, then re-run.
 
 Scope is **changed code plus blast radius**. A whole-repo pass re-reads untouched code and burns context before reaching what matters; a diff-only pass misses the commonest agent failure, where the changed file is fine and an unchanged caller three files away is now broken.
 
@@ -37,7 +37,7 @@ Stop expanding a trace when a check you actually read constrains the value, when
 
 Diff too large for one pass: split by directory, dispatch one reader per group with this section and the taxonomy inline, then merge. The brief says when it is over budget.
 
-**Done when** every changed file has been read end to end, every taxonomy category consciously considered against it, every tell resolved into a finding or dismissed with a reason, and every question that pulled in a blast-radius file answered.
+**Done when** every changed file has been read end to end, every taxonomy category consciously considered against it, every applicable security check considered where the file touches attack surface, every tell resolved into a finding or dismissed with a reason, and every question that pulled in a blast-radius file answered.
 
 ### 3. Refute
 
@@ -81,7 +81,7 @@ Each Confirmed finding carries **what** is wrong, the **trigger** that causes it
 
 A skip recorded only in chat is a skip forgotten — anything left unread goes in Coverage.
 
-**Done when** the verdict names the single worst thing in one sentence, every finding cites `file:line`, every unread in-scope file appears under Coverage, and the report is written to its file.
+**Done when** the verdict names the single worst thing in one sentence, every finding cites `file:line`, every unread in-scope file appears under Coverage, and the report is written to its file — or to chat alone when no effort directory exists, per [Referencing](#referencing).
 
 ## Builder tells
 
@@ -115,7 +115,7 @@ Language-agnostic. Check each consciously; a category is never clean because the
 
 ## Security
 
-Only for files touching attack surface: external input, database queries, auth or authz, sessions and tokens, crypto, outbound calls, serialization, process or shell execution. Files touching none get no security pass and no clean note.
+Only for files touching attack surface: external input, database queries, auth or authz, sessions and tokens, crypto, outbound calls, serialization, process or shell execution. Files touching none get no security pass and no clean note. For files that do, check each item below — an attack-surface file is never clean because it "seems fine".
 
 Injection (SQL, command, template, header, path traversal) · output encoding and XSS · authentication behind every protected operation · authorization and IDOR, where **ownership** is verified rather than merely being logged in · CSRF on state-changing operations · TOCTOU · session fixation, expiry, cookie flags, constant-time secret comparison · secure randomness and algorithm choice · information disclosure through traces, logs, or timing · resource exhaustion from attacker-controlled size · business-logic abuse: replay, state-machine violations, negative quantities, overflow, rounding in money paths.
 

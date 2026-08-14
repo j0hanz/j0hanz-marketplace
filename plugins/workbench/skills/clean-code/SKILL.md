@@ -1,11 +1,11 @@
 ---
 name: clean-code
-description: Readability pass over code that already works — naming, function size, comments, structure — behavior byte-for-byte unchanged, every function in scope carrying a verdict. Use when asked to clean up or tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt) or structural and maintainability review of a branch (qc).
+description: Readability pass over code that already works — behavior-preserving, every function in scope carrying a verdict. Use when asked to tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt) or structural and maintainability review of a branch (qc).
 ---
 
 # Clean Code
 
-Behavior stays identical: every edit is a **rename**, an **extraction**, a **reorder**, or a deleted comment — plus the new code those need.
+The pass is behavior-preserving: every edit is a **rename**, an **extraction**, a **reorder**, or a deleted comment — plus the new code those need.
 
 Cleaning applies the verdicts; reviewing reports them. Same pass either way, and the review mode skips steps 1 and 4.
 
@@ -21,7 +21,7 @@ Renaming a local is free. The other three edits carry hazards a reader does not 
 
 ### 1. Pin the behavior
 
-Run the tests covering the touched files and save their output. That saved output is what "behavior unchanged" gets measured against; a check written after the edits only asserts what the new code already does.
+Run the tests covering the touched files and save their output. That saved output is what the behavior-preserving pass is measured against; a check written after the edits only asserts what the new code already does.
 
 **Done when** the pre-edit output is saved, or the absence of any covering test is stated.
 
@@ -43,7 +43,7 @@ Where two heuristics conflict, a constraint written in the code — a why-commen
 
 **Done when** every function on the list carries one of three verdicts: **changed**, with what and why; **left clean**; or **left dirty on purpose**, naming the heuristic declined and the constraint that outranked it. A file-level "looks fine" is not a verdict, and neither is "the rest is trivial".
 
-### 4. Prove behavior held
+### 4. Preserve the behavior
 
 Run the same tests and diff the output against step 1.
 
@@ -88,8 +88,8 @@ Run the same tests and diff the output against step 1.
 
 This skill is one of three that read a landed diff, each on its own axis and none on the others' ([plan](../plan/SKILL.md)). A verdict that turns out to need more than a rename leaves this pass rather than stretching it:
 
-| What the walk surfaced                         | Hands to                             |
-| :--------------------------------------------- | :----------------------------------- |
-| The code is wrong, not merely unclear          | [bug-hunt](../bug-hunt/SKILL.md)     |
-| The shape is wrong — layering, indirection     | [qc](../qc/SKILL.md)                 |
-| The edit no longer fits one behavior-safe pass | [write-plan](../write-plan/SKILL.md) |
+| What the walk surfaced                               | Hands to                             |
+| :--------------------------------------------------- | :----------------------------------- |
+| The code is wrong, not merely unclear                | [bug-hunt](../bug-hunt/SKILL.md)     |
+| The shape is wrong — layering, indirection           | [qc](../qc/SKILL.md)                 |
+| The edit no longer fits one behavior-preserving pass | [write-plan](../write-plan/SKILL.md) |

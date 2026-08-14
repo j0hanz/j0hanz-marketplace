@@ -1,6 +1,7 @@
 ---
 name: write-skills
-description: Author a SKILL.md that fires predictably. Use when writing a new skill, auditing one that misfires or sprawls, or judging a skill set for coherence. Not for authoring hooks ([write-hooks](../write-hooks/SKILL.md)), CLAUDE.md agent memory, or reader-facing project docs.
+description: Use when you need to write a new skill or audit an existing one.
+disable-model-invocation: true
 ---
 
 **Predictability**.

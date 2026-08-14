@@ -1,6 +1,6 @@
 ---
 name: run-plan
-description: Execute a written plan. Use when handed a plan file to carry out, or resuming one mid-flight. Not for writing the plan (write-plan).
+description: Execute a written plan. Use when handed a plan file, or resuming one mid-flight. Not for writing the plan (write-plan) or reviewing a suspect one (plan-hunt).
 ---
 
 # Run Plan
@@ -61,12 +61,10 @@ evidence [`db.ts:42`](../../../src/lib/db.ts#L42)
 
 ## Stopping
 
-STOP is a report, never a workaround. Name the condition, the step, and the evidence, then hand off:
+STOP is a report. Name the condition, the step, and the evidence, then hand off:
 
 | What tripped it                          | Hands to                                                      |
 | :--------------------------------------- | :------------------------------------------------------------ |
 | Behavior the spec got wrong              | [write-specs](../write-specs/SKILL.md#spec-delta), as a delta |
 | A decision only the user makes           | [grilling](../grilling/SKILL.md)                              |
 | Drift, failed verification, foreign file | the user, with the log line                                   |
-
-Resuming after a STOP clears keeps the old line; a fresh line records the retry.

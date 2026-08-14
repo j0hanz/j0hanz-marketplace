@@ -1,6 +1,6 @@
 ---
 name: write-hooks
-description: Author a Claude Code hook that fires on the right event and fails safe — handler config, matchers, exit codes, JSON output, plugin shipping. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the skill or plugin that carries the hook ([write-skills](../write-skills/SKILL.md)).
+description: Author a Claude Code hook that fires on the right event and fails safe. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for authoring the skill or plugin that carries the hook ([write-skills](../write-skills/SKILL.md)), nor for permissions and env-var config in settings.json (update-config) — write-hooks authors the hook handler and its registration block; update-config the rest of the settings file.
 ---
 
 # Writing hooks
@@ -259,7 +259,7 @@ case exited 0 instead of erroring.
 - Every matching hook runs **in parallel, to completion**. One hook's `deny` doesn't cancel
   another's side effects — log line already written.
 - `PreToolUse` precedence: `deny` > `defer` > `ask` > `allow`. Two hooks rewriting same
-  call: last to finish wins, non-deterministic order. Never have two.
+  call: last to finish wins, non-deterministic order — **one rewriter per call.**
 - Every hook's `additionalContext` kept; Claude receives all of them.
 - Identical handlers deduplicated by command string + args (URL for HTTP hooks) — across
   sources, not per plugin. Comparison runs on raw strings before
@@ -302,7 +302,4 @@ case exited 0 instead of erroring.
 
 ## Reading hooks already installed
 
-Two branches read rather than write: auditing a set that already runs, and chasing one that
-never fires. Both need the merged view before anything else, cuz config **merges** across six
-sources and no single settings file holds what actually runs. Load [AUDIT.md](AUDIT.md) — it
-carries the enumeration order, the ranking of what you find, and the not-firing checklist.
+Load [AUDIT.md](AUDIT.md) — it carries the six-source enumeration order, the ranking of what you find, and the not-firing checklist.

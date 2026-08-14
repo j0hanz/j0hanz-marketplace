@@ -1,9 +1,9 @@
 ---
 name: frontier
-description: 'Frontier: chart work too big for one session as a map of tickets. Use when the way from a loose idea to done is not visible yet, or when resuming an existing map. Not for changes that fit one session (write-plan).'
+description: 'Frontier: chart work too big for one session as a map of tickets. Use when the way from a loose idea to done is not visible yet, or when resuming an existing map. Not for changes that fit one session (write-plan). Not for widening approaches when none exist yet (ideation).'
 ---
 
-Loose idea arrive too big for one agent session, wrapped in **fog**: way from here to **destination** not visible yet. Finding that way is the work, not charging at destination. This skill chart way as **map** of tickets — each resolve one decision, or one thing a decision wait on — then work them until route clear. Every session take what sit at **frontier**: edge of known, decisions takeable right now.
+Loose idea arrive too big for one agent session, wrapped in **fog**: way from here to **destination** not visible yet. Finding that way is the work. This skill chart way as **map** of tickets — each resolve one decision, or one thing a decision wait on — then work them until route clear. Every session take what sit at **frontier**: edge of known, decisions takeable right now.
 
 Load [operations](operations.md) before creating, claiming, resolving, or closing any record; it hold record templates and storage protocol. Load [example](example.md) on the first create-round of a map, and before any redraw. Questioning protocol lives in the `grilling` skill — invoke it wherever this skill says [grill](../grilling/SKILL.md).
 
@@ -17,7 +17,7 @@ Map is an **index**, not store: it gist each decision and link ticket holding de
 
 ## Tickets
 
-Each ticket is child of map and resolve one sharp decision; its body states what it resolves. Type, priority, blockers = metadata.
+Each ticket is child of map and resolve one sharp decision; its body states what it resolves.
 
 Under a tracker profile, blocking use tracker's native dependency relationship — that render frontier _visually_ in tracker's own UI, so human see what takeable without opening map; under local files, `blocked_by` is a frontmatter scan.
 
@@ -30,7 +30,7 @@ Hold regardless of storage, and each defies what the moment would otherwise sugg
 - Update and re-block both clear any live claim — the question it was claimed under changed.
 - A **create-round** that was interrupted is rolled back, not finished: a ticket that never published never joined the route.
 - Open, unclaimed tickets with an empty frontier is not finished work.
-- No subagent survives the session that launched it.
+- Subagents die with the session that launched them.
 - Validate the blocker graph again after every redraw: a redraw can add an edge to an already-published ticket, and an added edge can close a cycle.
 - Research subagents are delegates; the parent session writes every record.
 
@@ -62,7 +62,7 @@ When existing ticket turn out to sit past destination — mis-scoped while chart
 ## Chart the map
 
 1. **Name the destination.** [Grill](../grilling/SKILL.md) until user confirm what this map finding its way to.
-2. **Map the frontier.** Grill again, **breadth-first**: fan out across whole space rather than deep on one thread, surfacing open decisions and first steps takeable now. A question waiting on another question is a blocking edge, not a thread — ticket it, wire it, move on. **Done when** one further breadth pass over the destination surfaces no decision not already ticketed or written into fog. **If no fog surface** — way already clear, journey small enough for one session — no map needed. Stop and ask user how they want to proceed.
+2. **Map the frontier.** Grill again, **breadth-first**: fan out across the whole space, surfacing open decisions and first steps takeable now. A question waiting on another question is a blocking edge, not a thread — ticket it, wire it, move on. **Done when** one further breadth pass over the destination surfaces no decision not already ticketed or written into fog. **If no fog surface** — way already clear, journey small enough for one session — no map needed. Stop and ask user how they want to proceed.
 3. **Create the map** once user confirm destination and frontier read right: every section of the map template present, each filled or explicitly empty.
 4. **Create every ticket with a sharp question**, through the create-round barrier in [operations](operations.md). Wiring sorts them into frontier and blocked; whatever still can't be stated sharply stays in fog.
 5. **Dispatch takeable research** through research dispatch procedure in [operations](operations.md). **Done when** every research ticket the frontier query returned is either dispatched or flagged deadlocked per operations.

@@ -15,7 +15,7 @@ Where a spec exists it supplies the test list — [write-specs](../write-specs/S
 
 A **seam** is a public boundary you can observe behavior through without reaching inside: an exported function, an HTTP route, a module's public API, a CLI. A test earns its place when it can fail at the seam for a reason a caller would care about — if the only way to break it is to rename a private helper, it tests structure, not behavior.
 
-Write down the seams under test before any test exists, and confirm them. Where the surface is wide, fan out [research](../research/SKILL.md) to find the callers and the conventions the tests must match. Agreeing seams is how effort lands on critical paths and complex logic.
+Write down the seams under test before any test exists, and confirm them. Where the surface is wide, fan out [research](../research/SKILL.md) to find the callers and the conventions the tests must match.
 
 **Done when** the seam list is written and confirmed against its callers, and every requirement ID in scope maps to a seam on it — every test written sits at a confirmed seam.
 
@@ -117,7 +117,7 @@ test('createUser makes user retrievable', async () => {
 });
 ```
 
-**It was written in bulk.** A test written before the implementation taught you anything locks in an imagined structure, and the suite drifts insensitive to real changes. Every test in the loop has been **red** for a predicted reason.
+**It was written in bulk.** A test written before the implementation taught you anything locks in an imagined structure, and the suite drifts insensitive to real changes.
 
 ## Referencing
 

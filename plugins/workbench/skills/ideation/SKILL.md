@@ -40,7 +40,7 @@ Two candidates one killer takes out are **twins** — one bet written twice. Kee
 
 ### 3. Hand the live set over
 
-The live set is written under the decision it answers — the map node in [grilling](../grilling/SKILL.md), or the ticket that raised it under [frontier](../frontier/SKILL.md). With neither open, it becomes the first node of the map grilling opens next. Say which survivor you would take and why.
+The live set is written under the decision it answers — the map node in [grilling](../grilling/SKILL.md), or the ticket that raised it under [frontier](../frontier/SKILL.md). With neither open, it becomes the first node of the map grilling opens next. Say which survivor you would take and why. Each survivor goes on the page with its killer and its cost — what taking it would give up.
 
 - **One survivor** — nothing left to decide; its behavior goes to [write-specs](../write-specs/SKILL.md).
 - **Two or more** — [grilling](../grilling/SKILL.md) puts them to the user as one round.

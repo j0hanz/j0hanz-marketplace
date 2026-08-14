@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Plan a change as an implementation file a cold executor can follow — another agent, or a future session. Not for deciding what the behavior should be (write-specs) or executing the plan (run-plan).
+description: Plan a change as an implementation file a cold executor can follow — another agent, or a future session. Not for deciding what the behavior should be (write-specs), executing the plan (run-plan), or work too big for one session (frontier).
 ---
 
 # Write Plan
@@ -17,13 +17,13 @@ Three properties make a plan executable by that reader:
 
 ### 1. Recon
 
-Open every file the plan will name. Fan out [research](../research/SKILL.md) where the surface is wide — it maps callers and conventions while you route, and you still open what the plan names. Run every command it will cite — guessed commands are the most common way a plan dies on contact. Record `git rev-parse --short HEAD`. Note the conventions the change must match, each with one exemplar file to imitate.
+Open every file the plan will name. Fan out [research](../research/SKILL.md) when the change touches more files than you can open in one pass — it maps callers and conventions while you route, and you still open what the plan names. Run every command it will cite — guessed commands are the most common way a plan dies on contact. Record `git rev-parse --short HEAD`. Note the conventions the change must match, each with one exemplar file to imitate.
 
 **Done when** every path, symbol, and command destined for the plan has been verified against the repo, every convention the change must match has a linked exemplar file to imitate, and the SHA is recorded.
 
 ### 2. Route
 
-Order the steps so the build stays passing between them: add the new path, switch the callers, then delete the old one. Where the change spans layers, make the first step a thin **vertical slice** and widen from there. Tests are steps, not a wish at the end — a step that adds behavior is worked test-first by [tdd](../tdd/SKILL.md), so its Verify command is the suite.
+Order the steps so the build stays passing between them — e.g., add the new path, switch the callers, then delete the old one. Where the change spans layers, make the first step a thin **vertical slice** and widen from there. Tests are steps, not a wish at the end — a step that adds behavior is worked test-first by [tdd](../tdd/SKILL.md), so its Verify command is the suite.
 
 **Done when** each step verifies on its own, and the step list reads in that order — every new path added before the caller switch, every caller switch before the deletion.
 
@@ -31,7 +31,7 @@ Order the steps so the build stays passing between them: add the new path, switc
 
 Fill the template, then reread it as the executor. Wherever you filled a gap from memory, inline the missing fact.
 
-**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, each STOP condition names a risk specific to this change, and every Verify command has been run and produced its expected output.
+**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, every out-of-scope file is listed with a reason touching it is wrong, each STOP condition names a risk specific to this change, and every Verify command has been run and produced its expected output.
 
 ## Referencing
 
@@ -142,5 +142,3 @@ The full template is the default. For a change touching at most two files with n
 ## Secrets
 
 Secrets never appear in a plan: reference `file:line` and the credential type, and recommend rotation.
-
-Once the plan is written, its executor is [run-plan](../run-plan/SKILL.md).

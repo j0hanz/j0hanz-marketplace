@@ -23,7 +23,7 @@ Route to one skill, not a list — [plan](../plan/SKILL.md)'s Routes table picks
 
 Secrets follow the [write-plan rule](../write-plan/SKILL.md#secrets): name the `file:line` and the credential type, recommend rotation. Personal data goes the same way — the location, not the value.
 
-**Done when** the file names the branch and SHA, every path `git status` lists sits in Working state or is named there as unrelated, every claim that cannot be recovered from the repo is on the page and everything else is a link that resolves, each dead end carries its reason, the next step is one concrete action, one route command is named, no credential or personal data survives the read-through, and the path has been reported.
+**Done when** the file names the branch and SHA, every path `git status` lists sits in Working state or is named there as unrelated, everything that dies with the session is on the page and everything else is a link that resolves, each dead end carries its reason, one route command is named (First move) and the single command that proves it landed is named (Next), no credential or personal data survives the read-through, and the path has been reported.
 
 ## Referencing
 
@@ -46,14 +46,13 @@ What landed, what is half-done, what has not been touched. One line each.
 
 ## Working state
 
-Only what the repo cannot tell you — name it or it is lost: uncommitted files
+What dies with the session — name it or it is lost: uncommitted files
 and what is in them, stashes, running processes and their ports, hand-set env
 vars, local data changes. "Clean tree, nothing running" where that is the truth.
 
 ## Decided here
 
-Decisions made in this conversation and written down nowhere else, each with
-the reason. One that outlives this change belongs in an ADR
+Decisions that die with this session, each with the reason. One that outlives this change belongs in an ADR
 (`/workbench:write-adr`) — link the record here rather than repeat it.
 
 ## Ruled out
@@ -66,8 +65,7 @@ the reason. One that outlives this change belongs in an ADR
 
 ## Next
 
-1. <one concrete action, with the command that proves it worked>
-2. …
+The command that proves the first move landed: `<command or output that shows the route started>`.
 
 ## Artifacts
 

@@ -3,7 +3,7 @@ name: research
 description: Research a question against primary sources and report back cited findings — web sources or this working directory. Use when a question needs sources answered rather than the user. Not for decisions the user must make (grilling).
 ---
 
-Dispatch a background agent (Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`) — you keep working while it reads. Two source modes share one template: **web** (fetch and search outside the repo) or **directory** (read this working directory). A question spanning both is two dispatches, not one agent handed both source blocks.
+Dispatch a background agent (Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`). Two source modes share one template: **web** (fetch and search outside the repo) or **directory** (read this working directory). A question spanning both is two dispatches, not one agent handed both source blocks.
 
 Fill the template and pass it as the agent's prompt. Drop a whole tag when the run has nothing to put in it, and inside `<sources>` keep only the mode you picked — an agent handed both picks its own.
 

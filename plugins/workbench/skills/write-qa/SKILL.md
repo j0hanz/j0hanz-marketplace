@@ -1,6 +1,6 @@
 ---
 name: write-qa
-description: Create coverage-mapped QA deliverables — test plans, manual test cases, regression suites, and bug reports. Use when asked for a test plan, manual cases, a regression suite, or a bug report. Not for automated tests (tdd), hunting bugs in a diff (bug-hunt), or verifying a landed change against its spec (verify-specs).
+description: Create coverage-mapped QA deliverables. Use when asked for a test plan, manual cases, a regression suite, or a bug report. Not for automated tests (tdd), hunting bugs in a diff (bug-hunt), or verifying a landed change against its spec (verify-specs).
 ---
 
 # Write QA
@@ -51,7 +51,7 @@ Missing context the material cannot answer → ask the user; [grilling](../grill
 For each in-scope requirement and surface:
 
 1. Inventory states, transitions, contracts, dependencies, error/retry paths — fan out [research](../research/SKILL.md) where the surface is wide.
-2. Name the risk and the test dimension that addresses it.
+2. Name the risk and the test type that addresses it.
 3. Map to a planned case, suite check, or justified gap, citing the requirement ID where a spec exists.
 4. Keep the map inside the deliverable — plan and regression always; cases and bugs via **traceability**.
 
@@ -100,7 +100,7 @@ One prefix per type, carried in the case ID.
 
 Where a deliverable lives follows its lifetime, under the [referencing convention](../write-specs/SKILL.md#referencing).
 
-Per the referencing convention, change-scoped QA files (`<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md`) sit in the dated per-change directory; standing records sit at `docs/qa/`. Net-new here: standing QA filenames — bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
+Change-scoped QA files follow the [referencing convention](../write-specs/SKILL.md#referencing). Net-new here: standing QA filenames — bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
 
 `<name>.cases.md` collects the whole set into one file (structure in `test-case.md`); the coverage map links to anchors inside it.
 
@@ -111,4 +111,4 @@ bug to spec [`auth spec`](../plan/2026-08-13-auth/auth.spec.md)
 suite to case [`TC-FUNC-001`](../plan/2026-08-13-auth/auth.cases.md#tc-func-001)
 ```
 
-A bug found while executing a case gets the next `BUG-` number and a link from the case's execution history; its fix enters the chain at [write-plan](../write-plan/SKILL.md), and a run against a spec feeds [verify-specs](../verify-specs/SKILL.md).
+A bug found while executing a case gets the next `BUG-` number and a link from the case's execution history.

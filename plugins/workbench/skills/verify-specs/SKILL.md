@@ -13,13 +13,13 @@ description: Verify a built system against its spec — run each requirement's f
 
 List every requirement ID in the spec beside its falsifying observation. Where a spec predates that convention, derive one from the requirement's Given/When/Then — the `Then` is the observable. Where none can be derived, rule it `unobservable` and send it to open questions rather than scoring it.
 
-**Done when** every ID in the spec has a named observation or an `unobservable` ruling, with none unaccounted for.
+**Done when** every ID in the spec has a named observation or an `unobservable` ruling.
 
 ### 2. Observe
 
 Run each one against the built system — prefer a test (cite the [tdd](../tdd/SKILL.md) test name); fall back to a command when no test covers it, a manual check only when no automation exists — cite the [write-qa](../write-qa/SKILL.md) case that scripts it, and file what it breaks as a bug record there. An ID whose evidence is an argument rather than an observation is **unmet**.
 
-Unwanted-behavior requirements (`If … then …`) need the bad input actually sent. An error path nobody triggered is unverified, not passing.
+Unwanted-behavior requirements (`If … then …`) need the bad input actually sent. An error path nobody triggered is **unverified**.
 
 **Done when** every scored ID carries evidence, and every `If … then …` requirement had its trigger fired.
 
@@ -35,7 +35,7 @@ Report the verdict table, then close the loop on the spec itself:
 
 ## Referencing
 
-The verdict lives beside the spec it judges as `<name>.verify.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — paths relative to the verdict. Verifying again after fixes appends a dated section; the first verdict stays, since which requirements failed and when is the record.
+The verdict lives beside the spec as `<name>.verify.md`, under write-specs' [referencing convention](../write-specs/SKILL.md#referencing). Verifying again after fixes appends a dated section; the first verdict stays — which requirements failed and when is the record.
 
 ```markdown
 spec [`<name>.spec.md`](<name>.spec.md)
