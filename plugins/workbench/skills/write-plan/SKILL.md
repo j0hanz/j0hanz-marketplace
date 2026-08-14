@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Plan a change as an implementation file a cold executor can follow — another agent, or a future session. Use when a change is understood and the question is how to build it, from a pinned cause, a settled spec, or a review finding to act on. Not for deciding what the behavior should be (write-specs), executing the plan (run-plan), or work too big for one session (frontier).
+description: Plan a change as an implementation file a cold executor can follow — another agent, or a future session. Use when the behavior is settled and the question is how to build it — "how should I build this", "write a plan", "what's the approach" — or when acting on a pinned cause, a settled spec, a hunt finding, or a review comment. Hand the finished plan to plan-hunt before run-plan executes it. Not for deciding what the behavior should be (write-specs), executing the plan (run-plan), writing the tests inside a step (tdd), or work too big for one session (frontier).
 ---
 
 # Write Plan
@@ -142,3 +142,11 @@ The full template is the default. For a change touching at most two files with n
 ## Secrets
 
 Secrets never appear in a plan: reference `file:line` and the credential type, and recommend rotation.
+
+## Handing off
+
+The plan is written, not trusted. Hand it to
+[plan-hunt](../plan-hunt/SKILL.md) — a blind refuter kills dead steps cheaper
+than run-plan discovers them. A plan of at most two steps against files this
+session already read may go straight to [run-plan](../run-plan/SKILL.md); say
+which route you took and why.

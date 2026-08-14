@@ -28,7 +28,7 @@ const brief = (stages, payload = { hook_event_name: 'UserPromptSubmit' }) => {
 
 test('an unfinished chain names the skill that produces the next stage', () => {
   const context = JSON.parse(brief(['spec', 'plan'])).hookSpecificOutput.additionalContext;
-  assert.match(context, /no run, verify; next `\/workbench:run-plan`/);
+  assert.match(context, /no run, verify; the run-plan skill produces the next one/);
 });
 
 test('an unprompted brief stays silent once the chain is complete', () => {
@@ -41,11 +41,18 @@ test('an unprompted brief stays silent once the chain is complete', () => {
 test('a stage the route skipped is behind the frontier, not pending', () => {
   const context = JSON.parse(brief(['diagnose', 'plan', 'run'])).hookSpecificOutput
     .additionalContext;
-  assert.match(context, /no verify; next `\/workbench:verify-specs`/);
+  assert.match(context, /no verify; the verify-specs skill produces the next one/);
 });
 
 test('a stem that never entered the chain is not routed into it', () => {
   assert.equal(brief(['hunt']), '');
+});
+
+// diagnose pins a cause that needs fixing, so its stem always owes a plan — unlike a hunt,
+// which can find nothing and would then bill the brief forever.
+test('a lone diagnose stem is routed to the plan it owes', () => {
+  const context = JSON.parse(brief(['diagnose'])).hookSpecificOutput.additionalContext;
+  assert.match(context, /the write-plan skill produces the next one/);
 });
 
 test('an explicit invocation gets the state even with the chain complete', () => {
@@ -54,4 +61,20 @@ test('an explicit invocation gets the state even with the chain complete', () =>
     tool_input: { skill: 'workbench:qc' },
   });
   assert.match(out, /docs\/plan\/2026-08-14-auth\//);
+});
+
+// The cold start is where a bench with no effort directory has the most to say and the
+// unprompted gate says least — SessionStart pays that rent once, not per prompt.
+test('a session start announces the convention even with no effort directory', () => {
+  const project = mkdtempSync(join(tmpdir(), 'workbench-brief-'));
+  try {
+    const out = spawnSync(process.execPath, [HOOK], {
+      input: JSON.stringify({ hook_event_name: 'SessionStart' }),
+      env: { ...process.env, CLAUDE_PROJECT_DIR: project },
+      encoding: 'utf8',
+    }).stdout;
+    assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /none under docs\/plan\//);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
 });

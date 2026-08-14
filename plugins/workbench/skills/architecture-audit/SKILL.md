@@ -1,7 +1,6 @@
 ---
 name: architecture-audit
-description: Rank a repo's structural debt by churn, worst first, each finding carrying the restructure that takes it out.
-disable-model-invocation: true
+description: Rank a repo's structural debt by churn, worst first, each finding carrying the restructure that takes it out. Use when asked to audit architecture, find structural debt, or judge whether a repo's shape still holds — repo-wide, not diff-scoped. Not for a branch diff's maintainability (qc), readability inside a function (clean-code), or charting the work the findings imply (frontier).
 ---
 
 # Architecture Audit

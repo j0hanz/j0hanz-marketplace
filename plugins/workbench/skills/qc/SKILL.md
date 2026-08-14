@@ -1,6 +1,6 @@
 ---
 name: qc
-description: Review a branch diff for maintainability and return blocking comments. Use once a branch's changes have landed, or when asked to review the maintainability of a diff. Not for correctness bugs (bug-hunt) or test coverage (tdd, verify-specs).
+description: Review a whole branch diff for maintainability and return blocking comments. Use once a branch's changes have landed and the question is whether the shape holds across them — layering, indirection, duplication. Not for correctness or security defects (bug-hunt), naming and readability inside a function (clean-code), test coverage (tdd, verify-specs), or repo-wide structural debt outside this branch (architecture-audit).
 ---
 
 Dispatch the review to a background subagent — you keep working while it reviews.

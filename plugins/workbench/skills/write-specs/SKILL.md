@@ -1,6 +1,6 @@
 ---
 name: write-specs
-description: Spec the observable behavior a change must deliver. Use when a change's behavior is not yet fixed in writing, when asked to spec a feature, or to capture what a built system already guarantees. Not for the execution route (write-plan) or verifying a built system (verify-specs).
+description: Spec the observable behavior a change must deliver. Use when a change's behavior is not yet fixed in writing, when asked to spec a feature or write requirements, when a request names what the system should do but not how, or to capture what a built system already guarantees. Hand the finished spec to spec-hunt before write-plan builds on it. Not for the execution route (write-plan), reviewing the spec just written (spec-hunt), or verifying a built system (verify-specs).
 ---
 
 # Write Specs
@@ -151,4 +151,8 @@ Amending a spec that already exists is a **delta** against its current IDs, neve
 - **R5** — <why it no longer applies>
 ```
 
-When the behavior is settled and the question becomes how to build it, hand off to [write-plan](../write-plan/SKILL.md).
+When the behavior is settled, hand the spec to
+[spec-hunt](../spec-hunt/SKILL.md) — it kills the gaps a cold executor would
+hit, checked against the done-when checklist above. A zero-finding hunt
+forwards to [write-plan](../write-plan/SKILL.md); confirmed gaps come back here
+as a [delta](#spec-delta) first.

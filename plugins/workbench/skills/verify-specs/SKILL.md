@@ -64,3 +64,11 @@ Against [`<name>.spec.md`](<name>.spec.md), commit `<short SHA>`, <YYYY-MM-DD>.
 
 - <the delta section merged into the canonical spec, or "none">
 ```
+
+## Handing off
+
+Every ID met is the chain's end, not a stop: say so plainly and name what the
+change still owes — [bug-hunt](../bug-hunt/SKILL.md) if correctness was never
+reviewed, [qc](../qc/SKILL.md) if the structure was not, neither if run-plan
+already routed both. A spec signed off with no reviewer having read the diff is
+a verdict on behavior alone.

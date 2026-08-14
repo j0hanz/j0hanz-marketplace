@@ -37,6 +37,7 @@ try {
   // On every prompt the brief lands before the skill choice, not after it — but only when
   // it has something to route. The silence gate below is what keeps that free.
   const mine =
+    event === 'SessionStart' ||
     event === 'UserPromptSubmit' ||
     invoked.startsWith(PREFIX) ||
     (event === 'UserPromptExpansion' &&
@@ -76,10 +77,11 @@ try {
       // Only stages past the furthest one reached are pending. A stage the route skipped on
       // purpose — diagnose bypasses spec — is behind, and routing back to it is wrong.
       const reached = CHAIN.reduce((best, stage, index) => (kinds.has(stage) ? index : best), -1);
-      const missing = reached < 0 ? [] : CHAIN.slice(reached + 1);
+      const missing =
+        reached < 0 ? (kinds.has('diagnose') ? CHAIN.slice(1) : []) : CHAIN.slice(reached + 1);
       if (missing.length > 0) incomplete = true;
       lines.push(
-        `  stem \`${stem}\`: ${has.join(', ')}${missing.length > 0 ? ` — no ${missing.join(', ')}; next \`/workbench:${NEXT[missing[0]]}\`` : ''}`,
+        `  stem \`${stem}\`: ${has.join(', ')}${missing.length > 0 ? ` — no ${missing.join(', ')}; the ${NEXT[missing[0]]} skill produces the next one` : ''}`,
       );
     }
     const other = files.filter((file) => !ARTIFACT.test(file));
