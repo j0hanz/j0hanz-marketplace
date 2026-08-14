@@ -201,14 +201,19 @@ const read = (p) => {
   }
 };
 
+// A manifest that will not parse is itself worth knowing, and silence about it
+// reads as "there was nothing declared" — the one wrong thing a probe can say.
+const unparsed = [];
+
 const parse = (p) => {
   const text = read(p);
   if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
-    // A manifest that will not parse is itself worth knowing, and it reaches the
-    // brief as a missing section rather than a stack trace over everything after it.
+    // Named in the brief rather than thrown, so one bad file does not take the
+    // rest of the run with it.
+    unparsed.push(p);
     return null;
   }
 };
@@ -262,7 +267,9 @@ function walk(dir, out = []) {
 }
 
 function* blocks(text, anchor) {
-  const lines = text.split('\n');
+  // A CRLF checkout is the default on Windows. Left in place, the trailing \r
+  // defeats every `$` below and the file reads as having no commands at all.
+  const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
     const m = anchor.exec(lines[i]);
     if (!m) continue;
@@ -279,7 +286,9 @@ function* blocks(text, anchor) {
 
 function runSteps(text) {
   const out = [];
-  for (const [m, body] of blocks(text, /^(\s*)(?:-\s+)?run:\s*(.*)$/)) {
+  // The dash belongs to the indent. Measured before it, `- run: |` sets a depth
+  // two columns short of the step's own keys and swallows `env:` as a command.
+  for (const [m, body] of blocks(text, /^(\s*(?:-\s+)?)run:\s*(.*)$/)) {
     const inline = m[2].trim();
     if (inline && !/^[|>]/.test(inline)) out.push(inline);
     else out.push(...body.map((line) => line.trim()));
@@ -397,7 +406,9 @@ for (const name of Object.keys(parse('composer.json')?.scripts ?? {})) {
 brief.push('\n## Commands\n');
 if (declared.size === 0) {
   brief.push(
-    'Nothing declared — every invocation is typed by hand, so CI below is the only record.',
+    unparsed.length > 0
+      ? `${unparsed.join(', ')} would not parse — declared commands unread, not absent.`
+      : 'Nothing declared — every invocation is typed by hand, so CI below is the only record.',
   );
 } else {
   for (const [name, [body, source]] of [...declared].slice(0, 30)) {
@@ -466,6 +477,9 @@ if (gates.size === 0) {
 brief.push('\n## Surprises\n');
 brief.push('Candidates. Each one still needs its file opened before it earns a line.\n');
 const surprises = [];
+
+if (unparsed.length > 0)
+  surprises.push(`did not parse, so nothing was read from: ${unparsed.join(', ')}`);
 
 const trees = new Map();
 let scanned = 0;
@@ -571,7 +585,10 @@ for (const kind of ['skills', 'agents', 'hooks', 'commands']) {
   const owned = claude.filter((f) => f.startsWith(`.claude/${kind}/`));
   if (owned.length > 0) {
     const names = [...new Set(owned.map((f) => f.split('/')[2].replace(/\.\w+$/, '')))];
-    context.push(`.claude/${kind}/  ${names.slice(0, SHOWN).join(', ')}`);
+    context.push(
+      `.claude/${kind}/  ${names.slice(0, SHOWN).join(', ')}` +
+        (names.length > SHOWN ? ` …and ${names.length - SHOWN} more` : ''),
+    );
   }
 }
 const settings = parse('.claude/settings.json');
