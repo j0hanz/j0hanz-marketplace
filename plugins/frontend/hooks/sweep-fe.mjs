@@ -1,12 +1,3 @@
-// fires:  Stop (turn end)
-// reads:  stdin JSON { stop_hook_active, session_id, cwd };
-//         git rev-parse --show-toplevel, git ls-files, git status --porcelain -z
-// emits:  hookSpecificOutput.additionalContext (agent) + systemMessage (human):
-//           list of dirty frontend files + reminder to run frontend:guidelines
-// fails:  not a git repo / git missing / not a frontend project / no dirty FE files
-//         / stop_hook_active -> exit 0 silent
-// verify: node hooks/sweep-fe.mjs < fixture.json; echo $?
-
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -14,8 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 
-// Extensions counted as frontend once the project is confirmed FE.
-// .ts/.js/.mjs are ambiguous alone, but safe inside a known-frontend repo.
 const FE_EXT = new Set([
   '.tsx',
   '.jsx',
@@ -36,8 +25,6 @@ const FE_EXT = new Set([
   '.pcss',
 ]);
 
-// Dep-name tokens that prove a frontend framework. Matched by tokenizing the
-// dep name on /@/-/_, so "split2" (contains "lit") does not false-match "lit".
 const FE_TOKEN = new Set([
   'react',
   'reactdom',
@@ -63,7 +50,6 @@ const FE_TOKEN = new Set([
   'inferno',
 ]);
 
-// Config basenames (root) that prove a frontend toolchain.
 const FE_CONFIG = /^(vite|next|svelte|nuxt|astro|tailwind)\.config\.|^angular\.json$/;
 
 const slug = (v) => String(v ?? 'x').replace(/[^\w-]/g, '_');
@@ -104,8 +90,6 @@ const isFrontendProject = (root) => {
   try {
     if (readdirSync(root).some((f) => FE_CONFIG.test(f))) return true;
   } catch {}
-  // Tracked tier-1 FE files anywhere in the repo — presence proves FE work even
-  // before package.json lists a framework.
   try {
     const out = execFileSync(
       'git',
@@ -121,13 +105,9 @@ const isFrontendProject = (root) => {
   return false;
 };
 
-// Returns dirty frontend file paths. Git failure -> [] (fail open, stay silent).
 const dirtyFrontendFiles = (cwd) => {
   let out;
   try {
-    // --no-renames: a rename shows as delete + add (two clean "XY path" entries)
-    // instead of the -z form "R  new\0old", where the second (old, no XY) would
-    // hit slice(3) and produce a bogus path.
     out = execFileSync('git', ['status', '--porcelain', '-z', '--no-renames'], {
       cwd,
       encoding: 'utf8',
@@ -139,7 +119,6 @@ const dirtyFrontendFiles = (cwd) => {
   const files = [];
   for (const entry of out.split('\0')) {
     if (!entry) continue;
-    // porcelain -z entry: "XY path"; XY is 2 chars + 1 space.
     const name = entry.slice(3);
     const dot = name.lastIndexOf('.');
     if (dot < 0) continue;
@@ -150,16 +129,14 @@ const dirtyFrontendFiles = (cwd) => {
 
 const main = async () => {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
-  if (payload.stop_hook_active) return; // continuation this hook caused — stop the loop
+  if (payload.stop_hook_active) return;
   const cwd = payload.cwd || process.cwd();
   const root = gitRoot(cwd);
-  if (!root || !isFrontendProject(root)) return; // inert outside frontend repos
+  if (!root || !isFrontendProject(root)) return;
   const files = dirtyFrontendFiles(cwd);
   if (files.length === 0) return;
 
   const sorted = [...new Set(files)].sort();
-  // Re-warn only when the dirty FE set changes; stays quiet across Stops that
-  // touch nothing new. Keyed on session + the exact file set.
   const key = createHash('sha1')
     .update(slug(payload.session_id) + '\n' + sorted.join('\n'))
     .digest('hex');
@@ -168,24 +145,17 @@ const main = async () => {
   try {
     writeFileSync(marker, sorted.join('\n'));
   } catch {}
-
   const shown = sorted
     .slice(0, 20)
     .map((f) => `  - ${f}`)
     .join('\n');
   const more = sorted.length > 20 ? `\n  …and ${sorted.length - 20} more` : '';
-  const context = [
-    `Frontend files changed in this session (${sorted.length}):`,
+  const systemMessage = [
+    `frontend: ${sorted.length} changed FE file${sorted.length === 1 ? '' : 's'} — run frontend:guidelines`,
     shown + more,
-    `Run frontend:guidelines to check the mechanical floor (semantics, focus, states, motion) before shipping.`,
   ].join('\n');
 
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'Stop', additionalContext: context },
-      systemMessage: `frontend: ${sorted.length} changed FE file${sorted.length === 1 ? '' : 's'} — run frontend:guidelines`,
-    }),
-  );
+  process.stdout.write(JSON.stringify({ systemMessage }));
 };
 
 try {
