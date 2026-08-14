@@ -19,7 +19,7 @@ Three review the diff once code lands, each on its own axis, none on the others'
 
 [frontier](../frontier/SKILL.md) replaces the front of the chain when the way to done is not visible yet. [architecture-audit](../architecture-audit/SKILL.md) sits before the chain rather than on it — whole repo, no diff — and feeds one finding to [write-plan](../write-plan/SKILL.md) or the whole list to [frontier](../frontier/SKILL.md).
 
-Two sit off the route entirely: [write-skills](../write-skills/SKILL.md) and [write-hooks](../write-hooks/SKILL.md) author the Claude Code extensions themselves, not the work they run on.
+Three sit off the route entirely, on the harness rather than the work: [init](../init/SKILL.md) sets up the repo's own Claude Code context — a root CLAUDE.md, and the hooks or skills that follow from it — while [write-skills](../write-skills/SKILL.md) and [write-hooks](../write-hooks/SKILL.md) author those extensions themselves.
 
 Four skills join the chain. [refactor](../refactor/SKILL.md) enters at a behavior-preserving structure change — behavior is settled, so it bypasses write-specs and write-plan, and hands to [qc](../qc/SKILL.md). [diagnose](../diagnose/SKILL.md) enters at a reported symptom whose cause is unknown — it reproduces and narrows by running the code, then hands the cause and repro to [write-plan](../write-plan/SKILL.md). [spec-hunt](../spec-hunt/SKILL.md) and [plan-hunt](../plan-hunt/SKILL.md) are opt-in adversarial passes, each sitting after its authoring skill — spec-hunt after write-specs, plan-hunt after write-plan — and handing a marked artifact back to it; they mirror [bug-hunt](../bug-hunt/SKILL.md), which reviews a diff, not an in-progress artifact.
 
@@ -61,6 +61,7 @@ First matching row wins, read top to bottom.
 | Whole repo, the shape itself is the problem | [architecture-audit](../architecture-audit/SKILL.md)                                                             |
 | Decision settled, outlives the effort       | [write-adr](../write-adr/SKILL.md)                                                                               |
 | Fogged — too big for one session            | [frontier](../frontier/SKILL.md)                                                                                 |
+| Repo has no CLAUDE.md, or it has drifted    | [init](../init/SKILL.md)                                                                                         |
 | Authoring a skill or a hook                 | [write-skills](../write-skills/SKILL.md), [write-hooks](../write-hooks/SKILL.md)                                 |
 | Session ending, work unfinished             | [handoff](../handoff/SKILL.md)                                                                                   |
 
