@@ -55,20 +55,25 @@ instead where the decisions have prerequisites and need a map.
 
 Four classes earn a question:
 
-- **Gotcha** — the brief flagged a generated tree, a second lockfile, a CI-only command.
-  Does it hold, and what does getting it wrong cost? A gotcha nobody pays for is trivia.
+- **Gotcha** — always ask, open form: what broke last, what cost an afternoon, what a
+  newcomer gets wrong. The probe cannot see these, and they are the highest-value floor
+  lines. Where the brief flagged a mechanical one (generated tree, second lockfile,
+  CI-only command), adjudicate it in the same question: does it hold, and what does
+  getting it wrong cost? A gotcha nobody pays for is trivia.
 - **Contradiction** — two lines of an existing `CLAUDE.md` disagree, or a second doctrine
   file says otherwise. Quote both, ask which stands.
 - **Hook** — the mistake made twice. Which rule has to hold every time, whoever is typing?
 - **Skill** — the procedure with judgement in it. Which one gets explained to a human more
-  than once a month?
+  than once a month? Options are **skill** (hand off to [write-skills](../write-skills/SKILL.md)),
+  **floor-line** (a line in `CLAUDE.md` is the procedure), or **neither** — never bundle line
+  and skill into one option. The choice is settled here, not reopened at step 4.
 
-The last two ask even when the brief surfaced no candidate — step 4 has no other source,
-and a repo that wants neither says so in one click. Never ask what the probe answered; that
-spends the round-trip on nothing.
+The last three ask even when the brief surfaced no candidate — gotcha, hook, and skill
+all have no other source, and a repo that wants none says so in one click. Never ask what
+the probe answered; that spends the round-trip on nothing.
 
-**Done when** every lead is settled or dropped with the user's reason on it, and the hook
-and skill questions each carry a yes or a no.
+**Done when** every lead is settled or dropped with the user's reason on it, and the
+gotcha, hook, and skill questions each carry an answer — the user's "none" counts.
 
 ## 3. Write the floor
 
