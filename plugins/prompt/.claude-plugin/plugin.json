@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "prompt",
   "displayName": "Prompt",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Rewrites a rough, half-formed prompt into one that works on current Claude models.",
   "author": {
     "name": "j0hanz",
