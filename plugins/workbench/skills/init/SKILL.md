@@ -1,7 +1,6 @@
 ---
 name: init
 description: Bootstrap a repo's Claude Code context — a root CLAUDE.md, plus the hooks or skills the repo shows a reason for.
-argument-hint: '[directory]'
 disable-model-invocation: true
 ---
 
