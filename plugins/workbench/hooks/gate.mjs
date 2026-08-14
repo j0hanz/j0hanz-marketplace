@@ -22,7 +22,8 @@ export const misplacement = (filePath, project) => {
 
   const root = effortRoot(project);
   const parts = segmentsInside(root, abs);
-  if (parts && correctlyPlaced(parts)) return null;
+  if (!parts) return null;
+  if (correctlyPlaced(parts)) return null;
 
   const stem = match[1];
   const today = new Date().toLocaleDateString('en-CA');

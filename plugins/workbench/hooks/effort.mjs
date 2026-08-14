@@ -25,18 +25,30 @@ export const listEfforts = (root) => {
 
 export const liveEffort = (root, efforts) => {
   if (efforts.length === 0) return null;
-  const newestMtime = (dir) => {
+  const mdMtime = (file) => {
     try {
-      return readdirSync(join(root, dir))
-        .filter((file) => file.endsWith('.md'))
-        .reduce((best, file) => Math.max(best, statSync(join(root, dir, file)).mtimeMs), 0);
+      return statSync(file).mtimeMs;
     } catch {
       return 0;
     }
   };
+  const newestMtime = (dir) => {
+    let best = 0;
+    try {
+      for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
+        best = Math.max(best, mdMtime(join(dir, file)));
+      }
+    } catch {
+      return 0;
+    }
+    return best;
+  };
   // efforts is sorted ascending, so >= hands a tie to the later-dated directory.
   return efforts
-    .map((dir) => [dir, newestMtime(dir)])
+    .map((dir) => {
+      const base = join(root, dir);
+      return [dir, Math.max(newestMtime(base), newestMtime(join(base, 'tickets')))];
+    })
     .reduce((best, pair) => (pair[1] >= best[1] ? pair : best))[0];
 };
 
