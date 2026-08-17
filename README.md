@@ -78,7 +78,7 @@ MCP development skills for TypeScript SDK v2
 - Commands: `/mcp-hub:mcp`
 - Model-loaded skills: `mcp-auth`, `mcp-client`, `mcp-elicitation`, `mcp-migration`, `mcp-planning`, `mcp-protocol`, `mcp-router`, `mcp-server`, `mcp-test`
 - Agents: `mcp-auditor`, `mcp-debugger`, `mcp-migrator`
-- Hooks: `SessionStart`, `PostToolUse`
+- Hooks: `SessionStart`, `PostToolUse`, `SessionEnd`
 
 ### review
 

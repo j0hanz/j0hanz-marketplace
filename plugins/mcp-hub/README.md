@@ -51,7 +51,9 @@ Knowledge skills load automatically when the work touches their territory, witho
 
 `mcp-planning`, `mcp-server`, `mcp-client`, `mcp-auth`, `mcp-elicitation`, `mcp-test`, `mcp-protocol`, `mcp-migration`
 
-A SessionStart hook (`hooks/session-start.js`) injects the `/mcp` routing table into context at session start and after `/clear` or compaction (~3.1KB), so MCP work routes to the right skill without typing `/mcp`. Runs natively and cross-platform via Node.js (supported on Windows, macOS, and Linux).
+A SessionStart hook (`hooks/session-start.cjs`) injects the `/mcp` routing table into context at session start and after `/clear` or compaction (~3.1KB), so MCP work routes to the right skill without typing `/mcp`. Runs natively and cross-platform via Node.js (supported on Windows, macOS, and Linux).
+
+A PostToolUse hook (`hooks/post-tool-use.cjs`) scans a source file the moment Claude edits it in an MCP project and emits one `<mcp-hub-drift>` advisory citing the owning skill when it detects v1-SDK contamination, `instanceof` on an SDK error class, or a missing `docs/mcp-decisions.md`. Advisory only — it never blocks. A SessionEnd hook (`hooks/session-end.cjs`) removes the per-session dedupe scratch file. Both run via Node.js cross-platform.
 
 ## Agents
 

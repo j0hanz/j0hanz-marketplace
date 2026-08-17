@@ -114,7 +114,16 @@ function emit(findings) {
     console.error('mcp-hub: refusing to emit drift content containing reserved sentinels');
     return;
   }
-  process.stdout.write(`<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`);
+  // PostToolUse is a reflex event: plain stdout is not agent-injected (it shows
+  // as a transcript notice, not a system reminder Claude reads). Emit the block
+  // inside hookSpecificOutput.additionalContext so it lands beside the tool
+  // result. hookEventName is required or the output is silently ignored.
+  const block = `<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`;
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: block },
+    }),
+  );
 }
 
 // R2: decode PostToolUse stdin. Returns { filePath, sessionId } for a Write/Edit

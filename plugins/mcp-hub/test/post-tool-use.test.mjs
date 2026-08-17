@@ -69,6 +69,14 @@ const clean = (hookRoot, cwd, sessionId) => {
   if (sessionId) rmSync(storePath(sessionId), { force: true });
 };
 
+// The hook emits JSON with the advisory inside hookSpecificOutput.additionalContext
+// (PostToolUse is a reflex event; plain stdout is not agent-injected). Decode it
+// before asserting on path/line, since JSON-escaping doubles backslashes.
+const ctxOf = (stdout) => {
+  if (!stdout) return '';
+  return JSON.parse(stdout).hookSpecificOutput.additionalContext;
+};
+
 // --- R1: project gate -----------------------------------------------------
 
 test('R1: a non-MCP project (react only) emits nothing even for a v1 symbol', () => {
@@ -189,12 +197,17 @@ test('R3/R8: a v1 symbol emits exactly one <mcp-hub-drift> block with skill, loc
   try {
     const { stdout, status } = run(hook, cwd, payload(join(cwd, 'src', 'server.ts'), sid));
     assert.equal(status, 0);
-    assert.equal((stdout.match(/<mcp-hub-drift>/g) || []).length, 1);
-    assert.equal((stdout.match(/<\/mcp-hub-drift>/g) || []).length, 1);
-    assert.match(stdout, /mcp-hub:mcp-migration/);
-    assert.match(stdout, /:\d+/); // path:line
-    assert.match(stdout, /consider/); // suggestion phrase
-    assert.doesNotMatch(stdout, /<system-reminder>/);
+    // PostToolUse is a reflex event: the block must travel inside
+    // hookSpecificOutput.additionalContext to reach the agent, not as plain stdout.
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.hookSpecificOutput.hookEventName, 'PostToolUse');
+    const ctx = parsed.hookSpecificOutput.additionalContext;
+    assert.equal((ctx.match(/<mcp-hub-drift>/g) || []).length, 1);
+    assert.equal((ctx.match(/<\/mcp-hub-drift>/g) || []).length, 1);
+    assert.match(ctx, /mcp-hub:mcp-migration/);
+    assert.match(ctx, /:\d+/); // path:line
+    assert.match(ctx, /consider/); // suggestion phrase
+    assert.doesNotMatch(ctx, /<system-reminder>/);
   } finally {
     clean(hook, cwd, sid);
   }
@@ -437,8 +450,8 @@ test('R9: different files in the same session each emit once', () => {
   try {
     const r1 = run(hook, cwd, payload(join(cwd, 'src', 'a.ts'), sid));
     const r2 = run(hook, cwd, payload(join(cwd, 'src', 'b.ts'), sid));
-    assert.match(r1.stdout, /src[\\/]a\.ts:/); // win32 backslash or posix slash
-    assert.match(r2.stdout, /src[\\/]b\.ts:/);
+    assert.match(ctxOf(r1.stdout), /src[\\/]a\.ts:/); // win32 backslash or posix slash
+    assert.match(ctxOf(r2.stdout), /src[\\/]b\.ts:/);
   } finally {
     clean(hook, cwd, sid);
   }

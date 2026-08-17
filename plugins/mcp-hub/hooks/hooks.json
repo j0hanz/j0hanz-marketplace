@@ -1,4 +1,5 @@
 {
+  "description": "mcp-hub hooks. SessionStart injects the /mcp router (~3.1KB). PostToolUse (Write|Edit) scans the edited source file in an MCP project and emits one <mcp-hub-drift> advisory citing the owning skill for v1-contamination, instanceof on an SDK error class, or a missing docs/mcp-decisions.md (advisory only, never blocks). SessionEnd removes this session's dedupe scratch file from os.tmpdir(). All run on Node.js (cross-platform: Windows, macOS, Linux); stdlib only, no external dependency.",
   "hooks": {
     "SessionStart": [
       {
@@ -19,6 +20,18 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.cjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-end.cjs\"",
             "timeout": 5
           }
         ]
