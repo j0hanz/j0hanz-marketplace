@@ -40,19 +40,10 @@ try {
       pkg.optionalDependencies,
     ),
   );
-  const v2Packages = [
-    '@modelcontextprotocol/server',
-    '@modelcontextprotocol/client',
-    '@modelcontextprotocol/core',
-    '@modelcontextprotocol/node',
-    '@modelcontextprotocol/server-legacy',
-    '@modelcontextprotocol/express',
-    '@modelcontextprotocol/hono',
-    '@modelcontextprotocol/fastify',
-  ];
+  const tooling = ['@modelcontextprotocol/codemod', '@modelcontextprotocol/inspector'];
   const mcpDeps = depNames.filter((n) => n.startsWith('@modelcontextprotocol/'));
   const v1 = mcpDeps.includes('@modelcontextprotocol/sdk');
-  const v2 = mcpDeps.filter((n) => v2Packages.includes(n));
+  const v2 = mcpDeps.filter((n) => n !== '@modelcontextprotocol/sdk' && !tooling.includes(n));
   if (v1 || v2.length) {
     console.log('<mcp-hub-probe>');
     console.log('Scope: auto-detected MCP packages in this project package.json.');
