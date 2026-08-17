@@ -18,10 +18,12 @@ try {
   const sid = input && typeof input.session_id === 'string' ? input.session_id : null;
   if (sid) {
     const safeId = sid.replace(/[^A-Za-z0-9_-]/g, '_');
-    try {
-      fs.unlinkSync(path.join(os.tmpdir(), 'mcp-hub-drift-' + safeId + '.json'));
-    } catch {
-      // already gone or unreadable -> nothing to clean
+    if (safeId.length > 0) {
+      try {
+        fs.unlinkSync(path.join(os.tmpdir(), 'mcp-hub-drift-' + safeId + '.json'));
+      } catch {
+        // already gone or unreadable -> nothing to clean
+      }
     }
   }
 } catch {

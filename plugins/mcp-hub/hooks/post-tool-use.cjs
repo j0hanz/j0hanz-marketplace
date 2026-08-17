@@ -76,9 +76,11 @@ function isMcpProject(cwd) {
     ),
   );
   const mcpDeps = depNames.filter((n) => n.startsWith('@modelcontextprotocol/'));
-  const v1 = mcpDeps.includes('@modelcontextprotocol/sdk');
-  const v2 = mcpDeps.filter((n) => n !== '@modelcontextprotocol/sdk' && !TOOLING.includes(n));
-  return v1 || v2.length > 0;
+  const hasV1 = mcpDeps.includes('@modelcontextprotocol/sdk');
+  const v2Packages = mcpDeps.filter(
+    (n) => n !== '@modelcontextprotocol/sdk' && !TOOLING.includes(n),
+  );
+  return hasV1 || v2Packages.length > 0;
 }
 
 function scanFile(resolved, cwd) {
@@ -180,6 +182,9 @@ function main() {
   if (!fs.existsSync(path.join(cwd, 'docs', 'mcp-decisions.md'))) {
     findings.push({ rule: 'R7' });
   }
+
+  // Short-circuit: if clean across R5, R6, and R7, skip dedupe store I/O.
+  if (findings.length === 0) return;
 
   // R9 / R13 dedupe: emit toEmit exactly once after the try/catch.
   const sessionIdUsable = typeof sessionId === 'string' && safeId(sessionId).length > 0;
