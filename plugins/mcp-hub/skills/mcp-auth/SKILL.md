@@ -17,7 +17,7 @@ Server-side HTTP auth and client credentials for TypeScript SDK v2. Ref: https:/
 ## When to Use
 
 - Verifying bearer tokens on the server, or picking/implementing a client auth provider (OAuth, machine-to-machine, cross-app).
-- Browser/SPA end-user login wiring (`connect`/`finishAuth`, `IssuerMismatchError`): see [mcp-client oauth-client-flow.md](../mcp-client/references/oauth-client-flow.md).
+- Browser/SPA end-user login wiring (`connect`/`finishAuth`, `IssuerMismatchError`): see [mcp-client] "Authenticate the client".
 - Mocking `authInfo` in tests: see [mcp-test].
 
 ## Steps
@@ -60,7 +60,7 @@ app.use(mcpAuthMetadataRouter({ oauthMetadata, resourceServerUrl: mcpServerUrl }
 
 Pick by trust model:
 
-- **User present in a browser** → prebuilt `authorization_code` flow (`UnauthorizedError` catch, `finishAuth` callback leg, `IssuerMismatchError`) — see [mcp-client oauth-client-flow.md](../mcp-client/references/oauth-client-flow.md).
+- **User present in a browser** → prebuilt `authorization_code` flow (`UnauthorizedError` catch, `finishAuth` callback leg, `IssuerMismatchError`) — see [mcp-client] "Authenticate the client".
 - **Service-to-service, no user** → `ClientCredentialsProvider` or `PrivateKeyJwtProvider`:
   ```ts
   new ClientCredentialsProvider({ clientId, clientSecret, expectedIssuer });
@@ -102,7 +102,7 @@ Prefer a **Client ID Metadata Document** (host `clientMetadata` at a stable HTTP
 ## Error Reference
 
 - **OAuth consolidation**: the v1 `Invalid*Error` family and `OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode`; switch `instanceof` to `error.code`.
-- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, thrown by `verifyAccessToken`) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client oauth-client-flow.md](../mcp-client/references/oauth-client-flow.md).
+- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, thrown by `verifyAccessToken`) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client].
 
 ## Common Mistakes
 
