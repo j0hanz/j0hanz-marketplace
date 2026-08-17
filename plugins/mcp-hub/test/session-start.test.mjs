@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,6 @@ import test from 'node:test';
 // so the net copies the source into a CJS fixture and runs it there — the same
 // CJS context it gets in production (plugin cache dir, no `type:module` parent).
 const HOOKS_DIR = fileURLToPath(new URL('../hooks/', import.meta.url));
-const SRC = join(HOOKS_DIR, 'session-start.cjs');
 
 const SKILL_FIXTURE =
   [
@@ -25,11 +24,14 @@ const SKILL_FIXTURE =
 // Build a fixture tree (hooks/ + skills/) and return a run helper bound to it.
 const makeFixture = (skillContent) => {
   const root = mkdtempSync(join(tmpdir(), 'mcphub-hook-'));
-  mkdirSync(join(root, 'hooks'), { recursive: true });
+  // mkdirSync stays here (unlike the other two test files) for skills/mcp-router:
+  // that tree isn't part of hooks/, so cpSync(HOOKS_DIR, ...) below can't create it.
   mkdirSync(join(root, 'skills', 'mcp-router'), { recursive: true });
   if (skillContent !== null)
     writeFileSync(join(root, 'skills', 'mcp-router', 'SKILL.md'), skillContent);
-  copyFileSync(SRC, join(root, 'hooks', 'session-start.cjs'));
+  // Copies the whole hooks/ dir (not just session-start.cjs) so the sibling
+  // mcp-project.cjs module it requires travels with it into the fixture.
+  cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };
 

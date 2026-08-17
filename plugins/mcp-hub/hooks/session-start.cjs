@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { detectMcpProject } = require('./mcp-project.cjs');
 
 const skillPath = path.join(__dirname, '..', 'skills', 'mcp-router', 'SKILL.md');
 
@@ -30,22 +31,7 @@ try {
 console.log('\n</mcp-hub-router>');
 
 try {
-  const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
-  const depNames = Object.keys(
-    Object.assign(
-      {},
-      pkg.dependencies,
-      pkg.devDependencies,
-      pkg.peerDependencies,
-      pkg.optionalDependencies,
-    ),
-  );
-  const tooling = ['@modelcontextprotocol/codemod', '@modelcontextprotocol/inspector'];
-  const mcpDeps = depNames.filter((n) => n.startsWith('@modelcontextprotocol/'));
-  const hasV1 = mcpDeps.includes('@modelcontextprotocol/sdk');
-  const v2Packages = mcpDeps.filter(
-    (n) => n !== '@modelcontextprotocol/sdk' && !tooling.includes(n),
-  );
+  const { hasV1, v2Packages } = detectMcpProject(process.cwd());
   if (hasV1 || v2Packages.length > 0) {
     console.log('<mcp-hub-probe>');
     console.log('Scope: auto-detected MCP packages in this project package.json.');

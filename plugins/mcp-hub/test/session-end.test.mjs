@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import driftStore from '../hooks/drift-store.cjs';
 
 // The hook is CommonJS. Under this repo's `type: module` it will not run in
 // place, so the net copies the source into a CJS fixture and runs it there —
 // the same CJS context it gets in production. Mirrors test/post-tool-use.test.mjs.
 const HOOKS_DIR = fileURLToPath(new URL('../hooks/', import.meta.url));
-const SRC = join(HOOKS_DIR, 'session-end.cjs');
 
-const safeId = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, '_');
-const storePath = (sid) => join(tmpdir(), 'mcp-hub-drift-' + safeId(sid) + '.json');
+const { storePath } = driftStore;
 
 const makeHook = () => {
   const root = mkdtempSync(join(tmpdir(), 'mcphub-end-'));
-  mkdirSync(join(root, 'hooks'), { recursive: true });
-  copyFileSync(SRC, join(root, 'hooks', 'session-end.cjs'));
+  // Copies the whole hooks/ dir (not just session-end.cjs) so the sibling
+  // drift-store.cjs module it requires travels with it into the fixture.
+  cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };
 

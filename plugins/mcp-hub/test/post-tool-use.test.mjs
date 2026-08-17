@@ -1,20 +1,19 @@
 import assert from 'node:assert/strict';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import driftStore from '../hooks/drift-store.cjs';
 
 // The hook is CommonJS. Under this repo's `type: module` it will not run in
 // place, so the net copies the source into a CJS fixture and runs it there —
 // the same CJS context it gets in production (plugin cache dir, no
 // `type:module` parent). Mirrors test/session-start.test.mjs.
 const HOOKS_DIR = fileURLToPath(new URL('../hooks/', import.meta.url));
-const SRC = join(HOOKS_DIR, 'post-tool-use.cjs');
 
-const safeId = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, '_');
-const storePath = (sessionId) => join(tmpdir(), 'mcp-hub-drift-' + safeId(sessionId) + '.json');
+const { storePath } = driftStore;
 
 const MCP_PKG = JSON.stringify({ dependencies: { '@modelcontextprotocol/server': '2.0.0' } });
 const TOOLING_PKG = JSON.stringify({
@@ -27,8 +26,9 @@ const REACT_PKG = JSON.stringify({ dependencies: { react: '1.0.0' } });
 
 const makeHook = () => {
   const root = mkdtempSync(join(tmpdir(), 'mcphub-drift-'));
-  mkdirSync(join(root, 'hooks'), { recursive: true });
-  copyFileSync(SRC, join(root, 'hooks', 'post-tool-use.cjs'));
+  // Copies the whole hooks/ dir (not just post-tool-use.cjs) so the sibling
+  // mcp-project.cjs and drift-store.cjs modules it requires travel with it.
+  cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };
 
