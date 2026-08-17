@@ -1,6 +1,6 @@
 ---
 name: mcp-elicitation
-description: Use when implementing mid-call user interaction, prompt autocomplete, progress tracking, or cancellation in the TypeScript SDK v2.
+description: Use when implementing mid-call user interaction, prompt autocomplete, progress tracking, cancellation, or client-side elicitation-handler registration in the MCP SDK v2.
 user-invocable: false
 metadata:
   category: technique
@@ -11,12 +11,6 @@ metadata:
 Covers `@modelcontextprotocol/server` v2 mid-call interaction. Ref: https://ts.sdk.modelcontextprotocol.io/v2/
 
 Modern (2026-era) connections use stateless, multi-round `inputRequired(...)` returns instead of blocking the handler thread; legacy (2025-era) connections use blocking `elicitInput()`. Only the ask-user mechanism differs across eras — progress (`notify`) and cancellation (`signal`) are identical in both. The SDK bridges modern servers to legacy clients automatically when `inputRequired.legacyShim` is enabled (default `true`).
-
-## When to Use
-
-- Tool needs mid-call operator input, confirmation, or progress tracking.
-- Client needs to register auto-fulfillment handlers.
-- Prompt arguments require dynamic autocompletion.
 
 ## Steps
 
@@ -40,7 +34,7 @@ client.setRequestHandler('elicitation/create', async (req) => {
 
 ### Server: mid-call interaction
 
-1. **Check responses before eliciting**: before returning `inputRequired`, check `ctx.mcpReq.inputResponses` — the client re-runs the whole call from the top once the user answers, so already-answered fields must not be re-requested. Read accepted values with `acceptedContent(ctx.mcpReq.inputResponses, key, schema)` (returns `undefined` if missing, declined, or cancelled); inspect the raw action (`accept`/`decline`/`cancel`) with `inputResponse(...)` first, and bail out on `decline`/`cancel` instead of re-prompting — else a declined field loops forever.
+1. **Dedupe before eliciting**: before returning `inputRequired`, check `ctx.mcpReq.inputResponses` — the client re-runs the whole call from the top once the user answers. Read accepted values with `acceptedContent(ctx.mcpReq.inputResponses, key, schema)` (returns `undefined` if missing, declined, or cancelled); inspect the raw action (`accept`/`decline`/`cancel`) with `inputResponse(...)` first, and bail on `decline`/`cancel` rather than re-prompting — else a declined field loops forever.
 
    ```ts
    server.registerTool(
@@ -128,7 +122,7 @@ client.setRequestHandler('elicitation/create', async (req) => {
 
 ## Legacy Path (2025-era connections only)
 
-`ctx.mcpReq.elicitInput()` **throws on 2026-era connections regardless of the shim** — `legacyShim` runs the other direction: it serves modern `inputRequired(...)` returns to 2025-era clients by pushing real `elicitation/create` requests, it does not make `elicitInput()` work on modern connections. Requires the client's `elicitation` capability. Form mode is for standard inputs — never request secrets (credentials, API keys) via forms. URL mode redirects the user outside the chat (e.g. OAuth login). `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` for a ported draft-07 schema.
+`ctx.mcpReq.elicitInput()` **throws on 2026-era connections regardless of the shim** — `legacyShim` runs the other direction: it serves modern `inputRequired(...)` returns to 2025-era clients by pushing real `elicitation/create` requests, it does not make `elicitInput()` work on modern connections. Requires the client's `elicitation` capability. Form mode is for standard inputs — never request secrets (credentials, API keys) via forms. URL mode redirects the user outside the chat (e.g. OAuth login). On `decline`/`cancel`, bail out of the handler rather than re-prompting. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` for a ported draft-07 schema.
 
 ```ts
 const result = await ctx.mcpReq.elicitInput({
@@ -158,8 +152,9 @@ To consider elicitation and mid-call interaction complete, you must verify:
 
 - [ ] No mid-call tool handlers block threads or run synchronously while awaiting user actions.
 - [ ] Every `inputRequired` return checks `ctx.mcpReq.inputResponses` first, so answered fields are never re-requested.
+- [ ] Decline/cancel actions bail out of the flow rather than re-prompting (else a declined field loops forever).
 - [ ] The `requestState` codec is wired (HMAC-verified) and no secrets are placed in the attacker-controlled `requestState` payload.
-- [ ] All forms, input widgets, and prompt arguments are clear, validated, and do NOT request credentials or access key secrets.
+- [ ] Forms, input widgets, and prompt arguments are validated and exclude credentials and access-key secrets.
 - [ ] `signal.aborted` is checked on every iteration of loops or long database inquiries.
 - [ ] New interaction flows return modern `inputRequired` descriptors; legacy `elicitInput()` is used only where a connection is confirmed 2025-era.
 - [ ] No deprecated sampling (`requestSampling`) or MCP logging (`log`) call remains — replaced with a direct LLM call and stderr/OpenTelemetry respectively.

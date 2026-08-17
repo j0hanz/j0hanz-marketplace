@@ -1,6 +1,6 @@
 ---
 name: mcp-protocol
-description: Use when working with low-level MCP v2 protocol, custom transports, raw wire messages, gateways, or the low-level Server class — not the high-level McpServer (see mcp-server).
+description: Use when working below McpServer in the MCP SDK v2 — custom transports, raw wire messages, gateways, or the low-level Server class; high-level servers: see [mcp-server].
 user-invocable: false
 metadata:
   category: technique
@@ -8,7 +8,7 @@ metadata:
 
 # MCP Protocol
 
-Prefer `McpServer`; drop to the low-level `Server` only for custom RPC methods, a hand-rolled transport, or gateway/relay routing across protocol eras — it skips automatic validation, capability advertisement, and error wrapping. Docs: https://ts.sdk.modelcontextprotocol.io/v2/
+Prefer `McpServer`; `Server` is the escape hatch — drop to it only for custom RPC methods, a hand-rolled transport, or gateway/relay routing across protocol eras. It skips automatic validation, capability advertisement, and error wrapping. Docs: https://ts.sdk.modelcontextprotocol.io/v2/
 
 ## Steps
 
@@ -116,7 +116,7 @@ Prefer `McpServer`; drop to the low-level `Server` only for custom RPC methods, 
    ```
 
    - [ ] `send()` throws on failure and routes it through `onerror` — never swallowed.
-   - [ ] `onclose` fires on termination; callers invoke only `.connect()` — never call `.start()` directly.
+   - [ ] `onclose` fires on termination; callers start the transport via `server.connect(transport)` (which calls `transport.start()` internally) — never call `transport.start()` directly.
 
 4. **Route protocol eras and gateways**: use `isLegacyRequest()` to split 2025-era clients (no per-request `_meta` envelope) from modern ones before dispatch.
 

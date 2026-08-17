@@ -1,18 +1,20 @@
 ---
 name: mcp-client
-description: Use when building MCP clients using TypeScript SDK v2 (@modelcontextprotocol/client), managing connections, calling tools/resources, subscribing to changes, caching, or configuring middleware.
+description: Use when building MCP SDK v2 clients — connecting, calling tools/resources/prompts, subscribing, caching, middleware, or browser authorization_code auth; for service credentials see [mcp-auth], for custom transports see [mcp-protocol].
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# Building MCP Clients (TypeScript SDK v2)
+# Building MCP Clients (MCP SDK v2)
 
-Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `@modelcontextprotocol/client` `2.0.0-beta.3`.
 
 ## Steps
 
-1. **Configure ESM**: Standardize to ESM-only (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`). v2 ships a CommonJS build too, so CJS projects can `require('@modelcontextprotocol/client')` directly — no dynamic `import()` shim required.
+1. **Configure ESM**: Standardize to ESM-only (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`). v2 ships CJS too — `require()` resolves natively.
+
+   - [ ] ESM-only config is active in `tsconfig.json` (or CJS `require` resolves natively).
 
 2. **Initialize Client**: `new Client({...})`, declaring capacities up front in the constructor — **elicitation is mandatory**; sampling (`createMessage`) and roots (`roots/list`) are deprecated per SEP-2577, so declare them only if you need legacy support. Pass paths via tool arguments / resource URIs / host config instead of roots.
 
@@ -37,6 +39,8 @@ Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelc
    );
    ```
 
+   - [ ] Client declares capacities (elicitation mandatory; sampling/roots only if used) in the constructor BEFORE registering handlers.
+
 3. **Pick Transport & Connect**: Choose by server transport, then `await client.connect(transport)`:
 
    ```ts
@@ -48,7 +52,9 @@ Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelc
    - **SSE-only legacy server**: `SSEClientTransport` — only after StreamableHTTP fails; SSE is a fallback, not a first choice.
    - **Negotiation footgun**: For spawn-per-invocation stdio CLI wrappers, pin the era with `versionNegotiation: { mode: { pin: '2026-07-28' } }` (modern-only) or `{ mode: 'legacy' }` — **never `{ mode: 'auto' }`**, which stalls on cold spawns. `{ mode: 'auto' }` is fine for long-lived connections.
 
-4. **Register Hook Interceptors**: After `connect`, register handlers via `setRequestHandler('elicitation/create', …)` for auto-fulfillment. Register `sampling/createMessage` / `roots/list` handlers only if you declared those (deprecated) capacities in Step 2.
+   - [ ] Negotiation mode matches connection lifetime per Step 3 (`'auto'` only for long-lived connections).
+
+4. **Register Hook Interceptors**: After `connect`, register `sampling/createMessage` / `roots/list` handlers only if you declared those deprecated capacities in Step 2; for the elicitation/create handler, see [mcp-elicitation] "Client: register the handler first".
 
 5. **Manage Calls**: Call tools with `.callTool()` (no-arg `listTools()`/`listPrompts()`/`listResources()` auto-aggregate pages; pass `{ cursor }` for one page); check execution status on the `result.isError` payload — do **not** catch standard tool exceptions as business failures; unknown/disabled tool names reject the promise with `ProtocolError(InvalidParams)` — catch that separately from `isError: true` business failures (see [mcp-server] "Handle Errors").
 
@@ -73,7 +79,11 @@ Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelc
    });
    ```
 
+   - [ ] Success checks read `result.isError` directly instead of catching exceptions for standard tool responses; unknown/disabled tool names are caught as `ProtocolError(InvalidParams)`, handled separately.
+
 6. **Graceful Terminate**: On every shutdown **and** error path, tear down cleanly to avoid dangling connections. Over **Streamable HTTP**, run `await transport.terminateSession()` (a no-op when the server issued no session ID) then `await client.close()`. Over **stdio** or in-memory, `await client.close()` alone is the whole teardown — there is no server-side session to terminate.
+
+   - [ ] Sessions terminate gracefully on shutdown AND error paths: Streamable HTTP runs `terminateSession()` + `close()`; stdio/in-memory run `close()` alone.
 
 ## Optional Capabilities
 
@@ -120,7 +130,7 @@ The transport `authProvider` option accepts `AuthProvider | OAuthClientProvider`
 
 **Issuer stamping (SEP-2352)**: `auth()` stamps `issuer` onto every value passed to `saveTokens()`/`saveClientInformation()` and threads `{ issuer }` as `ctx` to those plus `tokens()`/`clientInformation()`. Round-trip the stored object verbatim — rebuilding it field-by-field and dropping `issuer` defeats the per-AS check. Key multi-AS storage on `ctx.issuer` (treat `ctx === undefined` as "return the most-recently-saved set" — the per-request `Authorization: Bearer` read calls `tokens()` with no `ctx`).
 
-**Errors**: v1 `Invalid*Error`/`OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode` (switch `instanceof` to `error.code`). `InsufficientScopeError` (SEP-2350, extends `OAuthClientFlowError`) is a distinct **transport** class from `OAuthError(OAuthErrorCode.InsufficientScope)` thrown by server verifiers (see [mcp-auth]). `StreamableHTTPClientTransport`'s `onInsufficientScope` defaults to `'reauthorize'` (re-authorizes with the union of requested + challenged scope); set `'throw'` for `client_credentials`/m2m clients, where re-authorization can't widen scope. Step-up retries are capped by `maxStepUpRetries` (default 1).
+**Errors**: OAuth error classes: see [mcp-auth] "Error Reference". `InsufficientScopeError` (SEP-2350, extends `OAuthClientFlowError`) is a distinct **transport** class from `OAuthError(OAuthErrorCode.InsufficientScope)` thrown by server verifiers. `StreamableHTTPClientTransport`'s `onInsufficientScope` defaults to `'reauthorize'` (re-authorizes with the union of requested + challenged scope); set `'throw'` for `client_credentials`/m2m clients, where re-authorization can't widen scope. Step-up retries are capped by `maxStepUpRetries` (default 1).
 
 ### Subscribe to changes
 
@@ -190,5 +200,6 @@ To consider a client implementation complete, you must verify:
 
 ## See Also
 
-- Connection troubleshooting or tests: [mcp-test]
+- Error code lookups: [mcp-test]; live diagnosis: dispatch the mcp-debugger agent.
 - Server-side token verification: [mcp-auth]
+- SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/

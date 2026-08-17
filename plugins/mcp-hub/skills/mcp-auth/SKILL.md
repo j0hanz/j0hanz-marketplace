@@ -1,14 +1,14 @@
 ---
 name: mcp-auth
-description: Use when an MCP server or endpoint needs protection or an MCP client needs credentials — bearer-token verification, OAuth flows, or machine-to-machine auth in the TypeScript SDK v2.
+description: Use when an MCP server needs bearer-token protection or a client needs service-to-machine credentials (ClientCredentials / PrivateKeyJwt / CrossApp providers) in MCP SDK v2; for browser authorization_code client flows, use [mcp-client].
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# MCP Authorization (TypeScript SDK v2)
+# Authorization (MCP SDK v2)
 
-Server-side HTTP auth and client credentials for TypeScript SDK v2. Ref: https://ts.sdk.modelcontextprotocol.io/v2/
+Ref: https://ts.sdk.modelcontextprotocol.io/v2/
 
 **Server is Resource Server only — never issues tokens.**
 
@@ -16,7 +16,6 @@ Server-side HTTP auth and client credentials for TypeScript SDK v2. Ref: https:/
 
 ## When to Use
 
-- Verifying bearer tokens on the server, or picking/implementing a client auth provider (OAuth, machine-to-machine, cross-app).
 - Browser/SPA end-user login wiring (`connect`/`finishAuth`, `IssuerMismatchError`): see [mcp-client] "Authenticate the client".
 - Mocking `authInfo` in tests: see [mcp-test].
 
@@ -88,16 +87,16 @@ Prefer a **Client ID Metadata Document** (host `clientMetadata` at a stable HTTP
 
 ## Completion Criteria
 
-- [ ] No token generation, JWT issuing, or credential DB checks on the server (Resource Server only).
+- [ ] Token issuance and revocation delegated to the IdP; the server validates only.
 - [ ] Token validation fails with standard 401/403 outside/before tool dispatch.
 - [ ] Auth failures in tools return `{ isError: true }` — no transport exceptions.
 - [ ] Tool callbacks read tenant/user permissions via `ctx.http?.authInfo`, not factory `ctx.authInfo`.
-- [ ] No raw HTTP header processing inside individual tool callbacks.
-- [ ] No token revocation endpoint on the MCP server — delegate to IdP/Authorization Server.
 - [ ] `verifyAccessToken` populates `expiresAt` on `AuthInfo`, else `requireBearerAuth` returns `401 invalid_token`.
 - [ ] Token rejection throws `OAuthError` with `OAuthErrorCode.InvalidToken` — any other exception type becomes an HTTP 500.
 - [ ] Non-Express `fetch` hosts (Cloudflare Workers, Deno, Hono) use web-standard `requireBearerAuth` from `@modelcontextprotocol/server`.
 - [ ] Client credentials/tokens are stored keyed by `ctx.issuer` (SEP-2352) — never shared across authorization servers.
+- [ ] Every Common Mistakes entry checked against the implementation.
+- [ ] Error Reference consolidation applied — no `instanceof` on `Invalid*Error` / `OAUTH_ERRORS`.
 
 ## Error Reference
 
@@ -108,4 +107,4 @@ Prefer a **Client ID Metadata Document** (host `clientMetadata` at a stable HTTP
 
 - **Header Extraction**: expecting the SDK to auto-extract bearer tokens without wiring `requireBearerAuth` as middleware.
 - **Test Tokens**: generating real tokens in tests — use mock issuers with [mcp-test].
-- **Decode-only JWT**: decoding without verifying signature/issuer/audience — always verify against IdP keys.
+- **Decode-only JWT**: decode passes typecheck and returns claims that look valid — verify signature/issuer/audience against IdP keys, not just decode.

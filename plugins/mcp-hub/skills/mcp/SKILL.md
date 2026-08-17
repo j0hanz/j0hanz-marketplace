@@ -10,7 +10,7 @@ metadata:
 
 # Model Context Protocol (MCP) Router
 
-<!-- Twin of mcp-router (this skill): user-invocable /mcp slash entry. mcp-router is the model-invoked router injected by the SessionStart hook. -->
+<!-- Twin of mcp-router (this skill): user-invocable /mcp slash entry. mcp-router is the hook-injected router (SessionStart injects its body). -->
 
 ## Dispatch
 
@@ -21,7 +21,7 @@ Match the `<job>` argument to a sub-skill or agent below and invoke it; confirm 
 - **`/mcp audit`**: Dispatches the `mcp-auditor` agent to perform a read-only codebase readiness review.
 - **`/mcp migrate`**: Dispatches the `mcp-migrator` agent to convert MCP SDK v1 to v2.
 - **`/mcp auth`**: Routes to [mcp-auth] for authentication mechanisms.
-- **`/mcp test`**: Routes to [mcp-test] or dispatches the `mcp-debugger` agent.
+- **`/mcp test`**: Routes to [mcp-test] for test authoring/running; dispatches the `mcp-debugger` agent to diagnose a failure.
 - **`/mcp elicit`**: Routes to [mcp-elicitation] for advanced interaction patterns.
 - **`/mcp protocol`**: Routes to [mcp-protocol] for custom transports or low-level messaging.
 - **`/mcp publish`**: Routes to [mcp-server] "Distribute".

@@ -1,6 +1,6 @@
 ---
 name: mcp-router
-description: Hook-injected routing map for MCP SDK v2 work — not invocable; hooks/session-start.js injects the body (frontmatter stripped) at session start.
+description: Session-injected routing map for MCP SDK v2 work.
 user-invocable: false
 disable-model-invocation: true
 metadata:
@@ -9,9 +9,7 @@ metadata:
 
 # MCP Router & Workflows
 
-If this content already appears earlier in the session, skip re-reading it.
-
-Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when needed (never upfront or twice).
+Entry point and canonical workflows for MCP SDK v2. Load sub-skills on-demand (never upfront or twice).
 
 ## Routing Map
 
@@ -23,7 +21,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 - **Gateway/proxy/relay**: [mcp-protocol]
 - **Migrate**: `mcp-migrator` agent (runs codemods) — for reference material load [mcp-migration]
 - **Test**: [mcp-test]
-- **Debug** (via `/mcp test`): `mcp-debugger` agent (on failure)
+- **Debug**: `mcp-debugger` agent (on failure).
 - **Audit**: `mcp-auditor` agent (read-only)
 - **Publish**: [mcp-server] "Distribute"
 
@@ -32,7 +30,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 ### Build Workflow
 
 1. **Clarify**: Run [mcp-planning] -> output `docs/mcp-decisions.md`.
-2. **Scaffold**: Load [mcp-server] or [mcp-client]. Modern split v2 SDK deps, ESM-first (CommonJS also shipped — `require('@modelcontextprotocol/…')` resolves natively).
+2. **Scaffold**: Load [mcp-server] or [mcp-client]. Modern split v2 SDK deps, ESM-first; CommonJS also resolves.
 3. **Auth** (*): HTTP/OAuth (Streamable HTTP) security. Load [mcp-auth].
 4. **Interact** (*): Prompts, progress, cancellation. Load [mcp-elicitation].
 5. **Test**: Load [mcp-test] to implement tests; they compile and run to completion.

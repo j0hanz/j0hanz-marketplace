@@ -1,6 +1,6 @@
 ---
 name: mcp-migration
-description: Use when migrating an MCP codebase from SDK v1 to v2 or applying codemods/renames manually — typically loaded alongside the mcp-migrator agent, which runs the codemod.
+description: MCP SDK v2: use when migrating an MCP codebase from @modelcontextprotocol/sdk v1 to split v2 packages, including running the v1-to-v2 codemod and resolving its renames by hand.
 user-invocable: false
 metadata:
   category: technique
@@ -41,9 +41,9 @@ Flow: `scope → codemod → packages → flags → era → modernize → mcpser
 
 - [ ]: `elicitInput`→`inputRequired` (legacy branch present only if step 5 serves it), `requestState` wired for multi-round flows, `list_changed`→`subscriptions/listen`.
 
-7. **Adopt McpServer**: Change low-level `Server` implementations to modern `McpServer` where appropriate to automate capability registration, and transition to Standard Schema objects (e.g. `z.object(...)` from zod ≥4.2.0; ArkType as-is; Valibot as-is (native Standard Schema)).
+7. **Adopt McpServer**: Convert low-level `Server` to `McpServer` unless custom/vendor JSON-RPC methods require the low-level class — those stay; see [mcp-protocol]. This automates capability registration. Transition to Standard Schema objects (e.g. `z.object(...)` from zod ≥4.2.0; ArkType as-is; Valibot as-is (native Standard Schema)).
 
-- [ ]: Low-level `Server`→`McpServer` where appropriate; Standard Schema objects adopted.
+- [ ]: Every low-level `Server` either converted to `McpServer` or confirmed to carry custom methods that require it (handed to [mcp-protocol]); Standard Schema objects adopted.
 
 8. **Transition TS Config**: Configure `tsconfig.json` modules to `"NodeNext"`, `"moduleResolution": "NodeNext"` and set `"type": "module"` in `package.json` for ESM (recommended). v2 is ESM-first but ships a CommonJS build too, so CommonJS projects can `require('@modelcontextprotocol/…')` directly — no dynamic `import()` shim required.
 
@@ -51,7 +51,7 @@ Flow: `scope → codemod → packages → flags → era → modernize → mcpser
 
 9. **Verify with Tests**: Validate code functionality using [mcp-test] integration and unit assertions, and check the migrated code against Silent Behavior Changes below — the codemod and compiler can't catch these, so tests are the only gate.
 
-- [ ]: Tests via [mcp-test] compile and pass against the migrated code; no references to the legacy `@modelcontextprotocol/sdk` package remain in `package.json` or source files.
+- [ ]: Tests via [mcp-test] compile and pass against the migrated code; no references to the legacy `@modelcontextprotocol/sdk` package remain in `package.json` or source files; and every row of Silent Behavior Changes reviewed against the codebase (each either confirmed unchanged or migrated).
 
 ## Reference
 
@@ -89,7 +89,7 @@ Never import `@modelcontextprotocol/core-internal` — private, no stable API.
 | `ResourceReference` / `ResourceReferenceSchema`          | `ResourceTemplateReference` / `ResourceTemplateReferenceSchema`                  |
 | `IsomorphicHeaders`                                      | Web Standard `Headers` (use `.get()`/`.set()`, not bracket access)               |
 
-> Low-level `setRequestHandler(Schema)` becomes `setRequestHandler('method/string')`; high-level `.tool()` becomes `.registerTool()` — don't conflate them.
+> Low-level `setRequestHandler(Schema)` becomes `setRequestHandler('method/string')`; high-level `.tool()` becomes `.registerTool()`. Low-level and high-level are distinct renames (different call sites).
 
 #### Context & Property
 
@@ -106,7 +106,7 @@ Never import `@modelcontextprotocol/core-internal` — private, no stable API.
 | `StreamableHTTPServerTransport`                     | `Node/WebStandardStreamableHTTPServerTransport`                                                     |
 | `extra.taskStore` / `taskId` / `taskRequestedTtl`   | _removed_ (experimental tasks removed, SEP-2663 — no mechanical migration; delete usages)           |
 
-**OAuth error classes** collapse to one `OAuthError` + `OAuthErrorCode`: every `<Name>Error` class → `OAuthErrorCode.<Name>` with the `Error` suffix dropped (`InvalidGrantError` → `OAuthErrorCode.InvalidGrant`, `InvalidTokenError` → `OAuthErrorCode.InvalidToken`, …), except `ServerError` which keeps its full name (`OAuthErrorCode.ServerError`) and `CustomOAuthError` which maps to a custom code you define. `OAUTH_ERRORS` is removed — replace `instanceof` checks with a switch on `error.code`. Token verifiers must throw `OAuthError(OAuthErrorCode.InvalidToken)` for a bad token, or it becomes an HTTP 500 instead. The **transport-layer** `InsufficientScopeError` (SEP-2350, extends `OAuthClientFlowError`) is a distinct class from `OAuthErrorCode.InsufficientScope` above — don't conflate them.
+**If the codebase uses OAuth**, the error classes collapse to one `OAuthError` + `OAuthErrorCode`: every `<Name>Error` class → `OAuthErrorCode.<Name>` with the `Error` suffix dropped (`InvalidGrantError` → `OAuthErrorCode.InvalidGrant`, `InvalidTokenError` → `OAuthErrorCode.InvalidToken`, …), except `ServerError` which keeps its full name (`OAuthErrorCode.ServerError`) and `CustomOAuthError` which maps to a custom code you define. `OAUTH_ERRORS` is removed — replace `instanceof` checks with a switch on `error.code`. Token verifiers must throw `OAuthError(OAuthErrorCode.InvalidToken)` for a bad token, or it becomes an HTTP 500 instead. The **transport-layer** `InsufficientScopeError` (SEP-2350, extends `OAuthClientFlowError`) is a distinct class from `OAuthErrorCode.InsufficientScope` above. Non-OAuth migrations skip this paragraph.
 
 ### Silent Behavior Changes
 

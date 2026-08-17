@@ -1,27 +1,26 @@
 ---
 name: mcp-test
-description: Use when writing or running tests for an MCP server or client in the TypeScript SDK v2 — test setup, inspector sessions, and coverage/assertion patterns. For diagnosing runtime misbehavior (connection failures, ProtocolError/SdkError), dispatch the mcp-debugger agent.
+description: MCP SDK v2 — use when writing or running tests for an MCP server or client — test setup, inspector sessions, and coverage/assertion patterns. For diagnosing runtime misbehavior (connection failures, ProtocolError/SdkError), dispatch the mcp-debugger agent.
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# Testing & Debugging MCP (TypeScript SDK v2)
+# Testing MCP (MCP SDK v2)
 
-Covers `2.0.0-beta.3` test/debug workflows for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `2.0.0-beta.3` test workflows (plus the shared error-code reference the mcp-debugger agent loads) for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 `pick harness -> mock security -> manual probe -> match error channel & look up code`
 
 ## When to Use
 
-- Writing tests for MCP servers/clients in TS/JS, or running inspector sessions for test scaffolding.
 - Deprecated APIs / mismatched SDKs: load [mcp-migration].
 - Server config (stderr logging, custom schemas): see [mcp-server].
 - Client connection testing: see [mcp-client].
 
 ## Steps
 
-1. **Pick a Harness** — match the transport under test; never open a real network port or spawn a subprocess unless the test is exercising stdio itself.
+1. **Pick a Harness** — match the transport under test; in-process by default; real ports/subprocesses only for stdio coverage.
 
    - **HTTP server**, in-process via `createMcpHandler`'s `handler.fetch` — exercises HTTP-specific behavior (headers, auth middleware, Host/Origin checks):
 
@@ -140,7 +139,8 @@ To consider testing implementation complete, you must verify:
 
 - [ ] Every harness matches its transport: HTTP tested in-process via `handler.fetch` (no real port); direct server/client pairing uses `InMemoryTransport.createLinkedPair()`; stdio coverage spawns the real process with `StdioClientTransport`.
 - [ ] No test in the standard unit test run opens a real network port.
-- [ ] Tool _business_ failures assert `isError: true`; unknown/disabled tool names assert `ProtocolError(InvalidParams)` via try/catch + `.code` — never bare `instanceof` (see [mcp-server] "Handle Errors").
+- [ ] Every error assertion matched against the Error Code Reference table for its channel (ProtocolError vs SdkError vs SdkHttpError) — no guessed codes.
+- [ ] Tool business failures assert `isError: true`; unknown/disabled tool names assert `ProtocolError(InvalidParams)` via try/catch + `.code` (see step 4).
 - [ ] Test suite exits cleanly: every `client.close()`/`handler.close()` runs, no hanging tasks or open connections.
 
 ## See Also
