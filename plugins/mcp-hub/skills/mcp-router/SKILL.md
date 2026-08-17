@@ -56,7 +56,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 
 ### Migrate Workflow
 
-Canonical steps live in [mcp-migration] (scope → codemod → flags → packages → modernize → mcpserver → tsconfig → verify → era). Dispatch the `mcp-migrator` agent to execute; load [mcp-migration] for reference tables (renames, package split, era adoption).
+Canonical steps live in [mcp-migration] (scope → codemod → packages → flags → era → modernize → mcpserver → tsconfig → verify). Dispatch the `mcp-migrator` agent to execute; load [mcp-migration] for reference tables (renames, package split, era adoption).
 
 ### Debug Workflow
 
