@@ -20,7 +20,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 - **Auth**: [mcp-auth]
 - **Elicit**: [mcp-elicitation]
 - **Protocol**: [mcp-protocol]
-- **Gateway/proxy/relay**: [mcp-protocol] (see wire-schemas-and-gateways.md)
+- **Gateway/proxy/relay**: [mcp-protocol]
 - **Migrate**: `mcp-migrator` agent (runs codemods) — for reference material load [mcp-migration]
 - **Test**: [mcp-test]
 - **Debug** (via `/mcp test`): `mcp-debugger` agent (on failure)
