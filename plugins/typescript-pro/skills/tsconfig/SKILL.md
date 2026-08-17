@@ -71,7 +71,7 @@ Libraries are different: the consumer's config is unknown, so compile under the 
 Split a large or multi-environment program into smaller projects, each with its own tsconfig, connected with `references`. Gains: faster incremental builds, enforced layering, per-environment options.
 
 - **`references`** — top-level array: `{ "references": [{ "path": "../src" }] }`. Importing from a referenced project loads its _output_ `.d.ts`, not its source.
-- **`composite: true`** on every referenced project. It implies `declaration: true` and `incremental: true`, defaults `rootDir` to the tsconfig directory, and _requires_ every implementation file to be matched by `include` or listed in `files` (tsc names anything missed).
+- **`composite: true`** on every referenced project — its implications are in the [implied-values table](#implied-values-dont-set-redundantly); beyond those, it _requires_ every implementation file to be matched by `include` or listed in `files` (tsc names anything missed).
 - **Build with `tsc -b`** (build mode). It builds referenced projects in dependency order, does up-to-date checks, and effectively forces `noEmitOnError` for all projects (otherwise a stale dependency would hide its error after one build). Flags: `--verbose`, `--dry`, `--clean`, `--force`, `--watch`.
 - **`declarationMap: true`** so editors' Go-To-Definition and rename cross project boundaries.
 - **Solution tsconfig** at the root: `"files": []` plus `references` to every leaf project. `tsc -b` then builds the whole graph from one entry point. (Empty `files` is allowed once you have ≥1 reference.)
@@ -80,9 +80,9 @@ Split a large or multi-environment program into smaller projects, each with its 
 ## Flags behind the table
 
 - **`strict: true`** turns on the strict family (`strictNullChecks`, `noImplicitAny`, `noImplicitThis`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `strictBuiltinIteratorReturn`, `useUnknownInCatchVariables`, `alwaysStrict`). Default is `true` in modern TS. Full per-flag detail in `OPTIONS.md`.
-- **`verbatimModuleSyntax: true`** — what you write is what's emitted: `type`-modified imports/exports are erased, everything else is kept. It will _not_ rewrite an `import` to `require` (or vice versa); it errors instead, forcing you to be intentional about CJS vs ESM and catching a missing `package.json` `"type"`. Replaces the deprecated `importsNotUsedAsValues` and `preserveValueImports`. Incompatible with any setup that emits both ESM and CJS from one source.
-- **`isolatedModules: true`** — warns about code single-file transpilers (Babel, swc, `ts.transpileModule`) can't handle: re-exporting a type without `export { type }`, referencing ambient `const enum` members, namespaces in non-module files. Implied by `verbatimModuleSyntax`.
-- **`esModuleInterop: true`** — fixes CJS/AMD/UMD interop so `import x from "cjs"` and `import * as x` behave like Babel, emitting `__importDefault`/`__importStar` helpers. Implied by `nodenext`/`preserve`. Implies `allowSyntheticDefaultImports` (which is type-checking only — it doesn't change emit).
+- **`verbatimModuleSyntax: true`** — what you write is what's emitted: it errors rather than rewriting `import`↔`require`, forcing intentional CJS vs ESM. Incompatible with dual-emit from one source. Erasure mechanics and deprecated-flag lineage in [`OPTIONS.md`](OPTIONS.md).
+- **`isolatedModules: true`** — flags constructs single-file transpilers (Babel, swc, `ts.transpileModule`) can't handle; implied by `verbatimModuleSyntax`. Detail in [`OPTIONS.md`](OPTIONS.md).
+- **`esModuleInterop: true`** — fixes CJS/AMD/UMD default-import interop; implied by `nodenext`/`preserve`, implies `allowSyntheticDefaultImports` (type-checking only). Helper mechanics in [`OPTIONS.md`](OPTIONS.md).
 
 For the full strict-family list, interop-flag mechanics, deprecated flags, and `jsx`/`lib`/emit knobs, see [`OPTIONS.md`](OPTIONS.md).
 
