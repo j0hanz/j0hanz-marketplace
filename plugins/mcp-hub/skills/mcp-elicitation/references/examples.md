@@ -11,6 +11,8 @@ metadata:
 
 Mid-call user input is handled statelessly via `input_required` responses.
 
+> Prereq: v2 requires `zod ^4.2.0` (self-converts). See [mcp-server](../../mcp-server/SKILL.md) Standard Schema note.
+
 ```ts
 server.registerTool(
   'deploy',
@@ -39,6 +41,8 @@ server.registerTool(
 > [!WARNING]
 > Blocking `elicitInput()` throws on 2026-era connections. Use only on 2025-era connections; on 2026-era `elicitInput()` throws regardless of the shim. The `legacyShim` is unrelated — it serves `inputRequired(...)` returns to 2025-era clients by pushing real `elicitation/create` requests.
 
+> `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` for a ported draft-07 schema.
+
 ```ts
 const result = await ctx.mcpReq.elicitInput({
   mode: 'form',
@@ -53,6 +57,8 @@ if (result.action === 'accept') {
   return { content: [{ type: 'text', text: `Recorded: ${JSON.stringify(result.content)}` }] };
 }
 ```
+
+> **v2 typing:** `ElicitResult.content` values are `string | number | boolean | string[]`. An elicitation handler returning arbitrary objects fails to compile and fails schema validation (`-32602`).
 
 ## Progress Notifications
 

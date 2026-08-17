@@ -27,7 +27,7 @@ Required `package.json` setup:
 ```
 
 - The entry file's first line must be exactly `#!/usr/bin/env node`.
-- Pin the SDK version exactly (the current beta, no `^`) — beta releases can break between minors.
+- Pin the `@modelcontextprotocol/*` packages together (they share one version); use an exact pin (no `^`). List `@modelcontextprotocol/server` (or `/client`) plus any adapter (`/node`, `/express`, `/hono`, `/fastify`) and its framework peer dep explicitly. Beta releases can break between minors.
 - Smoke-test the packed artifact before publishing:
 
 ```sh

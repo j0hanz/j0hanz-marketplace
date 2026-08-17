@@ -1,7 +1,6 @@
 ---
 name: mcp-auth
 description: Use when an MCP server or endpoint needs protection or an MCP client needs credentials — bearer-token verification, OAuth flows, or machine-to-machine auth in the TypeScript SDK v2.
-when_to_use: Bearer-token verification, OAuth flows, machine-to-machine authentication, MCP authentication, token validation, security.
 user-invocable: false
 metadata:
   category: technique
@@ -12,6 +11,8 @@ metadata:
 Server-side HTTP auth and client credentials for TypeScript SDK v2. Ref: https://ts.sdk.modelcontextprotocol.io/v2/
 
 **Server is Resource Server only — never issues tokens.**
+
+> v1 Authorization Server helpers (`mcpAuthRouter`, `OAuthServerProvider`) are frozen in `@modelcontextprotocol/server-legacy/auth`; Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) come from `@modelcontextprotocol/express` (Node) or `@modelcontextprotocol/server` (web-standard hosts). Migrate the AS role to a dedicated IdP.
 
 ## When to Use
 

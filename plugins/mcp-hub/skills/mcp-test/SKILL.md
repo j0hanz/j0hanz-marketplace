@@ -1,7 +1,6 @@
 ---
 name: mcp-test
 description: Use when writing or running tests for an MCP server or client in the TypeScript SDK v2 — test setup, inspector sessions, and coverage/assertion patterns. For diagnosing runtime misbehavior (connection failures, ProtocolError/SdkError), see the mcp-debugger agent.
-when_to_use: MCP testing, test setup, inspector sessions, coverage, assertion patterns, test scaffolding.
 user-invocable: false
 metadata:
   category: technique
@@ -35,7 +34,7 @@ To consider testing implementation complete, you must verify:
 
 - [ ] HTTP adapters are tested in-process via the `handler.fetch` mock (no real port); stdio coverage spawns the real process with `StdioClientTransport` (no in-process shortcut); `InMemoryTransport.createLinkedPair()` pairs 2025-era instances directly.
 - [ ] No real network ports are spawned in the standard unit test execution workflows.
-- [ ] Tool business failures return structured `isError: true` bodies in the success payload, not protocol-level crashes.
+- [ ] Tool _business_ failures return `isError: true`; unknown/disabled tool names reject with `ProtocolError(InvalidParams)` — assert via try/catch + `error.code` (see [mcp-server errors](../mcp-server/references/errors.md)).
 - [ ] Test suite executes successfully with no hanging tasks or loose connections.
 
 ## Examples & References

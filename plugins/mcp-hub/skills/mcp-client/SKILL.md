@@ -1,7 +1,6 @@
 ---
 name: mcp-client
 description: Use when building MCP clients using TypeScript SDK v2 (@modelcontextprotocol/client), managing connections, calling tools/resources, subscribing to changes, caching, or configuring middleware.
-when_to_use: Building an MCP client, client connections, registering capabilities, calling tools, reading resources, progress handlers.
 user-invocable: false
 metadata:
   category: technique
@@ -25,7 +24,7 @@ Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelc
 
 4. **Register Hook Interceptors**: After `connect`, register handlers via `setRequestHandler('elicitation/create', …)` for auto-fulfillment. Register `sampling/createMessage` / `roots/list` handlers only if you declared those (deprecated) capacities in Step 2.
 
-5. **Manage Calls**: Call tools with `.callTool()` and paginate; check execution status on the `result.isError` payload — do **not** catch standard tool exceptions as business failures.
+5. **Manage Calls**: Call tools with `.callTool()` (no-arg `listTools()`/`listPrompts()`/`listResources()` auto-aggregate pages; pass `{ cursor }` for one page); check execution status on the `result.isError` payload — do **not** catch standard tool exceptions as business failures; unknown/disabled tool names reject the promise with `ProtocolError(InvalidParams)` — catch that separately from `isError: true` business failures (see [mcp-server errors](../mcp-server/references/errors.md)).
 
 6. **Graceful Terminate**: On every shutdown **and** error path, tear down cleanly to avoid dangling connections. Over **Streamable HTTP**, run `await transport.terminateSession()` (a no-op when the server issued no session ID) then `await client.close()`. Over **stdio** or in-memory, `await client.close()` alone is the whole teardown — there is no server-side session to terminate.
 
@@ -43,5 +42,6 @@ To consider a client implementation complete, you must verify:
 ## Reference Guides
 
 - Connection, tools, resources, prompts: [references/examples.md](references/examples.md)
+- OAuth client flow: [references/oauth-client-flow.md](references/oauth-client-flow.md)
 - Subscriptions, caching, middleware, roots: [references/subscriptions-caching-middleware.md](references/subscriptions-caching-middleware.md)
 - Connection troubleshooting or tests: [mcp-test]

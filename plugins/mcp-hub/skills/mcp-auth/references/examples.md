@@ -17,14 +17,20 @@ import {
   requireBearerAuth,
 } from '@modelcontextprotocol/express';
 import type { AuthInfo } from '@modelcontextprotocol/server';
+import { OAuthError, OAuthErrorCode } from '@modelcontextprotocol/server';
 
 const mcpServerUrl = new URL('https://api.example.com/mcp');
 
 const auth = requireBearerAuth({
   verifier: {
     verifyAccessToken: async (token) => {
-      const payload = await verifyJwt(token);
-      return { token, clientId: payload.sub, scopes: payload.scopes, expiresAt: payload.exp };
+      try {
+        const payload = await verifyJwt(token);
+        return { token, clientId: payload.sub, scopes: payload.scopes, expiresAt: payload.exp };
+      } catch {
+        // v2: throw OAuthError(InvalidToken) — a generic Error makes this HTTP 500
+        throw new OAuthError(OAuthErrorCode.InvalidToken, 'Invalid or expired token');
+      }
     },
   },
   requiredScopes: ['mcp'],
@@ -81,15 +87,22 @@ Service-to-service auth, no user interaction. Service requests token and injects
 
 ```ts
 import { ClientCredentialsProvider, PrivateKeyJwtProvider } from '@modelcontextprotocol/client';
+import type { AuthProvider } from '@modelcontextprotocol/client';
 
 // Client credentials (shared secret)
 new ClientCredentialsProvider({ clientId, clientSecret, expectedIssuer });
 
 // Signed JWT assertion (private_key_jwt)
-new PrivateKeyJwtProvider({ clientId, privateKey, algorithm: 'RS256', jwtLifetimeSeconds: 300 });
+new PrivateKeyJwtProvider({
+  clientId,
+  privateKey,
+  algorithm: 'RS256',
+  jwtLifetimeSeconds: 300,
+  expectedIssuer,
+});
 
 // Custom minimal token provider
-const authProvider = {
+const authProvider: AuthProvider = {
   token: () => getStoredToken(),
   onUnauthorized: (ctx) => refresh(),
 };
@@ -192,6 +205,10 @@ app.post(
 
 ## Error Reference
 
+- **OAuth consolidation**: the v1 `Invalid*Error` family and `OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode`; switch `instanceof` to `error.code`. Token verifiers must throw `OAuthError(OAuthErrorCode.InvalidToken)` or invalid tokens become HTTP 500.
 - `UnauthorizedError` (client): HTTP 401 `invalid_token` — token missing/expired; re-run auth.
-- `InsufficientScopeError` (client): HTTP 403 `insufficient_scope` — token valid but lacks required scopes.
-- **`onInsufficientScope`** (client transport, SEP-2350): `'reauthorize'` (default) auto-steps-up scopes; `'throw'` raises `InsufficientScopeError`.
+- `InsufficientScopeError` — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, server verifier) and the **transport** one (SEP-2350, extends `OAuthClientFlowError`, raised by `onInsufficientScope: 'throw'`). HTTP 403 `insufficient_scope` — token valid but lacks required scopes.
+- **`onInsufficientScope`** (client transport, SEP-2350): `'reauthorize'` (default) auto-steps-up scopes; `'throw'` raises the transport `InsufficientScopeError`.
+- `InsecureTokenEndpointError` (client): token endpoint not `https:` (loopback exempt — SEP-2207).
+- `RegistrationRejectedError` (client): DCR rejected — carries `status` / `body` / `submittedMetadata`.
+- `AuthorizationServerMismatchError` (client): credential pinned to a different AS (`expectedIssuer`).

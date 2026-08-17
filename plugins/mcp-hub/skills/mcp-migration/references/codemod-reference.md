@@ -9,9 +9,9 @@ metadata:
 
 ## CLI Usage
 
-Run the codemod across a directory: `npx @modelcontextprotocol/codemod@beta v1-to-v2 .`
+Run the codemod across a directory: `npx @modelcontextprotocol/codemod@latest v1-to-v2 .`
 
-Run on a single file: `npx @modelcontextprotocol/codemod@beta v1-to-v2 src/server.ts`
+Run on a single file: `npx @modelcontextprotocol/codemod@latest v1-to-v2 src/server.ts`
 
 ## Migration Scope & Mappings
 

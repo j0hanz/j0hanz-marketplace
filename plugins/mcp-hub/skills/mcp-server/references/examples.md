@@ -39,7 +39,7 @@ serveStdio(() => {
 });
 ```
 
-> **Standard Schema:** `inputSchema`/`outputSchema` also accept ArkType schemas as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema` (passed directly), or raw JSON Schema via `fromJsonSchema`.
+> **Standard Schema:** `inputSchema`/`outputSchema` also accept ArkType schemas as-is, Valibot (native Standard Schema, passed directly), or raw JSON Schema via `fromJsonSchema`.
 
 ## Tool Registration
 

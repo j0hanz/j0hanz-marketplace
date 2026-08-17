@@ -42,6 +42,10 @@ Prefer this over mocking `handler.fetch` when you don't need to exercise HTTP-sp
 
 > `InMemoryTransport` lives in `@modelcontextprotocol/client`, not `core` (which exports Zod schemas only).
 
+> In v2, `InMemoryTransport.close()` aborts in-flight handlers via `ctx.mcpReq.signal` (no longer runs to completion) and no longer double-fires `onclose` on the initiating side.
+
+> A custom/test transport that sets `sessionId` at construction skips the `initialize` handshake — leave it unset for a fresh handshake.
+
 ### HTTP handler harness
 
 ```ts

@@ -27,12 +27,16 @@ server.setRequestHandler('tools/list', async () => ({
     },
   ],
 }));
+```
 
+> Unknown/disabled tool names reject with `ProtocolError(InvalidParams)` before this handler runs — do not handle them here (see [mcp-server errors](../../mcp-server/references/errors.md)). The `isError: true` branch below is a _known_ tool's business failure.
+
+```ts
 server.setRequestHandler('tools/call', async (req) => {
-  if (req.params.name !== 'search') {
-    return { content: [{ type: 'text', text: `Unknown: ${req.params.name}` }], isError: true };
-  }
   const { query } = req.params.arguments as { query: string };
+  if (!query) {
+    return { content: [{ type: 'text', text: 'query required' }], isError: true }; // business failure
+  }
   // …
 });
 ```
@@ -81,8 +85,8 @@ import { type } from 'arktype';
 inputSchema: type({ name: 'string', 'times?': '1 <= number.integer <= 5' });
 
 // Valibot
-import { toStandardJsonSchema } from '@valibot/to-json-schema';
-inputSchema: toStandardJsonSchema(v.object({ name: v.string() }));
+import { object, string } from 'valibot';
+inputSchema: object({ name: string() });
 
 // Plain JSON Schema
 import { fromJsonSchema } from '@modelcontextprotocol/server';

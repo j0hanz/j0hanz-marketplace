@@ -46,6 +46,7 @@ const result = await client.callTool({ name: 'lookup-order', arguments: { id: 'A
 // result.content: block array
 // result.isError: true if tool failed (check before using content)
 // result.structuredContent: unknown; present if outputSchema declared
+// narrow with isCallToolResult(result) / isSpecType.X(result) from '@modelcontextprotocol/client' — do not use the `in` operator (passthrough objects satisfy every member)
 
 const { resources } = await client.listResources();
 const { resourceTemplates } = await client.listResourceTemplates();

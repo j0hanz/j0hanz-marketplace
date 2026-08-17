@@ -20,6 +20,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 - **Auth**: [mcp-auth]
 - **Elicit**: [mcp-elicitation]
 - **Protocol**: [mcp-protocol]
+- **Gateway/proxy/relay**: [mcp-protocol] (see wire-schemas-and-gateways.md)
 - **Migrate**: `mcp-migrator` agent (runs codemods) — for reference material load [mcp-migration]
 - **Test**: [mcp-test]
 - **Debug** (via `/mcp test`): `mcp-debugger` agent (on failure)
@@ -43,6 +44,8 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 1. **Locate**: Scan for `@modelcontextprotocol/sdk` (v1 single-package) imports.
 2. **Version**: If SDK v1, load [mcp-migration] (flag as Blocker).
    - **Version (deprecated APIs)**: Grep for SEP-2577-deprecated subsystems (`listRoots`, `sendRootsListChanged`, `sendLoggingMessage`, `createMessage`, `setLoggingLevel`), deprecated `registerClient` (SEP-991), and the removed variadic `.tool()`/`.prompt()`/`.resource()` registration — flag as Should Fix.
+   - **Version (v1→v2 renames)**: Grep for `McpError`, `ErrorCode`, `StreamableHTTPError`, `JSONRPCError`, `ResourceReference`, `IsomorphicHeaders`, `RequestHandlerExtra`, schema-first `setRequestHandler(`, `SSEServerTransport`, `WebSocketClientTransport`, and the `Invalid*Error` OAuth classes — flag as **Blocker**.
+   - **Version (removed tasks)**: Grep for `ProtocolOptions.tasks`, `taskManager`, `registerToolTask`, `TaskStore`, `InMemoryTaskStore`, `requestStream`/`callToolStream`/`createMessageStream`/`elicitInputStream`, `Experimental*Tasks` — the experimental tasks feature is removed (SEP-2663); flag as **Blocker** (no mechanical migration; remove usages).
 3. **Design**: Check structure via [mcp-server] / [mcp-client].
 4. **Security** (*): Audit auth (HTTP). Load [mcp-auth].
 5. **Interact** (*): Audit prompts/progress/cancellation. Load [mcp-elicitation].

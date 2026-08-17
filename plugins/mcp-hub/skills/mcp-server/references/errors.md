@@ -33,3 +33,5 @@ throw new ResourceNotFoundError(uri.href); // -32602 with data: { uri }
 ```
 
 Tool handler **cannot** emit protocol error — every throw (even `ProtocolError`) becomes `isError: true`. Exception: `UrlElicitationRequiredError` propagates (`-32042`). Full code tables in [mcp-test](../../mcp-test/SKILL.md) skill.
+
+**Caller side:** an unknown or disabled tool name rejects the `callTool()` promise with `ProtocolError(ProtocolErrorCode.InvalidParams)` (`-32602`) — it does **not** resolve `CallToolResult{ isError: true }`. A v1 caller that checked `result.isError` for an unknown tool gets an unhandled rejection; catch the promise and inspect `error.code` instead. Tool _business_ failures (a registered tool that runs and reports failure) still return `isError: true`.

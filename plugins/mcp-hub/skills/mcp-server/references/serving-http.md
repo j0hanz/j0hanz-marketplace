@@ -80,3 +80,4 @@ Serving 2025-era clients:
 - `createMcpHandler(factory, { legacy: 'stateless' })` — stateless per-request serving of legacy calls.
 - `serveStdio(factory, { legacy: 'serve' })` — decide once per stdio connection.
 - **SSE (deprecated, migration only)**: Migrate to Streamable HTTP. Frozen v1 SSE transport in `@modelcontextprotocol/server-legacy/sse`.
+- **POST `Content-Type` (every era)**: server entries validate the request `Content-Type` by parsed media type, not substring; a POST whose media type is not `application/json` answers `415 Unsupported Media Type`. SDK clients always sent the correct header; hand-rolled clients that omit it must now set `Content-Type: application/json`.

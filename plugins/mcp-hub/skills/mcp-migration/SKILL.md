@@ -26,7 +26,7 @@ Flow: `scope → codemod → flags → packages → modernize → mcpserver → 
 
 - [ ]: All `@mcp-codemod-error` inline comments are found and resolved.
 
-4. **Update Packages**: Convert deprecated `@modelcontextprotocol/sdk` dependencies to appropriate v2 packages from [references/tables.md](references/tables.md). Load `@modelcontextprotocol/server-legacy/sse` (subpath) if using `SSEServerTransport`.
+4. **Update Packages**: Convert deprecated `@modelcontextprotocol/sdk` dependencies to appropriate v2 packages from [references/tables.md](references/tables.md). Load `@modelcontextprotocol/server-legacy/sse` (subpath) if using `SSEServerTransport`. stdio transports import from the `./stdio` subpath (`@modelcontextprotocol/client/stdio`, `@modelcontextprotocol/server/stdio`), not the package root.
 
 - [ ]: Deprecated `@modelcontextprotocol/sdk` deps converted to split v2 packages; SSE uses `@modelcontextprotocol/server-legacy/sse`.
 
@@ -37,7 +37,7 @@ Flow: `scope → codemod → flags → packages → modernize → mcpserver → 
 
 - [ ]: `elicitInput`→`inputRequired`, `requestState` wired for multi-round flows, `list_changed`→`subscriptions/listen`.
 
-6. **Adopt McpServer**: Change low-level `Server` implementations to modern `McpServer` where appropriate to automate capability registration, and transition to Standard Schema objects (e.g. `z.object(...)` from zod ≥4.2.0; ArkType as-is; Valibot via `@valibot/to-json-schema`).
+6. **Adopt McpServer**: Change low-level `Server` implementations to modern `McpServer` where appropriate to automate capability registration, and transition to Standard Schema objects (e.g. `z.object(...)` from zod ≥4.2.0; ArkType as-is; Valibot as-is (native Standard Schema)).
 
 - [ ]: Low-level `Server`→`McpServer` where appropriate; Standard Schema objects adopted.
 

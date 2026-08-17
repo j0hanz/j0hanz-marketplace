@@ -1,6 +1,6 @@
 ---
 description: >-
-  Reference mapping for the 14 core MCP design decisions, safe defaults, trigger conditions, and choices.
+  Reference mapping for the 15 core MCP design decisions, safe defaults, trigger conditions, and choices.
 metadata:
   tags: [decisions, planning, defaults, triggers]
   source: internal
@@ -8,13 +8,13 @@ metadata:
 
 # MCP Decisions & Safe Defaults
 
-This reference contains the 14 core decisions, safe defaults, triggers, and choices for the MCP interview.
+This reference contains the 15 core decisions, safe defaults, triggers, and choices for the MCP interview.
 
 1. **Scope** (Default: `server`): Ask if unclear. Choices: Server | Client
-2. **Transport** (Default: `stdio`): Ask if remote/multi-user/deploy. Choices: stdio | HTTP
-3. **Auth** (Default: `none`): Ask if HTTP. Choices: OAuth (client: `OAuthClientProvider`; server verifies via `requireBearerAuth`) | Custom bearer (client: `AuthProvider`; server: custom `verifyAccessToken`) | Legacy AS helpers (`server-legacy/auth`)
+2. **Transport** (Default: `stdio`): Ask if remote/multi-user/deploy. Choices: stdio | Streamable HTTP (SSE/WebSocket transports are removed — SSE frozen at `@modelcontextprotocol/server-legacy/sse`).
+3. **Auth** (Default: `none`): Ask if HTTP. Choices: OAuth (client: `OAuthClientProvider`; server verifies via `requireBearerAuth`) | Custom bearer (client: `AuthProvider`; server: custom `verifyAccessToken`) | Legacy AS helpers (`server-legacy/auth`). Note: `InsecureTokenEndpointError` if the token endpoint is not `https:` (loopback exempt — SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
 4. **Tool Surface** (Default: `Few simple`): Ask if >3 tools/complex. Choices: Many simple | Few big with settings
-5. **Input schemas** (Default: `Zod on all`): Never ask.
+5. **Input schemas** (Default: `Standard Schema (zod ^4.2.0)`): Never ask. Choices: zod `^4.2.0` | ArkType | Valibot (all native) | raw JSON Schema via `fromJsonSchema()`.
 6. **Interaction** (Default: `Request-response`): Ask if long tasks/user input. Choices: Progress/Cancel | Multi-round-trip
 7. **Prompts** (Default: `None`): Ask if reusable/UI integration. Choices: Static | Completable
 8. **Error Strategy** (Default: `Protocol errors only`): Never ask.
@@ -24,5 +24,6 @@ This reference contains the 14 core decisions, safe defaults, triggers, and choi
 12. **Notifications** (Default: `None`): Ask if clients need list-change/data-change push updates. Choices: `subscriptions/listen` stream | None
 13. **Era / protocol revision** (Default: `legacy: 'stateless'`): Ask only if the modern (2026) spec is required. Choices: Both eras (`legacy: 'stateless'`) | modern (2026) spec only (`legacy: 'reject'`) | stay on the 2025-era stack (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler` — no `legacy:` setting applies).
 14. **Runtime** (Default: Node ≥ 20, ESM-first): Never ask. v2 is ESM-first but ships CJS too. Choices: Node ≥20 (fixed)
+15. **Staging** (Default: one-shot for small codebases): Choices: stage-by-directory (large codebases). Safe order: add the v2 packages + `zod ^4.2.0` while keeping `@modelcontextprotocol/sdk`; rewrite per-directory; remove the v1 dependency only when `grep -rn "@modelcontextprotocol/sdk"` finds no source import. Boundary rule: no SDK object may flow between v1-imported and v2-imported code (`instanceof` and nominal types do not cross).
 
 > Two-Choices rule: offer exactly two options unless the reference specifies a third load-bearing choice (items 3 and 13).
