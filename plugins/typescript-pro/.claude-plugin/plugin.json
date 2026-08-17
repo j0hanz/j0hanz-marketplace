@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "typescript-pro",
+  "displayName": "Typescript Pro",
+  "version": "0.1.0",
+  "description": "TypeScript type system skills: type-level utilities and type tests, .d.ts declaration contracts for packages and untyped APIs, JSDoc type-checking for plain .js files, and tsconfig selection by runtime.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": ["typescript", "types", "dts", "jsdoc", "tsconfig", "type-safety", "checkjs"]
+}

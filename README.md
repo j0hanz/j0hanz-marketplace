@@ -27,6 +27,7 @@ Claude Code plugins: skills and agents you can install into any project.
 /plugin install workbench@j0hanz-marketplace
 /plugin install output-styles@j0hanz-marketplace
 /plugin install nodejs@j0hanz-marketplace
+/plugin install typescript-pro@j0hanz-marketplace
 ```
 
 <!-- install:end -->
@@ -110,6 +111,12 @@ Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — wi
 Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists
 
 - Model-loaded skills: `nodejs-backend-patterns`, `nodejs-best-practices`
+
+### typescript-pro
+
+TypeScript type system skills: type-level utilities and type tests, .d.ts declaration contracts for packages and untyped APIs, JSDoc type-checking for plain .js files, and tsconfig selection by runtime
+
+- Model-loaded skills: `advanced-types`, `declaration-contracts`, `jsdoc-types`, `tsconfig`
 
 <!-- plugins:end -->
 

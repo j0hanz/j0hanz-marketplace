@@ -59,6 +59,12 @@
       "source": "./plugins/nodejs",
       "description": "Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists",
       "category": "development"
+    },
+    {
+      "name": "typescript-pro",
+      "source": "./plugins/typescript-pro",
+      "description": "TypeScript type system skills: type-level utilities and type tests, .d.ts declaration contracts for packages and untyped APIs, JSDoc type-checking for plain .js files, and tsconfig selection by runtime",
+      "category": "development"
     }
   ]
 }
