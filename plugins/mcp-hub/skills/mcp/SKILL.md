@@ -24,4 +24,4 @@ Match the `<job>` argument to a sub-skill or agent below and invoke it; confirm 
 - **`/mcp test`**: Routes to [mcp-test] or dispatches the `mcp-debugger` agent.
 - **`/mcp elicit`**: Routes to [mcp-elicitation] for advanced interaction patterns.
 - **`/mcp protocol`**: Routes to [mcp-protocol] for custom transports or low-level messaging.
-- **`/mcp publish`**: Routes to [mcp-server] `references/distribution.md`.
+- **`/mcp publish`**: Routes to [mcp-server] "Distribute".

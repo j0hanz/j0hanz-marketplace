@@ -26,7 +26,7 @@ Covers testing and error diagnosis for `2.0.0-beta.3`. Reference: https://ts.sdk
 1. **Verify Sandbox**: Confirm test isolation. Prefer `InMemoryTransport.createLinkedPair()` to pair a `Client` and `McpServer` directly (era-specific; see `references/examples.md`), avoiding real ports or subprocesses.
 2. **Mock Security**: If testing auth-protected endpoints, pass mock `authInfo` payloads following [mcp-auth] policies to test 401/403 controls.
 3. **Execute Probe**: For stdio servers, launch the MCP inspector to probe commands interactively. For HTTP servers, direct post raw JSON-RPC requests via `curl` to the `/mcp` endpoints.
-4. **Assert Correct Channel**: See [references/tables.md](references/tables.md) for error classes/codes and `isError` checks; error channels in [mcp-server errors](../mcp-server/references/errors.md).
+4. **Assert Correct Channel**: See [references/tables.md](references/tables.md) for error classes/codes and `isError` checks; error channels in [mcp-server] "Handle Errors".
 
 ## Completion Criteria
 
@@ -34,10 +34,10 @@ To consider testing implementation complete, you must verify:
 
 - [ ] HTTP adapters are tested in-process via the `handler.fetch` mock (no real port); stdio coverage spawns the real process with `StdioClientTransport` (no in-process shortcut); `InMemoryTransport.createLinkedPair()` pairs 2025-era instances directly.
 - [ ] No real network ports are spawned in the standard unit test execution workflows.
-- [ ] Tool _business_ failures return `isError: true`; unknown/disabled tool names reject with `ProtocolError(InvalidParams)` — assert via try/catch + `error.code` (see [mcp-server errors](../mcp-server/references/errors.md)).
+- [ ] Tool _business_ failures return `isError: true`; unknown/disabled tool names reject with `ProtocolError(InvalidParams)` — assert via try/catch + `error.code` (see [mcp-server] "Handle Errors").
 - [ ] Test suite executes successfully with no hanging tasks or loose connections.
 
 ## Examples & References
 
 - In-process/manual test harness setup: [references/examples.md](references/examples.md)
-- Error classes, codes & lookups: [references/tables.md](references/tables.md); error channels: [../mcp-server/references/errors.md](../mcp-server/references/errors.md)
+- Error classes, codes & lookups: [references/tables.md](references/tables.md); error channels: [mcp-server] "Handle Errors"

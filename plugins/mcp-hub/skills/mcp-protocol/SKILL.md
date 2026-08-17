@@ -45,7 +45,7 @@ Prefer `McpServer`; drop to the low-level `Server` only for custom RPC methods, 
    });
    ```
 
-   > Unknown/disabled tool names reject with `ProtocolError(InvalidParams)` before `tools/call` runs — do not handle that case here (see [mcp-server errors](../mcp-server/references/errors.md)). The `isError: true` branch above is a _known_ tool's business failure, not a protocol error.
+   > Unknown/disabled tool names reject with `ProtocolError(InvalidParams)` before `tools/call` runs — do not handle that case here (see [mcp-server] "Handle Errors"). The `isError: true` branch above is a _known_ tool's business failure, not a protocol error.
    - [ ] `capabilities` in the second constructor argument declares every extension the server advertises — none left implicit.
 
 2. **Define custom methods**: prefix with a vendor namespace (`acme/search`, never a bare verb) and pass an explicit `{ params, result }` schema — same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, `fromJsonSchema()`; see [mcp-server]).

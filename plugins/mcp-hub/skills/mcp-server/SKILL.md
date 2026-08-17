@@ -8,13 +8,11 @@ metadata:
 
 # Building MCP Servers
 
-Covers `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Official reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-Flow: `ESM config` ➔ `McpServer` init ➔ register (tools/resources/prompts) ➔ sanitize paths ➔ transport (stdio/HTTP) — then [mcp-test], then distribute
+Flow: `ESM config -> McpServer init -> register (tools/resources/prompts) -> errors -> sanitize paths -> transport (stdio/HTTP) -> scale -> distribute` — then [mcp-test]
 
-## Stdio Quickstart
-
-See [Quickstart Examples](references/examples.md#quick-start) for complete setups. Minimal stub:
+Minimal stdio stub (see Step 6 for the full transport picture):
 
 ```ts
 serveStdio(() => {
@@ -22,9 +20,7 @@ serveStdio(() => {
   server.registerTool(
     'hello',
     { inputSchema: z.object({ name: z.string() }) },
-    async ({ name }) => ({
-      content: [{ type: 'text', text: `Hi ${name}` }],
-    }),
+    async ({ name }) => ({ content: [{ type: 'text', text: `Hi ${name}` }] }),
   );
   return server;
 });
@@ -32,41 +28,217 @@ serveStdio(() => {
 
 ## Steps
 
-1. **Configure ESM**: Standardize project to ESM-only (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`).
+1. **Configure ESM**: Standardize the project to ESM-only (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`). v2 ships a CommonJS build too, so CJS projects can `require('@modelcontextprotocol/server')` directly — no dynamic `import()` shim needed.
 
-- [ ]: Codebase operates exclusively with modern ESM resolutions.
+   - [ ] Codebase operates exclusively with modern ESM resolutions (or CJS `require` resolves natively).
 
-2. **Initialize Server**: Instantiate `McpServer` with suitable identifier.
+2. **Initialize Server**: instantiate `McpServer` with a stable identifier and declare optional constructor behavior up front.
 
-- [ ]: Server `name` and `version` are stable identifiers matching `package.json`.
+   ```ts
+   const server = new McpServer(
+     { name: 'catalog', version: '1.0.0' },
+     {
+       capabilities: { logging: {}, resources: { subscribe: true } },
+       instructions: 'Call list-trips before book-trip.',
+       enforceStrictCapabilities: true,
+       cacheHints: { 'tools/list': { ttlMs: 60_000, cacheScope: 'public' } }, // SEP-2549 — HTTP clients only
+     },
+   );
+   ```
 
-3. **Register Capabilities**:
-   - Register tools using `.registerTool()` passing Standard Schema input schema (see note after Steps and `references/examples.md`).
-   - Register dynamic templates using `.registerResource()` mapping dynamic parameters.
-   - Register prompt layouts using `.registerPrompt()`.
+   > `capabilities: { logging: {} }` enables the **deprecated** MCP logging subsystem (SEP-2577) — prefer `console.error` (stderr) or OpenTelemetry for new servers. `resources: { subscribe: true }` is not deprecated.
+   - [ ] `name`/`version` are stable identifiers matching `package.json` exactly.
 
-- [ ]: Each capability registered via matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with Standard Schema.
-- [ ]: Normal tool exceptions let SDK automatically wrap failures into standard `{ isError: true }` responses.
+3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4, ArkType as-is, Valibot as-is, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol].
 
-4. **Sanitize Access Paths**: Resolve and ensure resource paths using `realpath`, validating boundaries to protect against directory traversal.
+   ```ts
+   server.registerTool(
+     'search',
+     {
+       description: 'Search catalog',
+       inputSchema: z.object({
+         query: z.string().describe('Query'),
+         limit: z.number().int().max(50).optional(),
+       }),
+       outputSchema: z.object({ names: z.array(z.string()) }),
+       annotations: { readOnlyHint: true, idempotentHint: true },
+     },
+     async ({ query, limit }, ctx) => {
+       const names = await lookupNames(query, { signal: ctx.mcpReq.signal }); // forward abort on client cancel/disconnect
+       return { content: [{ type: 'text', text: names.join('\n') }], structuredContent: { names } };
+     },
+   );
 
-- [ ]: Resource template targets resolve securely and cannot exit root directories.
+   server.registerResource(
+     'user-profile',
+     new ResourceTemplate('users://{userId}/profile', {
+       list: undefined,
+       complete: { userId: async (v) => lookupIds(v) }, // argument completion for the URI's {userId} param
+     }),
+     { description: 'Profile', mimeType: 'application/json' },
+     async (uri, { userId }) => ({
+       contents: [{ uri: uri.href, text: JSON.stringify({ userId }) }],
+     }),
+   );
 
-5. **Establish Transport**: Bind server dependencies to standard channels (`serveStdio` or HTTP interfaces per-request factories).
+   server.registerPrompt(
+     'review-code',
+     { description: 'Review code', argsSchema: z.object({ code: z.string().describe('Code') }) },
+     ({ code }) => ({
+       messages: [{ role: 'user', content: { type: 'text', text: `Review:\n\n${code}` } }],
+     }),
+   );
+   ```
 
-- [ ]: Stdio servers NEVER use `console.log()` to prevent JSON-RPC wire corruption. All debug messages output on `console.error()`.
-- [ ]: Factory setups for HTTP endpoints instantiate fresh servers per-request without accumulating heavy persistent DB connections.
+   > Wrap any Standard Schema field in `completable(schema, async (value, ctx) => candidates)` to add argument completion — `ctx?.arguments` exposes sibling arguments already filled in, useful for dependent fields (e.g. filtering a `branch` field's candidates by an already-chosen `repo`).
 
-> `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4, Arktype, Valibot (native Standard Schema, passed directly), raw JSON Schema via `fromJsonSchema`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol].
+   > **Gotcha — zod version pin:** pin `zod ^4.2.0`; it self-converts via `~standard.jsonSchema`. Zod 3 typechecks cleanly under the v2 peer range but fails only at runtime — registration swallows the conversion failure, the server starts and connects, and the first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: `import { z } from 'zod'` falls back to the bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — a silent degradation, not a failure. The `zod/v4` subpath import instead **fails to compile** (`TS2769 No overload matches this call`). For other schema libs (or older zod), use `fromJsonSchema()` from `@modelcontextprotocol/server`.
+   - [ ] Each capability registered via the matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with a Standard Schema.
+   - [ ] Normal tool exceptions are left to `throw` — the SDK wraps them into `{ isError: true }` automatically.
 
-> Pin `zod ^4.2.0` — it self-converts via `~standard.jsonSchema`. A `zod` 3 range that satisfied the v1 peer typechecks cleanly under v2 and fails only at runtime, quietly: registration swallows the conversion failure, the server starts and connects, and the first `tools/list` answers with an error pointing at `fromJsonSchema()`. `zod` 4.0–4.1 lacks `~standard.jsonSchema`: under `import { z } from 'zod'` the SDK falls back to its bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` console warning and **drops `.describe()` field descriptions** — the server still starts, connects, and `tools/list` works, so this is a _silent degradation_, not a failure (a migrator expecting a compile break gets none). With the `zod/v4` subpath import (or zod-3.25.x via that subpath) the same code runs the fallback but **fails to compile** (`TS2769 No overload matches this call`). For other schema libs or older zod, use `fromJsonSchema()` from `@modelcontextprotocol/server`.
+4. **Handle Errors**: two channels, picked by audience.
 
-## Reference Guides & Adapters
+   | Channel            | Shape                               | Audience                                      | Produced by                                                 |
+   | ------------------ | ----------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
+   | **Tool error**     | Result with `isError: true`         | The **model** — reads the message and retries | Tool handlers: return it, or `throw` anything               |
+   | **Protocol error** | JSON-RPC `{ code, message, data? }` | The **caller's code**                         | Resource/prompt/completion callbacks: `throw ProtocolError` |
 
-- [Code Examples](references/examples.md): Practical code samples.
-- [Context API](references/context.md): Context variables (`ctx.mcpReq`, `ctx.http`, etc.).
-- [Errors API](references/errors.md): Tool vs Protocol error channels and handling.
-- [HTTP Serving](references/serving-http.md): Setup, Host/Origin security, and legacy clients.
-- [Scaling & Notifications](references/scaling.md): Caching, state, Event Bus, and pub/sub.
-- [Distribution](references/distribution.md): Npm publishing and host installation (`mcp.json`).
-- Adapters: [Express](references/framework-express.md) \| [Fastify](references/framework-fastify.md) \| [Hono](references/framework-hono.md) — pick by web stack (Hono for edge/serverless, Fastify for schema validation, Express for ecosystem/OAuth helpers).
+   ```ts
+   // Tool error — put the recovery hint in the text:
+   return {
+     content: [{ type: 'text', text: `No note "${id}". Known ids: ${ids.join(', ')}` }],
+     isError: true,
+   };
+
+   // Resource/prompt/completion callbacks:
+   import {
+     ProtocolError,
+     ProtocolErrorCode,
+     ResourceNotFoundError,
+   } from '@modelcontextprotocol/server';
+   throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Note ids are lowercase, got "${id}"`);
+   throw new ResourceNotFoundError(uri.href); // -32602 with data: { uri }
+   ```
+
+   Tool handlers **cannot** emit a protocol error — every throw (even `ProtocolError`) becomes `isError: true`; the sole exception is `UrlElicitationRequiredError`, which propagates (`-32042`). Full code tables in [mcp-test].
+
+   > **Gotcha — caller side:** an unknown or disabled tool name rejects the `callTool()` promise with `ProtocolError(InvalidParams)` (`-32602`) — it does **not** resolve `{ isError: true }`. Catch the promise and inspect `error.code`; a registered tool's own business failure still returns `isError: true`.
+   - [ ] Tool handlers return/`throw` for business failures — never a hand-built `ProtocolError`.
+   - [ ] Resource/prompt/completion callbacks `throw ProtocolError`/subclasses for caller-facing failures.
+
+5. **Sanitize Access Paths**: resolve and validate resource paths with `realpath`, checking boundaries to block directory traversal.
+
+   - [ ] Resource template targets resolve securely and cannot exit root directories.
+
+6. **Serve & Secure a Transport**: stdio for local/CLI use, HTTP for networked/hosted use.
+
+   - **stdio**: `serveStdio(factory)`; servers NEVER call `console.log()` — it corrupts the JSON-RPC wire. All diagnostics go to `console.error()`.
+
+     ```ts
+     const handle = serveStdio(() => buildServer());
+     console.error('listening on stdio'); // stderr — never console.log
+     process.on('SIGINT', () => void handle.close());
+     ```
+
+   - **HTTP**: `createMcpHandler(factory, options)` returns a web-standard `handler.fetch`; the factory must build a fresh server per request — never accumulate heavy persistent DB connections across requests.
+
+     ```ts
+     const handler = createMcpHandler(() => new McpServer({ name: 'notes', version: '1.0.0' }), {
+       responseMode: 'auto', // 'auto' | 'json' | 'sse' — 'auto' upgrades to SSE only when a notification precedes the result
+       legacy: 'stateless', // 'stateless' (default, serves 2025-era clients) | 'reject'
+     });
+     ```
+
+     Mount on plain `node:http` via `toNodeHandler(handler)` from `@modelcontextprotocol/node`, on a Web Standard runtime (Workers/Deno/Bun) by exporting `handler.fetch` directly, or on a framework adapter below. `handler.close()` aborts in-flight exchanges. Auth is pass-through: verify the bearer token in front, then `handler.fetch(request, { authInfo })`.
+
+   - **Host/Origin security** (DNS-rebinding + CSRF): app factories (`createMcpExpressApp`/`createMcpFastifyApp`/`createMcpHonoApp`) arm Host/Origin validation by default on localhost. Binding beyond localhost: pass `{ host, allowedHosts, allowedOrigins }`. A **bare** Web Standard runtime with no app factory gets **no** automatic protection — wire it in yourself:
+
+     ```ts
+     import {
+       createMcpHandler,
+       hostHeaderValidationResponse,
+       originValidationResponse,
+     } from '@modelcontextprotocol/server';
+     export default {
+       async fetch(request: Request) {
+         return (
+           hostHeaderValidationResponse(request, allowedHosts) ??
+           originValidationResponse(request, allowedOrigins) ??
+           handler.fetch(request)
+         );
+       },
+     };
+     ```
+
+   - **Framework adapters** — one factory function per framework, same pattern:
+
+     ```ts
+     import { createMcpExpressApp } from '@modelcontextprotocol/express';
+     import { toNodeHandler } from '@modelcontextprotocol/node';
+
+     const app = createMcpExpressApp();
+     const nodeHandler = toNodeHandler(handler);
+     app.all('/mcp', (req, res) => void nodeHandler(req, res, req.body));
+     app.listen(3000, '127.0.0.1');
+     ```
+
+     | Framework | Install                                                                                         | App factory             | Mount delta                                                                                                                                                                                                                                                                       |
+     | --------- | ----------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+     | Express   | `@modelcontextprotocol/server @modelcontextprotocol/express express @modelcontextprotocol/node` | `createMcpExpressApp()` | as above; also ships OAuth Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) — see [mcp-auth]                                                                                                                                                                |
+     | Fastify   | `@modelcontextprotocol/server @modelcontextprotocol/fastify @modelcontextprotocol/node fastify` | `createMcpFastifyApp()` | `app.all('/mcp', async (req, reply) => nodeHandler(req.raw, reply.raw, req.body))`                                                                                                                                                                                                |
+     | Hono      | `@modelcontextprotocol/server @modelcontextprotocol/hono hono`                                  | `createMcpHonoApp()`    | `app.all('/mcp', (c: Context) => handler.fetch(c.req.raw, { parsedBody: c.get('parsedBody') }))` — annotate `c: Context` explicitly, else the compiler mis-narrows the key; runs on Node (`@hono/node-server`'s `serve({ fetch: app.fetch })`), Bun, Deno, and Cloudflare Workers |
+
+   - **Legacy (2025-era) clients**: `createMcpHandler(factory, { legacy: 'stateless' })` or `serveStdio(factory, { legacy: 'serve' })`. SSE is deprecated (migration only) — frozen v1 transport lives in `@modelcontextprotocol/server-legacy/sse`. Every era: a POST whose `Content-Type` isn't `application/json` (by parsed media type) answers `415`.
+
+   - [ ] Stdio servers never call `console.log()`; all diagnostics go to `console.error()`.
+   - [ ] HTTP factories instantiate a fresh server per request — no accumulated heavy connections.
+   - [ ] A server bound beyond localhost, or on a bare runtime, has Host/Origin validation wired.
+   - [ ] Public HTTP endpoints are never exposed without auth ([mcp-auth]).
+
+7. **Manage Sessions & Scale**:
+
+   - **Stateless default**: fresh instance per request, nothing held → any load balancer, no affinity.
+   - **Sessions (2025-era only)**: hand-wire `NodeStreamableHTTPServerTransport` with `sessionIdGenerator` and a `Map<sessionId, transport>`. The 2026-07-28 revision is per-request — state lives in `requestState`, not a session.
+   - **Resumability**: pass an `eventStore` (`storeEvent(streamId, message)` / `replayEventsAfter(lastEventId, { send })`) so clients can reconnect via `Last-Event-ID`.
+   - **Cross-node notifications**: implement a `ServerEventBus` (`publish`/`subscribe`) over external pub/sub (e.g. Redis) and pass it in: `createMcpHandler(factory, { bus: redisBus })`.
+   - **Notifications**: most servers notify automatically via a registration handle (`update()`/`enable()`/`disable()`/`remove()`). Behind `createMcpHandler` (stateless per-request), publish through the handler facade instead: `handler.notify.resourceUpdated(uri)`, `.toolsChanged()`, `.promptsChanged()`, `.resourcesChanged()`. On stdio, `server.send*` routes directly onto the stdio stream.
+
+   - [ ] Cross-node deployments pass a shared `ServerEventBus` — otherwise notifications only reach the node that received the change.
+
+8. **Distribute**: ship only after testing with [mcp-test].
+
+   - **stdio via npm/npx**: entry file's first line must be exactly `#!/usr/bin/env node`; `package.json` needs `"type": "module"`, `"bin"`, `"files": ["dist"]`, `"engines": { "node": ">=20" }`. Pin the `@modelcontextprotocol/*` packages together with an exact version (no `^`) — betas break between minors. Smoke-test the packed artifact before publishing: `npm pack && npx @modelcontextprotocol/inspector npx -y ./example-mcp-0.1.0.tgz`.
+   - **HTTP**: deploy like any web service; never expose a public endpoint without auth ([mcp-auth]).
+   - **Host registration** (copy into the README):
+
+     | App         | How to connect                                                                                                           |
+     | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+     | Claude Code | `claude mcp add example -- npx -y example-mcp`                                                                           |
+     | VS Code     | `.vscode/mcp.json`: `{ "servers": { "example": { "type": "stdio", "command": "npx", "args": ["-y", "example-mcp"] } } }` |
+     | Cursor      | `.cursor/mcp.json`: `{ "mcpServers": { "example": { "command": "npx", "args": ["-y", "example-mcp"] } } }`               |
+
+   - **Versioning**: `new McpServer({ name, version })` must match `package.json` exactly. Changing what a tool requires is a breaking change — prefer adding optional fields; otherwise bump the major version.
+
+   - [ ] Packed artifact smoke-tested with the inspector before publishing.
+   - [ ] `McpServer` version matches `package.json` exactly.
+
+## Handler Context (`ctx`)
+
+Every handler receives context as its second argument:
+
+| Member                                         | Purpose                                                                                |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ctx.mcpReq.signal`                            | `AbortSignal` — aborts on client cancel/disconnect; check in loops, forward to `fetch` |
+| `ctx.mcpReq.id` / `ctx.mcpReq._meta`           | JSON-RPC request id / request `_meta` (e.g. `progressToken`)                           |
+| `ctx.mcpReq.notify(n)` / `ctx.mcpReq.send(r)`  | Send notification / request tied to this request                                       |
+| `ctx.mcpReq.elicitInput(params)`               | Ask user mid-call (2025-era; throws on 2026-era)                                       |
+| `ctx.mcpReq.inputResponses` / `requestState()` | 2026-era multi-round-trip surfaces                                                     |
+| `ctx.mcpReq.envelope`                          | Per-request client identity & capabilities (2026-era; legacy: `getClientVersion()`)    |
+| `ctx.sessionId`                                | Session id when transport has one                                                      |
+| `ctx.http?.authInfo` / `ctx.http?.req`         | Verified `AuthInfo` / inbound `Request` (HTTP only — `undefined` on stdio)             |
+
+## See Also
+
+- Writing/running tests, inspector sessions: [mcp-test]
+- Custom transports, gateways, raw wire messages: [mcp-protocol]
+- OAuth/bearer-token wiring for HTTP servers: [mcp-auth]

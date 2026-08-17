@@ -25,7 +25,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 - **Test**: [mcp-test]
 - **Debug** (via `/mcp test`): `mcp-debugger` agent (on failure)
 - **Audit**: `mcp-auditor` agent (read-only)
-- **Publish**: [mcp-server] `references/distribution.md`
+- **Publish**: [mcp-server] "Distribute"
 
 ## Workflows
 
@@ -36,7 +36,7 @@ Entry point and canonical workflows for MCP SDK v2. Load sub-skills only when ne
 3. **Auth** (*): HTTP/OAuth (Streamable HTTP) security. Load [mcp-auth].
 4. **Interact** (*): Prompts, progress, cancellation. Load [mcp-elicitation].
 5. **Test**: Load [mcp-test] to implement tests; they compile and run to completion.
-6. **Distribute** (*): Package setup / deployment. See [mcp-server] `references/distribution.md`.
+6. **Distribute** (*): Package setup / deployment. See [mcp-server] "Distribute".
 7. **Verify**: All prior phase checks pass.
 
 ### Audit Workflow

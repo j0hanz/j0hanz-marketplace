@@ -50,7 +50,7 @@ Covers `@modelcontextprotocol/client` `2.0.0-beta.3`. SDK: https://ts.sdk.modelc
 
 4. **Register Hook Interceptors**: After `connect`, register handlers via `setRequestHandler('elicitation/create', …)` for auto-fulfillment. Register `sampling/createMessage` / `roots/list` handlers only if you declared those (deprecated) capacities in Step 2.
 
-5. **Manage Calls**: Call tools with `.callTool()` (no-arg `listTools()`/`listPrompts()`/`listResources()` auto-aggregate pages; pass `{ cursor }` for one page); check execution status on the `result.isError` payload — do **not** catch standard tool exceptions as business failures; unknown/disabled tool names reject the promise with `ProtocolError(InvalidParams)` — catch that separately from `isError: true` business failures (see [mcp-server errors](../mcp-server/references/errors.md)).
+5. **Manage Calls**: Call tools with `.callTool()` (no-arg `listTools()`/`listPrompts()`/`listResources()` auto-aggregate pages; pass `{ cursor }` for one page); check execution status on the `result.isError` payload — do **not** catch standard tool exceptions as business failures; unknown/disabled tool names reject the promise with `ProtocolError(InvalidParams)` — catch that separately from `isError: true` business failures (see [mcp-server] "Handle Errors").
 
    ```ts
    const { tools } = await client.listTools();
