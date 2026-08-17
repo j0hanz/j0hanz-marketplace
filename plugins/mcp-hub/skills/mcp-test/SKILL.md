@@ -8,7 +8,7 @@ metadata:
 
 # MCP SDK v2 Testing
 
-Covers `2.0.0-beta.3` test workflows (plus the error-code reference used by `mcp-debugger`) for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `2.0.0` test workflows (plus the error-code reference used by `mcp-debugger`) for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 Test loop: `match transport → supply security context → probe behavior → assert its error channel`.
 
@@ -119,7 +119,7 @@ OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationSe
 | `ConnectionClosed`                                                                                                                                                                      | Connection closed with requests in flight                                                     |
 | `SendFailed`                                                                                                                                                                            | Failed to send a message                                                                      |
 | `InvalidResult`                                                                                                                                                                         | Response failed local schema validation                                                       |
-| `UnsupportedResultType`                                                                                                                                                                 | 2025-era response carried an unknown `resultType`                                             |
+| `UnsupportedResultType`                                                                                                                                                                 | 2026-era response carried an unknown `resultType`                                             |
 | `InputRequiredRoundsExceeded`                                                                                                                                                           | Auto-fulfilment hit `maxRounds`                                                               |
 | `ListPaginationExceeded`                                                                                                                                                                | No-arg `list*()` aggregate walk hit `listMaxPages` (explicit-`cursor` calls are never capped) |
 | `MethodNotSupportedByProtocolVersion`                                                                                                                                                   | Outbound method doesn't exist on the negotiated revision                                      |

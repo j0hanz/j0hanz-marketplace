@@ -81,7 +81,7 @@ new CrossAppAccessProvider({
 });
 ```
 
-For another grant model, implement `OAuthClientProvider` with static `clientMetadata`/`redirectUrl` plus `tokens`/`saveTokens`, `clientInformation`/`saveClientInformation`, `codeVerifier`/`saveCodeVerifier`, `state`, `redirectToAuthorization`, and `saveDiscoveryState`/`discoveryState`. Key `clientInformation` and `saveTokens` by `ctx.issuer` (SEP-2352), and override `validateResourceURL(url, ctx)` for RFC 8707 resource pinning. Use a **Client ID Metadata Document**—a stable HTTPS `clientMetadata` URL passed as `clientId`—instead of deprecated `registerClient` (SEP-991).
+For another grant model, implement `OAuthClientProvider` with static `clientMetadata`/`redirectUrl` plus `tokens`/`saveTokens`, `clientInformation`/`saveClientInformation`, `codeVerifier`/`saveCodeVerifier`, `state`, `redirectToAuthorization`, and `saveDiscoveryState`/`discoveryState`. Key `clientInformation` and `saveTokens` by `ctx.issuer` (SEP-2352), and override `validateResourceURL(serverUrl, resource?)` for RFC 8707 resource pinning. Use a **Client ID Metadata Document**—a stable HTTPS `clientMetadata` URL passed as `clientId`—instead of deprecated `registerClient` (SEP-991).
 
 - [ ] Each `ClientCredentialsProvider`, `PrivateKeyJwtProvider`, and `CrossAppAccessProvider` sets `expectedIssuer`.
 - [ ] Client information and tokens are partitioned by `ctx.issuer`; an authorization server receives only its own values.
@@ -90,7 +90,7 @@ For another grant model, implement `OAuthClientProvider` with static `clientMeta
 ## Handle authorization errors
 
 - **OAuth consolidation**: the v1 `Invalid*Error` family and `OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode`; switch `instanceof` to `error.code`.
-- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, thrown by `verifyAccessToken`) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client].
+- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, surfaced as a 403 by `requireBearerAuth` scope enforcement) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client].
 
 - [ ] Error handling uses `error.code` for the consolidated OAuth errors and distinguishes the OAuth and transport `InsufficientScopeError` classes.
 - [ ] Tests use mock issuers from [mcp-test].

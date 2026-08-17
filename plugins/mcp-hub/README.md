@@ -67,7 +67,7 @@ Defined under `agents/*.md`; each loads the matching `mcp-*` skill for its check
 
 ## Maintenance
 
-The SDK version (`2.0.0-beta.3`) is targeted by the six SDK-facing skills: `mcp-server`, `mcp-client`, `mcp-auth`, `mcp-test`, `mcp-migration`, `mcp-protocol`. The literal version string appears in this README (intro) and in `skills/mcp-client/SKILL.md` and `skills/mcp-test/SKILL.md`; `skills/mcp-server/SKILL.md`'s Distribute step pins by policy ("the current beta, no `^`") without a literal. The protocol revision (`2026-07-28`) is referenced across the skills — when either changes, grep the repo for the old string and review every hit.
+The SDK version (`2.0.0`, stable) is targeted by the six SDK-facing skills: `mcp-server`, `mcp-client`, `mcp-auth`, `mcp-test`, `mcp-migration`, `mcp-protocol`. The literal version string appears in this README (this section) and in `skills/mcp-client/SKILL.md` and `skills/mcp-test/SKILL.md`; `skills/mcp-server/SKILL.md`'s Distribute step pins by policy ("exact version, no `^`") without a literal. The protocol revision (`2026-07-28`) is referenced across the skills — when either changes, grep the repo for the old string and review every hit.
 
 ## License
 

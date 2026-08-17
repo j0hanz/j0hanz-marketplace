@@ -39,7 +39,7 @@ serveStdio(() => {
        capabilities: { logging: {}, resources: { subscribe: true } },
        instructions: 'Call list-trips before book-trip.',
        enforceStrictCapabilities: true,
-       cacheHints: { 'tools/list': { ttlMs: 60_000, cacheScope: 'public' } }, // SEP-2549 — HTTP clients only
+       cacheHints: { 'tools/list': { ttlMs: 60_000, cacheScope: 'public' } }, // SEP-2549 freshness hints for client caches
      },
    );
    ```
@@ -48,7 +48,7 @@ serveStdio(() => {
    - [ ] `name`/`version` are stable identifiers matching `package.json` exactly.
    - [ ] Optional constructor behavior (capabilities, instructions, enforceStrictCapabilities, cacheHints) is declared wherever the server relies on it.
 
-3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4, ArkType as-is, Valibot as-is, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol].
+3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4 or ArkType as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema`, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol].
 
    ```ts
    server.registerTool(
@@ -89,7 +89,7 @@ serveStdio(() => {
    );
    ```
 
-   > Wrap any Standard Schema field in `completable(schema, async (value, ctx) => candidates)` to add argument completion — `ctx?.arguments` exposes sibling arguments already filled in, useful for dependent fields (e.g. filtering a `branch` field's candidates by an already-chosen `repo`).
+   > Wrap a **prompt `argsSchema`** field in `completable(schema, async (value, ctx) => candidates)` to add argument completion — `ctx?.arguments` exposes sibling arguments already filled in, useful for dependent fields (e.g. filtering a `branch` field's candidates by an already-chosen `repo`). Resource template URI variables complete through the template's `complete` map instead (shown above).
 
    > **Gotcha — zod version pin:** pin `zod ^4.2.0`; it self-converts via `~standard.jsonSchema`. Zod 3 typechecks cleanly under the v2 peer range but fails only at runtime — registration swallows the conversion failure, the server starts and connects, and the first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: `import { z } from 'zod'` falls back to the bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — a silent degradation, not a failure. The `zod/v4` subpath import instead **fails to compile** (`TS2769 No overload matches this call`). For other schema libs (or older zod), use `fromJsonSchema()` from `@modelcontextprotocol/server`.
    - [ ] Each capability registered via the matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with a Standard Schema.
@@ -206,7 +206,7 @@ serveStdio(() => {
 
 7. **Distribute**: ship only after testing with [mcp-test].
 
-   - **stdio via npm/npx**: entry file's first line must be exactly `#!/usr/bin/env node`; `package.json` needs `"type": "module"` plus the standard npm `bin`/`files`/`engines` fields. Pin the `@modelcontextprotocol/*` packages together with an exact version (no `^`) — betas break between minors. Smoke-test the packed artifact before publishing: `npm pack && npx @modelcontextprotocol/inspector npx -y ./example-mcp-0.1.0.tgz`.
+   - **stdio via npm/npx**: entry file's first line must be exactly `#!/usr/bin/env node`; `package.json` needs `"type": "module"` plus the standard npm `bin`/`files`/`engines` fields. Pin the `@modelcontextprotocol/*` packages together with an exact version (no `^`) so the split packages never drift apart. Smoke-test the packed artifact before publishing: `npm pack && npx @modelcontextprotocol/inspector npx -y ./example-mcp-0.1.0.tgz`.
    - **HTTP**: protect every public endpoint through [mcp-auth].
    - **Host registration** (copy into the README):
 

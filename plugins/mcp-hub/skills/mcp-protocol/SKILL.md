@@ -175,7 +175,7 @@ export default {
 };
 ```
 
-> `isLegacyRequest()` returns a Promise; await it. `invoke(server, message, ctx)` serves single-message in-process dispatch, while gateways generally route through `fetch`.
+> `isLegacyRequest()` returns a Promise; await it. Gateways route through `fetch`; for in-process dispatch call `handler.fetch(new Request(...))` directly (harness patterns in [mcp-test]).
 
 - [ ] Multi-client gateways verify access and validate Host/Origin before branching on awaited `isLegacyRequest()`; both era handlers receive the same verified `authInfo`.
 - [ ] Handler dispatch contains failures so a long-lived stream continues.

@@ -16,11 +16,11 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
    **Done:** The migration scope and one-shot or staged posture are explicit; every staged boundary isolates v1 and v2 SDK objects.
 
-2. **Run the codemod on that scope**: Execute `npx @modelcontextprotocol/codemod@latest v1-to-v2 .`, replacing `.` with one target file when staging. It updates split-package imports, renames symbols, converts `extra` to `ctx`, rewrites schema-based `setRequestHandler` calls to method strings, and changes `.tool()`/`.prompt()`/`.resource()` registrations to `registerTool`/`registerPrompt`/`registerResource` with `z.object()` schemas. It writes `@mcp-codemod-error` where a safe rewrite is unavailable.
+2. **Run the codemod on that scope**: Execute `npx @modelcontextprotocol/codemod@latest v1-to-v2 .`, replacing `.` with the target **directory** when staging — a subdirectory run still updates the nearest manifest walking up (including removing the v1 dependency), so preview with `--dry-run`. It updates split-package imports, renames symbols, converts `extra` to `ctx`, rewrites schema-based `setRequestHandler` calls to method strings, and changes `.tool()`/`.prompt()`/`.resource()` registrations to `registerTool`/`registerPrompt`/`registerResource` with `z.object()` schemas. It writes `@mcp-codemod-error` where a safe rewrite is unavailable.
 
    **Done:** Every targeted file either compiles after the rewrite or has an `@mcp-codemod-error` marker to resolve.
 
-3. **Install the split packages**: Replace the v1 package with the public v2 packages used by rewritten imports (see [Package Split](#package-split)). Install `@modelcontextprotocol/server-legacy/sse` only for `SSEServerTransport`. In staged work, retain `@modelcontextprotocol/sdk` only for untouched v1 code; a one-shot migration removes it now.
+3. **Install the split packages**: Replace the v1 package with the public v2 packages used by rewritten imports (see [Package Split](#package-split)). Install `@modelcontextprotocol/server-legacy` (import from its `/sse` subpath) only for `SSEServerTransport`. In staged work, retain `@modelcontextprotocol/sdk` only for untouched v1 code; a one-shot migration removes it now.
 
    **Done:** Every migrated import resolves to its v2 package, and any retained v1 dependency serves only an unmigrated scope.
 

@@ -8,7 +8,7 @@ metadata:
 
 # MCP SDK v2 clients
 
-Covers `@modelcontextprotocol/client` `2.0.0-beta.3`.
+Covers `@modelcontextprotocol/client` `2.0.0`.
 
 ## Construct and run the client
 

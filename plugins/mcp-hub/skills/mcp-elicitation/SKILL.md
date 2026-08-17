@@ -25,7 +25,7 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
      },
    );
    client.setRequestHandler('elicitation/create', async (req) => {
-     if (req.params.mode !== 'form') return { action: 'decline' };
+     if (req.params.mode === 'url') return { action: 'decline' }; // mode is omitted on older form requests
      const content = await renderAndValidateJsonSchemaForm(
        req.params.message,
        req.params.requestedSchema,
@@ -34,7 +34,7 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    });
    ```
 
-   `renderAndValidateJsonSchemaForm()` renders the requested schema and resolves only validated content; `undefined` means the user declined. Add URL capability and an owned URL handler only when the client can complete that flow.
+   A host-implemented `renderAndValidateJsonSchemaForm()` (not an SDK export) renders the requested schema and resolves only validated content; `undefined` means the user declined. Add URL capability and an owned URL handler only when the client can complete that flow.
 
    **Done:** Every owned client that serves interaction advertises only supported modes, has a bounded handler, and returns content validated against the requested schema.
 
@@ -46,7 +46,7 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
      { inputSchema: z.object({ env: z.string() }) },
      async ({ env }, ctx) => {
        const state = inputResponse(ctx.mcpReq.inputResponses, 'confirm');
-       if (state?.action === 'decline' || state?.action === 'cancel') {
+       if (state?.kind === 'elicit' && state.action !== 'accept') {
          return { content: [{ type: 'text', text: 'Deploy cancelled' }] };
        }
        const confirmed = acceptedContent(
