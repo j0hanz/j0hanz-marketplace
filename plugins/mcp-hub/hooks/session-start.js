@@ -14,9 +14,6 @@ console.log(
 try {
   if (fs.existsSync(skillPath)) {
     const rawContent = fs.readFileSync(skillPath, 'utf8');
-
-    // Strip YAML frontmatter:
-    // It starts with --- and ends with ---
     const cleaned = rawContent.replace(/^---[\s\S]*?---\r?\n/, '');
     if (cleaned.includes('</mcp-hub-router>') || cleaned.includes('<system-reminder')) {
       console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
@@ -43,10 +40,19 @@ try {
       pkg.optionalDependencies,
     ),
   );
-  const tooling = ['@modelcontextprotocol/codemod', '@modelcontextprotocol/inspector'];
+  const v2Packages = [
+    '@modelcontextprotocol/server',
+    '@modelcontextprotocol/client',
+    '@modelcontextprotocol/core',
+    '@modelcontextprotocol/node',
+    '@modelcontextprotocol/server-legacy',
+    '@modelcontextprotocol/express',
+    '@modelcontextprotocol/hono',
+    '@modelcontextprotocol/fastify',
+  ];
   const mcpDeps = depNames.filter((n) => n.startsWith('@modelcontextprotocol/'));
   const v1 = mcpDeps.includes('@modelcontextprotocol/sdk');
-  const v2 = mcpDeps.filter((n) => n !== '@modelcontextprotocol/sdk' && !tooling.includes(n));
+  const v2 = mcpDeps.filter((n) => v2Packages.includes(n));
   if (v1 || v2.length) {
     console.log('<mcp-hub-probe>');
     console.log('Scope: auto-detected MCP packages in this project package.json.');
