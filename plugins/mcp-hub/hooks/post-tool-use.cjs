@@ -119,19 +119,27 @@ function emit(findings) {
   process.stdout.write(`<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`);
 }
 
-function main() {
-  // R2: parse stdin; absent/unparseable/no file_path -> fail open.
+// R2: decode PostToolUse stdin. Returns { filePath, sessionId } for a Write/Edit
+// of a string file_path, else null — absent/unparseable/malformed all fail open.
+function decodeInput() {
   let input;
   try {
     input = JSON.parse(fs.readFileSync(0, 'utf8'));
   } catch {
-    return;
+    return null;
   }
-  if (!input || !input.tool_input || typeof input.tool_input.file_path !== 'string') return;
-  if (input.tool_name !== 'Write' && input.tool_name !== 'Edit') return;
+  if (!input || !input.tool_input || typeof input.tool_input.file_path !== 'string') return null;
+  if (input.tool_name !== 'Write' && input.tool_name !== 'Edit') return null;
+  return { filePath: input.tool_input.file_path, sessionId: input.session_id };
+}
+
+function main() {
+  const decoded = decodeInput();
+  if (!decoded) return;
+  const { filePath, sessionId } = decoded;
 
   const cwd = process.cwd();
-  const resolved = path.resolve(input.tool_input.file_path);
+  const resolved = path.resolve(filePath);
 
   // R2 / A1: must be a file within the project. ponytail: startsWith is case-sensitive;
   // a mixed-case drive letter would miss — accepted ceiling (worktrees may revisit).
@@ -162,7 +170,6 @@ function main() {
   }
 
   // R9 / R13 dedupe: emit toEmit exactly once after the try/catch.
-  const sessionId = input.session_id;
   const sessionIdUsable = typeof sessionId === 'string' && safeId(sessionId).length > 0;
   let toEmit = findings;
   try {
