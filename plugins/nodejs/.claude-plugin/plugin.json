@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "nodejs",
+  "displayName": "Node.js",
+  "version": "0.1.0",
+  "description": "Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "nodejs",
+    "backend",
+    "fastify",
+    "express",
+    "typescript",
+    "postgresql",
+    "zod",
+    "architecture",
+    "production",
+    "security"
+  ]
+}

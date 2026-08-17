@@ -26,6 +26,7 @@ Claude Code plugins: skills and agents you can install into any project.
 /plugin install prompt@j0hanz-marketplace
 /plugin install workbench@j0hanz-marketplace
 /plugin install output-styles@j0hanz-marketplace
+/plugin install nodejs@j0hanz-marketplace
 ```
 
 <!-- install:end -->
@@ -103,6 +104,12 @@ Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — wi
 
 - Commands: `/output-styles:set-style`
 - Hooks: `UserPromptExpansion`
+
+### nodejs
+
+Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists
+
+- Model-loaded skills: `nodejs-backend-patterns`, `nodejs-best-practices`
 
 <!-- plugins:end -->
 

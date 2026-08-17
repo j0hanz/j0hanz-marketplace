@@ -53,6 +53,12 @@
       "source": "./plugins/output-styles",
       "description": "Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — with `/set-style <style>`",
       "category": "productivity"
+    },
+    {
+      "name": "nodejs",
+      "source": "./plugins/nodejs",
+      "description": "Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists",
+      "category": "development"
     }
   ]
 }
