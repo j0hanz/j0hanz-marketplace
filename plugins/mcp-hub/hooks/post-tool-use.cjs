@@ -58,6 +58,7 @@ function writeStore(p, keys) {
   fs.writeFileSync(p, JSON.stringify([...keys]));
 }
 
+// R7 is a project invariant with no per-file location, so it keys on rule alone.
 function keyOf(f) {
   return f.rule === 'R7' ? 'R7' : `${f.rule}|${f.file}`;
 }
@@ -97,9 +98,6 @@ function scanFile(resolved, cwd) {
   const displayPath = path.relative(cwd, resolved) || resolved;
   if (r5Line) findings.push({ rule: 'R5', file: resolved, line: r5Line, displayPath });
   if (r6Line) findings.push({ rule: 'R6', file: resolved, line: r6Line, displayPath });
-  if (!fs.existsSync(path.join(cwd, 'docs', 'mcp-decisions.md'))) {
-    findings.push({ rule: 'R7', file: resolved, line: 1, displayPath });
-  }
   return findings;
 }
 
@@ -107,8 +105,8 @@ function emit(findings) {
   if (findings.length === 0) return;
   const advisories = findings.map((f) => {
     const skill = SKILLS[f.rule];
-    const where = `${f.displayPath}:${f.line}`;
-    return `[${skill}] ${f.rule} ${RULE_NAMES[f.rule]} at ${where} — ${SUGGESTIONS[f.rule]}.`;
+    const loc = f.displayPath ? ` at ${f.displayPath}:${f.line}` : '';
+    return `[${skill}] ${f.rule} ${RULE_NAMES[f.rule]}${loc} — ${SUGGESTIONS[f.rule]}.`;
   });
   const content = advisories.join('\n');
   // Defensive: refuse content carrying a reserved sentinel (mirrors session-start.cjs:18-20).
@@ -161,12 +159,17 @@ function main() {
     return;
   }
 
-  // R5 / R6 / R7 scan.
+  // R5 / R6: per-file content scan.
   let findings;
   try {
     findings = scanFile(resolved, cwd);
   } catch {
     return;
+  }
+
+  // R7: project invariant — missing decision record. Not per-file, so no location.
+  if (!fs.existsSync(path.join(cwd, 'docs', 'mcp-decisions.md'))) {
+    findings.push({ rule: 'R7' });
   }
 
   // R9 / R13 dedupe: emit toEmit exactly once after the try/catch.
