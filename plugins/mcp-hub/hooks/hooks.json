@@ -1,5 +1,5 @@
 {
-  "description": "Inject the mcp router skill into context at session start.",
+  "description": "Inject the mcp router skill into context at session start; probe cwd package.json for @modelcontextprotocol/* (v1 -> /mcp migrate, v2 -> /mcp route).",
   "hooks": {
     "SessionStart": [
       {
