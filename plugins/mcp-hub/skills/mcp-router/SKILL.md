@@ -61,6 +61,6 @@ Canonical steps live in [mcp-migration] (scope → codemod → packages → flag
 ### Debug Workflow
 
 1. **Reproduce**: Capture the failing request/response or error code.
-2. **Classify**: Match the error against [mcp-test] `references/tables.md` (`ProtocolErrorCode` / `SdkErrorCode`).
+2. **Classify**: Match the error against [mcp-test] "Error Code Reference" (`ProtocolErrorCode` / `SdkErrorCode`).
 3. **Isolate**: Narrow to transport, protocol, auth, or application layer; reload the matching skill ([mcp-client] / [mcp-protocol] / [mcp-auth] / [mcp-server]).
 4. **Fix**: Apply the fix; re-run the reproducer.

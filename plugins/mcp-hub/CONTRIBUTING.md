@@ -16,7 +16,7 @@ We welcome issues and pull requests to improve these MCP development skills.
 
 ## Development Workflow
 
-- **Skills**: Skills are defined in `skills/*/SKILL.md` with accompanying files under `references/`.
+- **Skills**: Skills are defined in `skills/*/SKILL.md`, with disclosed reference material under `references/` when a skill needs it.
 - **Agents**: Agent configurations are defined under `agents/*.md`.
 - **Hooks**: Global lifecycle hooks (like `session-start.js`) live under `hooks/`.
 
