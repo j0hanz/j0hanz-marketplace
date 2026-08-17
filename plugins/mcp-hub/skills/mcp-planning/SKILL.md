@@ -10,50 +10,45 @@ metadata:
 
 Make and record all MCP design decisions before writing any code.
 
+`Search imports -> ask triggered questions -> record all 15 decisions -> append docs/mcp-decisions.md -> present`
+
 ## When to Use
 
 - "Clarify" step of `/mcp build`.
 - Designing transport, auth, tools, or distribution.
 
-## How It Works
+## Steps
 
-`Search -> Ask triggered questions -> Record 14 decisions -> Save docs/mcp-decisions.md`
+1. **Search**: Grep the project for `@modelcontextprotocol/` imports and dependencies before asking anything — v2 splits the SDK into scoped packages (`@modelcontextprotocol/{server,client,core,…}`), so a migrated codebase yields several hits, not one.
+2. **Determine Triggers**: Check each of the 15 decisions below against its trigger. A decision whose trigger fires gets a question; every other decision silently takes its safe default.
+3. **Query**: Ask only the triggered questions, one at a time, offering exactly two choices each (three only where marked below). A vague answer gets one re-ask before falling back to the first-listed choice; "you choose" skips straight to the first-listed choice.
+4. **Synthesize**: Write out all 15 decisions as a numbered list, each tagged `(asked)` or `(default)` — see Record Format.
+5. **Append**: Add a new dated section to `docs/mcp-decisions.md` (create the file if it doesn't exist yet); never edit or remove earlier dated records.
+6. **Present**: Show the user the completed record.
 
-### Rules
+## Decisions
 
-- **Search First**: Check project for `@modelcontextprotocol/`.
-- **Triggers**: Ask only if triggered; else use "Safe Default".
-- **One by One**: Ask one question at a time.
-- **Two Choices**: Offer exactly two options unless the reference specifies a third load-bearing choice (see Anti-Rationalization Table for rationale).
-- **Vague Input**: Re-ask if vague; if they say "you choose," use option 1.
+1. **Scope** (Default: `server`) — Ask if unclear. Choices: Server | Client.
+2. **Transport** (Default: `stdio`) — Ask if remote, multi-user, or deployed. Choices: stdio | Streamable HTTP. (SSE/WebSocket transports are removed — SSE is frozen at `@modelcontextprotocol/server-legacy/sse`.)
+3. **Auth** (Default: `none`) — Ask if HTTP. **Three choices** (load-bearing exception to the two-choice rule): OAuth (client `OAuthClientProvider`; server verifies via `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server custom `verifyAccessToken`) | Legacy AS helpers (`server-legacy/auth`). Gotcha: `InsecureTokenEndpointError` if the token endpoint isn't `https:` (loopback exempt, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
+4. **Tool Surface** (Default: `Few simple`) — Ask if >3 tools or complex. Choices: Many simple | Few big with settings.
+5. **Input Schemas** (Default: Standard Schema via `zod ^4.2.0`) — Never ask; silently match the project's existing library if one is already in use. Alternatives: zod `^4.2.0` | ArkType | Valibot (all native Standard Schema) | raw JSON Schema via `fromJsonSchema()`.
+6. **Interaction** (Default: `Request-response`) — Ask if long-running tasks or user input needed. Choices: Progress/Cancel | Multi-round-trip.
+7. **Prompts** (Default: `None`) — Ask if reusable or UI-integrated. Choices: Static | Completable.
+8. **Error Strategy** (Default: `Protocol errors only`) — Never ask.
+9. **Distribution** (Default: `Local`) — Ask if publishing or sharing. Choices: npm | Local.
+10. **Testing** (Default: `1 test per tool`) — Never ask.
+11. **Session/Resumability** (Default: `Stateless` — no session) — Ask if HTTP with multi-request client state needed. Choices: Stateless | `EventStore`-backed resumable sessions. (On the 2026-07-28 era, state is per-request via `requestState`, not session-based.)
+12. **Notifications** (Default: `None`) — Ask if clients need list-change or data-change push updates. Choices: `subscriptions/listen` stream | None.
+13. **Era / Protocol Revision** (Default: `legacy: 'stateless'`) — Ask only if the modern (2026) spec is required. **Three choices** (load-bearing exception): Both eras (`legacy: 'stateless'`) | modern (2026) only (`legacy: 'reject'`) | 2025-era stack only (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler`; no `legacy:` setting applies).
+14. **Runtime** (Default: Node ≥ 20, ESM-first) — Never ask. v2 is ESM-first but ships CJS too.
+15. **Staging** (Default: one-shot) — Ask if a large, multi-directory codebase is already on SDK v1. Choices: one-shot | stage-by-directory. Execution: [mcp-migration] Step 1.
 
-### Decision List
+> Two-choice rule: every decision offering **Choices** presents exactly two options except items 3 and 13, which carry a third load-bearing choice. (Item 5's **Alternatives** are silent-match only, never posed as a question, so the rule doesn't bind it.)
 
-See [references/decisions.md](references/decisions.md) for the 14 decisions, safe defaults, triggers, and choices.
+## Record Format
 
-### Steps
-
-1. **Search** project files for existing `@modelcontextprotocol/` imports to understand current scope.
-2. **Determine** trigger needs by reviewing trigger parameters in [references/decisions.md](references/decisions.md).
-3. **Query** triggered questions to the user, strictly one at a time, providing exactly two choices for each.
-4. **Synthesize** a record of all 14 decision points, identifying each parameter as either `(asked)` or `(default)`.
-5. **Append** the finalized dated markdown record directly onto `docs/mcp-decisions.md` without modifying any legacy records.
-6. **Present** the completed decision document to the user.
-
-### Completion Criteria
-
-To consider the interview phase complete, you must verify:
-
-- [ ] Existing codebase has been fully searched for imports of `@modelcontextprotocol/` or dependencies.
-- [ ] Decisions have been resolved or defaulted for all 14 core design criteria from [references/decisions.md](references/decisions.md).
-- [ ] No more than one clarification question was asked at a time.
-- [ ] `docs/mcp-decisions.md` exists or has been appended to, containing the new dated decision record.
-- [ ] All 14 decisions in the record are explicitly marked as either `(asked)` or `(default)`.
-- [ ] The full formatted decision summary has been outputted to the user.
-
-## Example
-
-`docs/mcp-decisions.md` format:
+`docs/mcp-decisions.md` — every run appends a new dated section listing all 15 decisions, each tagged `(asked)` or `(default)`:
 
 ```markdown
 # MCP Decision Record — YYYY-MM-DD
@@ -61,20 +56,27 @@ To consider the interview phase complete, you must verify:
 1. Scope: server exposing 4 tools. (asked)
 2. Transport: stdio. (default)
 3. Auth: none. (default)
-4. Era / protocol revision: Both eras (legacy: 'stateless'). (default)
-5. Runtime: Node ≥ 20, ESM-first. (default)
+4. Tool Surface: few simple tools. (default)
+5. Input Schemas: zod ^4.2.0. (default)
+6. Interaction: request-response. (default)
+7. Prompts: none. (default)
+8. Error Strategy: protocol errors only. (default)
+9. Distribution: local. (default)
+10. Testing: 1 test per tool. (default)
+11. Session/Resumability: stateless. (default)
+12. Notifications: none. (default)
+13. Era / Protocol Revision: both eras (legacy: 'stateless'). (default)
+14. Runtime: Node ≥ 20, ESM-first. (default)
+15. Staging: one-shot. (default)
 ```
 
-## Common Mistakes
+## Completion Criteria
 
-- Asking untriggered questions.
-- Leaving decisions blank in `docs/mcp-decisions.md`.
+To consider the interview phase complete, you must verify:
 
-### Anti-Rationalization Table
-
-| Rationalization / Excuse                                                       | Red Flag / Reality                                                                                                                                                                                   |
-| :----------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "The user is in a hurry, so I'll ask all questions at once."                   | **Violates One-by-One.** You must ask exactly one question at a time.                                                                                                                                |
-| "I'll suggest three options to give the user more choices."                    | **Violates Two Choices.** Offer exactly two options unless the reference specifies a third load-bearing choice (e.g. Auth item 3, Era item 13), or use the Safe Default.                             |
-| "I will write some boilerplate code to help them visualize."                   | **Violates ONLY make decisions.** Never write any code during the interview.                                                                                                                         |
-| "There is no need to search project files first for `@modelcontextprotocol/`." | **Violates Search First.** You must always perform the initial search. (v2 splits into `@modelcontextprotocol/{server,client,core,…}` — a migrated codebase yields multiple scoped imports, not one) |
+- [ ] Project searched for every `@modelcontextprotocol/` import or dependency, including scoped v2 packages.
+- [ ] Every one of the 15 decisions resolved — triggered ones asked, the rest defaulted.
+- [ ] No more than one question asked per turn; each asked question offered exactly two choices (three only for Auth and Era).
+- [ ] `docs/mcp-decisions.md` contains a new dated record; no prior record was edited or removed.
+- [ ] All 15 decisions appear in the record, each explicitly tagged `(asked)` or `(default)`.
+- [ ] The full record was shown to the user.

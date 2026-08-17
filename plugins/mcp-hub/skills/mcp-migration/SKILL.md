@@ -14,9 +14,9 @@ Flow: `scope → codemod → packages → flags → era → modernize → mcpser
 
 ## Steps
 
-1. **Confirm Scope**: Confirm the codebase contains `@modelcontextprotocol` dependencies or legacy v1 imports.
+1. **Confirm Scope**: Confirm the codebase contains `@modelcontextprotocol` dependencies or legacy v1 imports. For a large, multi-directory codebase, stage the rewrite instead of a one-shot pass (per [mcp-planning] decision 15): add the v2 packages and `zod ^4.2.0` alongside `@modelcontextprotocol/sdk`, rewrite one directory at a time, and remove the v1 dependency only once `grep -rn "@modelcontextprotocol/sdk"` finds no source import. While both are installed, no SDK object may cross the v1/v2 boundary — `instanceof` and nominal types don't.
 
-- [ ]: Codebase confirmed to contain `@modelcontextprotocol` dependencies or legacy v1 imports.
+- [ ]: Codebase confirmed to contain `@modelcontextprotocol` dependencies or legacy v1 imports; for large codebases, a staging posture (one-shot vs per-directory) has been chosen.
 
 2. **Execute Codemod**: Run `npx @modelcontextprotocol/codemod@latest v1-to-v2 .` (swap `.` for a file path to target one file). It rewrites import paths to the split v2 packages, renames symbols and remaps `extra`→`ctx`, converts schema-based `setRequestHandler(XSchema, ...)` calls to method-string form, and converts `.tool()`/`.prompt()`/`.resource()` registrations to `registerTool`/`registerPrompt`/`registerResource` wrapped in `z.object()`. Where it can't safely resolve a case, it inserts an inline `@mcp-codemod-error` comment instead of guessing.
 
