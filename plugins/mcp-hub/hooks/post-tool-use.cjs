@@ -1,0 +1,189 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+// PostToolUse drift scanner for mcp-hub. In a project whose package.json has an
+// @modelcontextprotocol/* dep (tooling excluded), scans the edited source file
+// the moment Claude writes it and emits one <mcp-hub-drift> advisory citing the
+// owning skill for: v1-contamination (R5), instanceof on an SDK error (R6), or
+// a missing docs/mcp-decisions.md (R7). Advisory only — always exits 0.
+// Mirrors hooks/session-start.cjs: sentinel-guarded stdout, fail-open, stdlib only.
+
+const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
+const TOOLING = ['@modelcontextprotocol/codemod', '@modelcontextprotocol/inspector'];
+
+// R5 -> mcp-hub:mcp-migration. The v1-contamination pattern set (spec A5).
+const R5_PATTERNS = [
+  /@modelcontextprotocol\/sdk(?![\w-])/,
+  /\b(McpError|ErrorCode|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra)\b/,
+  /\.\s*(tool|prompt|resource)\s*\(/,
+  /\bsetRequestHandler\s*\(\s*[A-Za-z_$]/, // schema identifier first arg, not a string
+];
+// R6 -> mcp-hub:mcp-test. instanceof on an SDK error class fails cross-bundle.
+const R6_PATTERN = /\binstanceof\s+(ProtocolError|SdkError|SdkHttpError|OAuthError|McpError)\b/;
+
+const SKILLS = {
+  R5: 'mcp-hub:mcp-migration',
+  R6: 'mcp-hub:mcp-test',
+  R7: 'mcp-hub:mcp-planning',
+};
+const RULE_NAMES = {
+  R5: 'v1-contamination',
+  R6: 'instanceof on SDK error',
+  R7: 'no decision record',
+};
+const SUGGESTIONS = {
+  R5: 'consider migrating to the split v2 packages (see mcp-hub:mcp-migration)',
+  R6: 'consider using .code/.data or .isInstance() (see mcp-hub:mcp-test)',
+  R7: 'consider recording decisions in docs/mcp-decisions.md first (see mcp-hub:mcp-planning)',
+};
+
+function safeId(s) {
+  return String(s).replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+// ENOENT -> empty set (normal first run, not an outage); other read failure throws.
+function readStore(p) {
+  let txt;
+  try {
+    txt = fs.readFileSync(p, 'utf8');
+  } catch (e) {
+    if (e.code === 'ENOENT') return new Set();
+    throw e;
+  }
+  return new Set(JSON.parse(txt));
+}
+
+function writeStore(p, keys) {
+  fs.writeFileSync(p, JSON.stringify([...keys]));
+}
+
+function keyOf(f) {
+  return f.rule === 'R7' ? 'R7' : `${f.rule}|${f.file}`;
+}
+
+// Project detection reuses hooks/session-start.cjs:43-47 (tooling excluded).
+function isMcpProject(cwd) {
+  const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+  const depNames = Object.keys(
+    Object.assign(
+      {},
+      pkg.dependencies,
+      pkg.devDependencies,
+      pkg.peerDependencies,
+      pkg.optionalDependencies,
+    ),
+  );
+  const mcpDeps = depNames.filter((n) => n.startsWith('@modelcontextprotocol/'));
+  const v1 = mcpDeps.includes('@modelcontextprotocol/sdk');
+  const v2 = mcpDeps.filter((n) => n !== '@modelcontextprotocol/sdk' && !TOOLING.includes(n));
+  return v1 || v2.length > 0;
+}
+
+function scanFile(resolved, cwd) {
+  const findings = [];
+  const text = fs.readFileSync(resolved, 'utf8');
+  const lines = text.split(/\r?\n/);
+
+  let r5Line = 0;
+  let r6Line = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!r5Line && R5_PATTERNS.some((re) => re.test(line))) r5Line = i + 1;
+    if (!r6Line && R6_PATTERN.test(line)) r6Line = i + 1;
+    if (r5Line && r6Line) break;
+  }
+
+  const displayPath = path.relative(cwd, resolved) || resolved;
+  if (r5Line) findings.push({ rule: 'R5', file: resolved, line: r5Line, displayPath });
+  if (r6Line) findings.push({ rule: 'R6', file: resolved, line: r6Line, displayPath });
+  if (!fs.existsSync(path.join(cwd, 'docs', 'mcp-decisions.md'))) {
+    findings.push({ rule: 'R7', file: resolved, line: 1, displayPath });
+  }
+  return findings;
+}
+
+function emit(findings) {
+  if (findings.length === 0) return;
+  const advisories = findings.map((f) => {
+    const skill = SKILLS[f.rule];
+    const where = `${f.displayPath}:${f.line}`;
+    return `[${skill}] ${f.rule} ${RULE_NAMES[f.rule]} at ${where} — ${SUGGESTIONS[f.rule]}.`;
+  });
+  const content = advisories.join('\n');
+  // Defensive: refuse content carrying a reserved sentinel (mirrors session-start.cjs:18-20).
+  if (content.includes('</mcp-hub-drift>') || content.includes('<system-reminder')) {
+    console.error('mcp-hub: refusing to emit drift content containing reserved sentinels');
+    return;
+  }
+  process.stdout.write(`<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`);
+}
+
+function main() {
+  // R2: parse stdin; absent/unparseable/no file_path -> fail open.
+  let input;
+  try {
+    input = JSON.parse(fs.readFileSync(0, 'utf8'));
+  } catch {
+    return;
+  }
+  if (!input || !input.tool_input || typeof input.tool_input.file_path !== 'string') return;
+  if (input.tool_name !== 'Write' && input.tool_name !== 'Edit') return;
+
+  const cwd = process.cwd();
+  const resolved = path.resolve(input.tool_input.file_path);
+
+  // R2 / A1: must be a file within the project. ponytail: startsWith is case-sensitive;
+  // a mixed-case drive letter would miss — accepted ceiling (worktrees may revisit).
+  try {
+    if (!resolved.startsWith(cwd + path.sep) && resolved !== cwd) return;
+    if (!fs.statSync(resolved).isFile()) return;
+  } catch {
+    return;
+  }
+
+  // A2: source-extension gate for R5, R6, and R7. Hoisted above the R1 package
+  // read so non-source writes (.md/.json) in an MCP project skip package.json.
+  if (!SOURCE_EXTS.has(path.extname(resolved).toLowerCase())) return;
+
+  // R1: MCP project gate, fail open (no/invalid package.json -> exit 0).
+  try {
+    if (!isMcpProject(cwd)) return;
+  } catch {
+    return;
+  }
+
+  // R5 / R6 / R7 scan.
+  let findings;
+  try {
+    findings = scanFile(resolved, cwd);
+  } catch {
+    return;
+  }
+
+  // R9 / R13 dedupe: emit toEmit exactly once after the try/catch.
+  const sessionId = input.session_id;
+  const sessionIdUsable = typeof sessionId === 'string' && safeId(sessionId).length > 0;
+  let toEmit = findings;
+  try {
+    if (sessionIdUsable) {
+      // ponytail: read-modify-write, no lock. Concurrent PostToolUse hooks (Claude
+      // may run parallel writes) race last-writer-wins and lose dedupe. Advisory
+      // only — acceptable ceiling; per-file lock if duplicate advisories appear.
+      const storePath = path.join(os.tmpdir(), 'mcp-hub-drift-' + safeId(sessionId) + '.json');
+      const seen = readStore(storePath);
+      toEmit = findings.filter((f) => !seen.has(keyOf(f)));
+      writeStore(storePath, [...seen, ...toEmit.map(keyOf)]); // re-persist full set
+    }
+  } catch {
+    toEmit = findings; // R13: outage -> emit all, dedupe skipped
+  }
+
+  emit(toEmit);
+}
+
+try {
+  main();
+} catch {
+  // fail open on any unexpected error: no stdout, exit 0
+}
