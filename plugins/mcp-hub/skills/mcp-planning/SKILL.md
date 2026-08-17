@@ -1,6 +1,6 @@
 ---
 name: mcp-planning
-description: Use when making MCP design decisions before code (server or client); not for routing/workflows (mcp-router) or the build itself ([mcp-server]/[mcp-client]).
+description: Plan: MCP SDK v2 design decisions before implementation; [mcp-router] owns workflows, [mcp-server] and [mcp-client] own builds.
 user-invocable: false
 metadata:
   category: technique
@@ -8,52 +8,55 @@ metadata:
 
 # MCP Planning
 
-Decide-first — make and record all MCP design decisions before writing any code.
-
-`Search imports -> ask triggered questions -> record all 15 decisions -> append docs/mcp-decisions.md -> present`
-
-## When to Use
-
-- The "Clarify" step of `/mcp build`.
+**Decide-first.** Record implementation choices before writing MCP server or client code.
 
 ## Steps
 
-1. **Search**: Grep the project for `@modelcontextprotocol/` imports and dependencies before asking anything — v2 splits the SDK into scoped packages (`@modelcontextprotocol/{server,client,core,…}`), so a migrated codebase yields several hits, not one.
-   - [ ] Project searched for every `@modelcontextprotocol/` import or dependency, including scoped v2 packages.
-2. **Determine Triggers**: Check each of the 15 decisions below against its trigger. A decision whose trigger fires gets a question; every other decision silently takes its safe default.
-   - [ ] Every one of the 15 decisions resolved — triggered ones asked, the rest defaulted.
-3. **Query**: Ask only the triggered questions, one at a time, offering exactly two choices each (three only where marked below). A vague answer gets one re-ask before falling back to the first-listed choice; "you choose" skips straight to the first-listed choice.
-   - [ ] No more than one question asked per turn; each asked question offered exactly two choices (three only for Auth and Era).
-4. **Synthesize**: Write out all 15 decisions as a numbered list, each tagged `(asked)` or `(default)` — see Record Format.
-   - [ ] All 15 decisions appear in the record, each explicitly tagged `(asked)` or `(default)`.
-5. **Append**: Add a new dated section to `docs/mcp-decisions.md` (create the file if it doesn't exist yet); never edit or remove earlier dated records.
-   - [ ] `docs/mcp-decisions.md` contains a new dated record; no prior record was edited or removed.
-6. **Present**: Show the user the completed record.
-   - [ ] The full record was shown to the user.
+1. **Inspect the project**: Find every `@modelcontextprotocol/` dependency and import. v2 uses several scoped packages, so inspect each rather than searching for one package name.
+
+   **Done:** Existing MCP code, dependencies, schema libraries, and runtime constraints are identified.
+
+2. **Resolve the decision set**: Evaluate every trigger in [Decisions](#decisions). Ask about each triggered decision; apply the stated default to every other decision.
+
+   **Done:** All 15 decisions have an explicit value, every remote HTTP Auth value is explicit, and every non-default value is traced to a question.
+
+3. **Ask tightly**: Ask one triggered question per turn. Offer the two stated choices; Auth asks its access gate first and its three method choices only when authenticated, while Era has three choices. Re-ask one vague answer, then use the first listed choice. Treat “you choose” as that default choice.
+
+   **Done:** Each asked decision has one unambiguous selected value.
+
+4. **Write the record**: List all 15 decisions in the [record format](#record-format), marking each `(asked)` or `(default)`.
+
+   **Done:** The record is exhaustive and every entry carries one source tag.
+
+5. **Append the dated section**: Add the completed record to `docs/mcp-decisions.md`, creating it when absent and preserving every earlier dated section.
+
+   **Done:** `docs/mcp-decisions.md` has the new complete dated section and its prior sections are unchanged.
+
+6. **Present the result**: Show the completed record before implementation begins.
+
+   **Done:** The user has the exact recorded decisions that guide the implementation.
 
 ## Decisions
 
-1. **Scope** (Default: `server`) — Ask if unclear. Choices: Server | Client.
-2. **Transport** (Default: `stdio`) — Ask if remote, multi-user, or deployed. Choices: stdio | Streamable HTTP. (SSE/WebSocket transports are removed — SSE is frozen at `@modelcontextprotocol/server-legacy/sse`.)
-3. **Auth** (Default: `none`) — Ask if HTTP. **Three choices** (load-bearing exception to the two-choice rule): OAuth (client `OAuthClientProvider`; server verifies via `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server custom `verifyAccessToken`) | Legacy AS helpers (`server-legacy/auth`). Gotcha: `InsecureTokenEndpointError` if the token endpoint isn't `https:` (loopback exempt, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
-4. **Tool Surface** (Default: `Few simple`) — Ask if >3 tools or complex. Choices: Many simple | Few big with settings.
-5. **Input Schemas** (Default: Standard Schema via `zod ^4.2.0`) — Never ask; silently match the project's existing library if one is already in use. Alternatives: zod `^4.2.0` | ArkType | Valibot (all native Standard Schema) | raw JSON Schema via `fromJsonSchema()`.
-6. **Interaction** (Default: `Request-response`) — Ask if long-running tasks or user input needed. Choices: Progress/Cancel | Multi-round-trip.
-7. **Prompts** (Default: `None`) — Ask if reusable or UI-integrated. Choices: Static | Completable.
-8. **Error Strategy** (Default: `Protocol errors only`) — Never ask.
-9. **Distribution** (Default: `Local`) — Ask if publishing or sharing. Choices: npm | Local.
-10. **Testing** (Default: `1 test per tool`) — Never ask.
-11. **Session/Resumability** (Default: `Stateless` — no session) — Ask if HTTP with multi-request client state needed. Choices: Stateless | `EventStore`-backed resumable sessions.
-12. **Notifications** (Default: `None`) — Ask if clients need list-change or data-change push updates. Choices: `subscriptions/listen` stream | None.
-13. **Era / Protocol Revision** (Default: `legacy: 'stateless'`) — Ask only if the modern (2026) spec is required. **Three choices** (load-bearing exception): Both eras (`legacy: 'stateless'`) | modern (2026) only (`legacy: 'reject'`) | 2025-era stack only (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler`; no `legacy:` setting applies).
-14. **Runtime** (Default: Node ≥ 20, ESM-first) — Never ask. v2 is ESM-first but ships CJS too.
-15. **Staging** (Default: one-shot) — Ask if a large, multi-directory codebase is already on SDK v1. Choices: one-shot | stage-by-directory. Execution: [mcp-migration] Step 1.
-
-> Two-choice rule: every decision offering **Choices** presents exactly two options except items 3 and 13, which carry a third load-bearing choice. (Item 5's **Alternatives** are silent-match only, never posed as a question, so the rule doesn't bind it.)
+1. **Scope** (default `server`) — Ask when the codebase does not establish server versus client. Choices: Server | Client.
+2. **Transport** (default `stdio`) — Ask for remote, multi-user, or deployed use. Choices: stdio | Streamable HTTP. **Gotcha:** current SSE and WebSocket transports are absent; frozen SSE remains at `@modelcontextprotocol/server-legacy/sse`.
+3. **Auth** (default `none` for local or stdio use) — For every remote HTTP deployment, ask: Authenticated | Private no-auth. Record `none` only for an explicit private deployment; public endpoints use [mcp-auth]. When authenticated, choose: OAuth (client `OAuthClientProvider`; server `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server `verifyAccessToken`) | Legacy authorization-server helpers (`server-legacy/auth`). **Gotchas:** token endpoints require `https:` except loopback (`InsecureTokenEndpointError`, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
+4. **Tool Surface** (default `Few simple`) — Ask for more than three tools or complex operations. Choices: Many simple | Few big with settings.
+5. **Input Schemas** (default Standard Schema via `zod ^4.2.0`) — Silently retain the project’s existing Standard Schema library; otherwise use zod. Use `fromJsonSchema()` only for existing raw JSON Schema.
+6. **Interaction** (default `Request-response`) — Ask for long-running work or required user input. Choices: Progress/Cancel | Multi-round-trip.
+7. **Prompts** (default `None`) — Ask for reusable or UI-integrated prompts. Choices: Static | Completable.
+8. **Error Strategy** (default `Protocol errors only`) — Apply without a question.
+9. **Distribution** (default `Local`) — Ask for publishing or sharing. Choices: npm | Local.
+10. **Testing** (default `1 test per tool`) — Apply without a question.
+11. **Session/Resumability** (default `Stateless`) — Ask when HTTP needs multi-request client state. Choices: Stateless | `EventStore`-backed resumable sessions.
+12. **Notifications** (default `None`) — Ask when clients need list or data change updates. Choices: `subscriptions/listen` stream | None.
+13. **Era / Protocol Revision** (default both eras, `legacy: 'stateless'`) — Ask only when modern 2026 behavior is required. **Three choices:** Both eras (`legacy: 'stateless'`) | Modern only (`legacy: 'reject'`) | 2025-era only (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler` or `legacy:` setting).
+14. **Runtime** (default Node ≥20, ESM-first) — Apply without a question; v2 also ships a CommonJS build.
+15. **Staging** (default `one-shot`) — Ask when a large, multi-directory codebase already uses SDK v1. Choices: one-shot | stage by directory. Execute the selected posture in [mcp-migration] step 1.
 
 ## Record Format
 
-`docs/mcp-decisions.md` — every run appends a new dated section listing all 15 decisions, each tagged `(asked)` or `(default)`:
+Append a dated section to `docs/mcp-decisions.md` that lists every decision:
 
 ```markdown
 # MCP Decision Record — YYYY-MM-DD

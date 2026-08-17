@@ -1,22 +1,18 @@
 ---
 name: mcp-test
-description: MCP SDK v2 — use when writing or running tests for an MCP server or client — test setup, inspector sessions, and coverage/assertion patterns. For diagnosing runtime misbehavior (connection failures, ProtocolError/SdkError), dispatch the mcp-debugger agent.
+description: 'Test: MCP SDK v2 server/client behavior with transport-matched harnesses, inspector probes, and error assertions; reproduced runtime protocol or SDK failures dispatch mcp-debugger.'
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# Testing MCP (MCP SDK v2)
+# MCP SDK v2 Testing
 
-Covers `2.0.0-beta.3` test workflows (plus the shared error-code reference the mcp-debugger agent loads) for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `2.0.0-beta.3` test workflows (plus the error-code reference used by `mcp-debugger`) for `@modelcontextprotocol/server` and `@modelcontextprotocol/client`. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-`pick harness -> mock security -> manual probe -> match error channel & look up code`
+Test loop: `match transport → supply security context → probe behavior → assert its error channel`.
 
-## When to Use
-
-- Deprecated APIs / mismatched SDKs: load [mcp-migration].
-- Server config (stderr logging, custom schemas): see [mcp-server].
-- Client connection testing: see [mcp-client].
+Use [mcp-migration] for SDK-version changes, [mcp-server] for server configuration, and [mcp-client] for connection implementation.
 
 ## Steps
 
@@ -57,9 +53,14 @@ Covers `2.0.0-beta.3` test workflows (plus the shared error-code reference the m
 
    - **stdio server** — spawn the real process with `StdioClientTransport`; stdio has no in-process shortcut.
 
-2. **Mock Security**: if testing auth-protected endpoints, pass mock `authInfo` payloads following [mcp-auth] policies to test 401/403 controls.
+   - [ ] Every HTTP test uses in-process `handler.fetch`, every direct pairing uses `InMemoryTransport.createLinkedPair()`, and every stdio test uses `StdioClientTransport`.
+   - [ ] The standard unit-test run opens no real network port.
 
-3. **Execute Probe**: for stdio servers, launch the MCP inspector to probe commands interactively:
+2. **Supply Security Context**: Auth-protected endpoint tests pass mock `authInfo` payloads following [mcp-auth] policies and cover their `401`/`403` controls.
+
+   - [ ] Every auth-protected endpoint has allowed, unauthenticated, and insufficient-scope test cases.
+
+3. **Execute Probe**: Exercise the shipping transport manually. For stdio servers, launch the MCP inspector:
 
    ```sh
    npx @modelcontextprotocol/inspector npx tsx src/index.ts
@@ -74,7 +75,13 @@ Covers `2.0.0-beta.3` test workflows (plus the shared error-code reference the m
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
    ```
 
-4. **Assert Correct Channel**: tool _business_ failures return `isError: true`; unknown/disabled tool names instead reject the promise with `ProtocolError(InvalidParams)` — assert via try/catch + `error.code`, never bare `instanceof` (fails cross-realm/cross-bundle; use `.isInstance()` or match `.code`/`data`). Error channel model: [mcp-server] "Handle Errors". Code lookups: Error Code Reference below.
+   - [ ] Every shipping server transport completes its representative probe without protocol framing errors.
+
+4. **Assert the error channel**: Tool business failures return `isError: true`; unknown or disabled tool names reject with `ProtocolError(InvalidParams)`. Assert rejection through `try`/`catch` and `error.code`; use `.isInstance()` or `.code`/`data` across realms and package bundles. Error-channel model: [mcp-server] “Handle Errors”. Code lookups: Error Code Reference below.
+
+   - [ ] Every error assertion uses the matching `ProtocolError`, `SdkError`, or `SdkHttpError` entry below.
+   - [ ] Tool business failures assert `isError: true`; unknown and disabled names assert `ProtocolError(InvalidParams)` via `try`/`catch` plus `.code`.
+   - [ ] Test teardown closes every client and handler, leaving no hanging tasks or connections.
 
 ## Error Code Reference
 
@@ -132,16 +139,6 @@ OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationSe
 | `ListPaginationExceeded` / no-arg list returns everything                               | v2 auto-aggregates pages; pass `{ cursor }` for one page, or drop to `client.request({ method: 'tools/list' })` (cap `listMaxPages` default 64).                                                                                                                                       |
 | Empty `tools/list` returns `[]` not `-32601`; capability advertised `listChanged: true` | `McpServer` eager-installs handlers for declared capabilities; set `listChanged: false` to opt out.                                                                                                                                                                                    |
 | Duck-typed `.code === 401` silently misses `SdkHttpError`                               | Read `.status` on `SdkHttpError`; `SseError` still uses numeric `.code`.                                                                                                                                                                                                               |
-
-## Completion Criteria
-
-To consider testing implementation complete, you must verify:
-
-- [ ] Every harness matches its transport: HTTP tested in-process via `handler.fetch` (no real port); direct server/client pairing uses `InMemoryTransport.createLinkedPair()`; stdio coverage spawns the real process with `StdioClientTransport`.
-- [ ] No test in the standard unit test run opens a real network port.
-- [ ] Every error assertion matched against the Error Code Reference table for its channel (ProtocolError vs SdkError vs SdkHttpError) — no guessed codes.
-- [ ] Tool business failures assert `isError: true`; unknown/disabled tool names assert `ProtocolError(InvalidParams)` via try/catch + `.code` (see step 4).
-- [ ] Test suite exits cleanly: every `client.close()`/`handler.close()` runs, no hanging tasks or open connections.
 
 ## See Also
 

@@ -1,64 +1,65 @@
 ---
 name: mcp-router
-description: Session-injected routing map for MCP SDK v2 work.
+description: 'Route: cross-cutting MCP SDK v2 work to its owning specialist; direct server, client, auth, protocol, or test work loads that skill.'
 user-invocable: false
-disable-model-invocation: true
 metadata:
   category: technique
 ---
 
-# MCP Router & Workflows
+# MCP SDK v2 Router
 
-Entry point and canonical workflows for MCP SDK v2. Load sub-skills on-demand (never upfront or twice).
+Route work that spans responsibilities. Classify direct work by its primary deliverable and load only the skills its implementation actually reaches.
 
-## Routing Map
+## Route
 
-- **Plan**: [mcp-planning]
-- **Build**: [mcp-server] (server) or [mcp-client] (client)
-- **Auth**: [mcp-auth]
-- **Elicit**: [mcp-elicitation]
-- **Protocol**: [mcp-protocol]
-- **Gateway/proxy/relay**: [mcp-protocol]
-- **Migrate**: `mcp-migrator` agent (runs codemods) — for reference material load [mcp-migration]
-- **Test**: [mcp-test]
-- **Debug**: `mcp-debugger` agent (on failure).
-- **Audit**: `mcp-auditor` agent (read-only)
-- **Publish**: [mcp-server] "Distribute"
+| Deliverable                                                            | Load or dispatch                                                              |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| New architecture or a design record                                    | [mcp-planning]                                                                |
+| High-level server, transport hosting, scaling, or release              | [mcp-server]                                                                  |
+| Client connection, calls, subscriptions, cache, or browser OAuth       | [mcp-client]                                                                  |
+| HTTP resource-server protection or service credentials                 | [mcp-auth]                                                                    |
+| Elicitation, progress, cancellation, or multi-round interaction        | [mcp-elicitation]                                                             |
+| Low-level `Server`, custom transport, raw wire data, gateway, or relay | [mcp-protocol]                                                                |
+| SDK v1 migration                                                       | Dispatch `mcp-migrator`; use [mcp-migration] for decisions and rename tables. |
+| Server/client test coverage or inspector probe                         | [mcp-test]                                                                    |
+| Reproduced runtime protocol or SDK failure                             | Dispatch `mcp-debugger`.                                                      |
+| Read-only production audit                                             | Dispatch `mcp-auditor`.                                                       |
 
-## Workflows
+## Coordinate
 
-### Build Workflow
+1. **Assign ownership**: Load the specialist for each distinct implementation concern; a new server or client design starts with [mcp-planning].
+   - [ ] Every requested concern has one owning skill or agent; overlapping concerns have an explicit boundary.
 
-1. **Clarify**: Run [mcp-planning] -> output `docs/mcp-decisions.md`.
-2. **Scaffold**: Load [mcp-server] or [mcp-client]. Modern split v2 SDK deps, ESM-first; CommonJS also resolves.
-3. **Auth** (*): HTTP/OAuth (Streamable HTTP) security. Load [mcp-auth].
-4. **Interact** (*): Prompts, progress, cancellation. Load [mcp-elicitation].
-5. **Test**: Load [mcp-test] to implement tests; they compile and run to completion.
-6. **Distribute** (*): Package setup / deployment. See [mcp-server] "Distribute".
-7. **Verify**: All prior phase checks pass.
+2. **Verify handoffs**: Let each selected specialist complete its own checks; use [mcp-test] after implementation and [mcp-server] “Distribute” before release.
+   - [ ] Every selected skill's completion criteria pass, and released server/client behavior has matching test evidence.
 
-### Audit Workflow
+## Audit Workflow
 
-1. **Locate**: Scan for `@modelcontextprotocol/sdk` (v1 single-package) imports.
-2. **Version**: If SDK v1, load [mcp-migration] (flag as Blocker).
-   - **Version (deprecated APIs)**: Grep for SEP-2577-deprecated subsystems (`listRoots`, `sendRootsListChanged`, `sendLoggingMessage`, `createMessage`, `setLoggingLevel`), deprecated `registerClient` (SEP-991), and the removed variadic `.tool()`/`.prompt()`/`.resource()` registration — flag as Should Fix.
-   - **Version (v1→v2 renames)**: Grep for `McpError`, `ErrorCode`, `StreamableHTTPError`, `JSONRPCError`, `ResourceReference`, `IsomorphicHeaders`, `RequestHandlerExtra`, schema-first `setRequestHandler(`, `SSEServerTransport`, `WebSocketClientTransport`, and the `Invalid*Error` OAuth classes — flag as **Blocker**.
-   - **Version (removed tasks)**: Grep for `ProtocolOptions.tasks`, `taskManager`, `registerToolTask`, `TaskStore`, `InMemoryTaskStore`, `requestStream`/`callToolStream`/`createMessageStream`/`elicitInputStream`, `Experimental*Tasks` — the experimental tasks feature is removed (SEP-2663); flag as **Blocker** (no mechanical migration; remove usages).
-3. **Design**: Check structure via [mcp-server] / [mcp-client].
-4. **Security** (*): Audit auth (HTTP). Load [mcp-auth].
-5. **Interact** (*): Audit prompts/progress/cancellation. Load [mcp-elicitation].
-6. **Tests**: Check test coverage via [mcp-test].
-7. **Intent**: Validate code matches `docs/mcp-decisions.md`.
-8. **Report**: Rank findings: Blockers, Should Fix, Nice to Have. Formatted as:
-   `- [file:line] | [Issue details] | [Skill to fix]`
+Use this canonical read-only sweep for an existing MCP implementation. `mcp-auditor` loads each named specialist only when its step is reached.
 
-### Migrate Workflow
+1. **Locate**: Scan source and manifests for `@modelcontextprotocol/sdk` (the v1 single-package import).
+   - [ ] Every MCP dependency and source import is classified as v1 or a split v2 package.
 
-Canonical steps live in [mcp-migration] (scope → codemod → packages → flags → era → modernize → mcpserver → tsconfig → verify). Dispatch the `mcp-migrator` agent to execute; load [mcp-migration] for reference tables (renames, package split, era adoption).
+2. **Version**: Treat a v1 package or import as a Blocker and load [mcp-migration]. Classify remaining version surfaces:
+   - SEP-2577 deprecations: `listRoots`, `sendRootsListChanged`, `sendLoggingMessage`, `createMessage`, `setLoggingLevel`; `registerClient` (SEP-991); and variadic `.tool()`/`.prompt()`/`.resource()` registration are Should Fix.
+   - v1→v2 renames: `McpError`, `ErrorCode`, `StreamableHTTPError`, `JSONRPCError`, `ResourceReference`, `IsomorphicHeaders`, `RequestHandlerExtra`, schema-first `setRequestHandler(`, `SSEServerTransport`, `WebSocketClientTransport`, and `Invalid*Error` OAuth classes are Blockers.
+   - Removed experimental tasks (SEP-2663): `ProtocolOptions.tasks`, `taskManager`, `registerToolTask`, `TaskStore`, `InMemoryTaskStore`, `requestStream`, `callToolStream`, `createMessageStream`, `elicitInputStream`, and `Experimental*Tasks` are Blockers; remove them rather than applying a mechanical migration.
+   - [ ] Every matched version surface is ranked with the applicable finding and [mcp-migration] owns its remediation.
 
-### Debug Workflow
+3. **Design**: Load [mcp-server] or [mcp-client] for each implemented role and assess its registered capabilities, transport, and lifecycle.
+   - [ ] Every server and client role is checked against its owning skill.
 
-1. **Reproduce**: Capture the failing request/response or error code.
-2. **Classify**: Match the error against [mcp-test] "Error Code Reference" (`ProtocolErrorCode` / `SdkErrorCode`).
-3. **Isolate**: Narrow to transport, protocol, auth, or application layer; reload the matching skill ([mcp-client] / [mcp-protocol] / [mcp-auth] / [mcp-server]).
-4. **Fix**: Apply the fix; re-run the reproducer.
+4. **Security**: For each HTTP boundary, load [mcp-auth] and assess authentication, authorization, and Host/Origin controls.
+   - [ ] Every HTTP boundary has a documented security finding or a passing [mcp-auth] assessment.
+
+5. **Interactions**: Load [mcp-elicitation] when the implementation exposes prompts, progress, cancellation, or multi-round interaction.
+   - [ ] Every implemented interaction surface is checked against [mcp-elicitation].
+
+6. **Tests**: Load [mcp-test] and assess the evidence for each implemented transport and error channel.
+   - [ ] Every implemented transport has matching test evidence or a ranked gap.
+
+7. **Intent**: Compare implementation decisions with `docs/mcp-decisions.md` when it exists.
+   - [ ] Every recorded decision is confirmed or has a ranked contradiction.
+
+8. **Report**: Emit Blockers, Should Fix, then Nice to Have findings as `- [file:line] | [Issue details] | [Skill to fix]`.
+   - [ ] Every finding has a source location, rank, and owning remediation skill.

@@ -1,27 +1,22 @@
 ---
 name: mcp-auth
-description: Use when an MCP server needs bearer-token protection or a client needs service-to-machine credentials (ClientCredentials / PrivateKeyJwt / CrossApp providers) in MCP SDK v2; for browser authorization_code client flows, use [mcp-client].
+description: 'Authorize MCP SDK v2 resource servers with bearer validation, service clients with credentials, or host-session exchanges; browser authorization_code flows use [mcp-client].'
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# Authorization (MCP SDK v2)
+# MCP SDK v2 authorization
 
 Ref: https://ts.sdk.modelcontextprotocol.io/v2/
 
-**Server is Resource Server only — never issues tokens.**
+**A server is a Resource Server: an IdP issues and revokes tokens; the server validates them.**
 
 > v1 Authorization Server helpers (`mcpAuthRouter`, `OAuthServerProvider`) are frozen in `@modelcontextprotocol/server-legacy/auth`; Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) come from `@modelcontextprotocol/express` (Node) or `@modelcontextprotocol/server` (web-standard hosts). Migrate the AS role to a dedicated IdP.
 
-## When to Use
+Browser/SPA login (`connect`, `finishAuth`, `IssuerMismatchError`) belongs in [mcp-client] “Authenticate the client.” Mock `authInfo` with [mcp-test].
 
-- Browser/SPA end-user login wiring (`connect`/`finishAuth`, `IssuerMismatchError`): see [mcp-client] "Authenticate the client".
-- Mocking `authInfo` in tests: see [mcp-test].
-
-## Steps
-
-### Protect the server (Resource Server)
+## Protect a resource server
 
 ```ts
 import {
@@ -50,61 +45,52 @@ app.all('/mcp', auth, (req, res) => void node(req, res, req.body));
 app.use(mcpAuthMetadataRouter({ oauthMetadata, resourceServerUrl: mcpServerUrl }));
 ```
 
-1. **Wire**: supply `verifyAccessToken` to `requireBearerAuth` — extracts the Authorization header, forwards verified `AuthInfo`.
-2. **Verify**: check the token against IdP/external keys; throw `OAuthError(OAuthErrorCode.InvalidToken)` on rejection.
-3. **Populate**: the helper attaches `AuthInfo` to `req.auth`; `toNodeHandler` forwards it → handlers read `ctx.http.authInfo` (no manual setup).
-4. **Enforce**: in tool callbacks, verify `ctx.http?.authInfo`; return `{ isError: true, content: [...] }` if unauthorized.
+Verify signatures, issuer, and audience against IdP keys; decoded JWT claims are insufficient. `requireBearerAuth` extracts the header, attaches verified `AuthInfo` to `req.auth`, and `toNodeHandler` forwards it to `ctx.http.authInfo`.
 
-### Authenticate the client
+- [ ] `requireBearerAuth` protects the MCP route before tool dispatch and `mcpAuthMetadataRouter` serves resource metadata.
+- [ ] `verifyAccessToken` supplies `expiresAt` and rejects bad tokens with `OAuthError(OAuthErrorCode.InvalidToken)`; a plain exception becomes HTTP 500.
+- [ ] Tool callbacks obtain tenant/user permissions from `ctx.http?.authInfo` and return `{ isError: true, content: [...] }` for authorization failures.
+- [ ] The host uses `@modelcontextprotocol/express` for Express or web-standard `requireBearerAuth` from `@modelcontextprotocol/server` for fetch hosts.
 
-Pick by trust model:
+## Authenticate a service client
 
-- **User present in a browser** → prebuilt `authorization_code` flow (`UnauthorizedError` catch, `finishAuth` callback leg, `IssuerMismatchError`) — see [mcp-client] "Authenticate the client".
-- **Service-to-service, no user** → `ClientCredentialsProvider` or `PrivateKeyJwtProvider`:
-  ```ts
-  new ClientCredentialsProvider({ clientId, clientSecret, expectedIssuer });
-  new PrivateKeyJwtProvider({
-    clientId,
-    privateKey,
-    algorithm: 'RS256',
-    jwtLifetimeSeconds: 300,
-    expectedIssuer,
-  });
-  ```
-  `expectedIssuer` pins the credential — a mismatched discovery result throws `AuthorizationServerMismatchError`.
-- **Host app already authenticated the user** → `CrossAppAccessProvider` exchanges the host session for MCP access:
-  ```ts
-  new CrossAppAccessProvider({
-    assertion: async (ctx) =>
-      (await discoverAndRequestJwtAuthGrant({/* issuer/audience */})).jwtAuthGrant,
-    clientId,
-    clientSecret,
-  });
-  ```
-- **None of the above fit** → implement `OAuthClientProvider`: static `clientMetadata`/`redirectUrl` config plus `tokens`/`saveTokens`, `clientInformation`/`saveClientInformation`, `codeVerifier`/`saveCodeVerifier`, `state`, `redirectToAuthorization`, `saveDiscoveryState`/`discoveryState` methods. Key `clientInformation`/`saveTokens` by `ctx.issuer` (SEP-2352) — a value from one AS must never reach another. Override `validateResourceURL(url, ctx)` for RFC 8707 resource pinning.
+Use `ClientCredentialsProvider` for a service with a client secret. Use `PrivateKeyJwtProvider` when the authorization server requires private-key client authentication:
 
-Prefer a **Client ID Metadata Document** (host `clientMetadata` at a stable HTTPS URL, pass that URL as `clientId`) over the deprecated `registerClient` (SEP-991).
+```ts
+new ClientCredentialsProvider({ clientId, clientSecret, expectedIssuer });
+new PrivateKeyJwtProvider({
+  clientId,
+  privateKey,
+  algorithm: 'RS256',
+  jwtLifetimeSeconds: 300,
+  expectedIssuer,
+});
+```
 
-## Completion Criteria
+`expectedIssuer` pins credentials; mismatched discovery throws `AuthorizationServerMismatchError`.
 
-- [ ] Token issuance and revocation delegated to the IdP; the server validates only.
-- [ ] Token validation fails with standard 401/403 outside/before tool dispatch.
-- [ ] Auth failures in tools return `{ isError: true }` — no transport exceptions.
-- [ ] Tool callbacks read tenant/user permissions via `ctx.http?.authInfo`, not factory `ctx.authInfo`.
-- [ ] `verifyAccessToken` populates `expiresAt` on `AuthInfo`, else `requireBearerAuth` returns `401 invalid_token`.
-- [ ] Token rejection throws `OAuthError` with `OAuthErrorCode.InvalidToken` — any other exception type becomes an HTTP 500.
-- [ ] Non-Express `fetch` hosts (Cloudflare Workers, Deno, Hono) use web-standard `requireBearerAuth` from `@modelcontextprotocol/server`.
-- [ ] Client credentials/tokens are stored keyed by `ctx.issuer` (SEP-2352) — never shared across authorization servers.
-- [ ] Every Common Mistakes entry checked against the implementation.
-- [ ] Error Reference consolidation applied — no `instanceof` on `Invalid*Error` / `OAUTH_ERRORS`.
+For an authenticated host session, exchange its assertion with `CrossAppAccessProvider`:
 
-## Error Reference
+```ts
+new CrossAppAccessProvider({
+  assertion: async (ctx) =>
+    (await discoverAndRequestJwtAuthGrant({/* issuer/audience */})).jwtAuthGrant,
+  clientId,
+  clientSecret,
+  expectedIssuer,
+});
+```
+
+For another grant model, implement `OAuthClientProvider` with static `clientMetadata`/`redirectUrl` plus `tokens`/`saveTokens`, `clientInformation`/`saveClientInformation`, `codeVerifier`/`saveCodeVerifier`, `state`, `redirectToAuthorization`, and `saveDiscoveryState`/`discoveryState`. Key `clientInformation` and `saveTokens` by `ctx.issuer` (SEP-2352), and override `validateResourceURL(url, ctx)` for RFC 8707 resource pinning. Use a **Client ID Metadata Document**—a stable HTTPS `clientMetadata` URL passed as `clientId`—instead of deprecated `registerClient` (SEP-991).
+
+- [ ] Each `ClientCredentialsProvider`, `PrivateKeyJwtProvider`, and `CrossAppAccessProvider` sets `expectedIssuer`.
+- [ ] Client information and tokens are partitioned by `ctx.issuer`; an authorization server receives only its own values.
+- [ ] A custom provider implements every listed persistence and redirect method, plus resource URL validation when RFC 8707 pinning applies.
+
+## Handle authorization errors
 
 - **OAuth consolidation**: the v1 `Invalid*Error` family and `OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode`; switch `instanceof` to `error.code`.
 - **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, thrown by `verifyAccessToken`) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client].
 
-## Common Mistakes
-
-- **Header Extraction**: expecting the SDK to auto-extract bearer tokens without wiring `requireBearerAuth` as middleware.
-- **Test Tokens**: generating real tokens in tests — use mock issuers with [mcp-test].
-- **Decode-only JWT**: decode passes typecheck and returns claims that look valid — verify signature/issuer/audience against IdP keys, not just decode.
+- [ ] Error handling uses `error.code` for the consolidated OAuth errors and distinguishes the OAuth and transport `InsufficientScopeError` classes.
+- [ ] Tests use mock issuers from [mcp-test].

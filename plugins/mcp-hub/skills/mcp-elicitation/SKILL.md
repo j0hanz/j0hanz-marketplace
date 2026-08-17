@@ -1,40 +1,44 @@
 ---
 name: mcp-elicitation
-description: Use when implementing mid-call user interaction, prompt autocomplete, progress tracking, cancellation, or client-side elicitation-handler registration in the MCP SDK v2.
+description: Elicitation: MCP SDK v2 user-input rounds, prompt completion, progress, or cancellation.
 user-invocable: false
 metadata:
   category: technique
 ---
 
-# MCP Elicitation & Mid-Call Interaction
+# MCP Elicitation
 
-Covers `@modelcontextprotocol/server` v2 mid-call interaction. Ref: https://ts.sdk.modelcontextprotocol.io/v2/
+Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-Modern (2026-era) connections use stateless, multi-round `inputRequired(...)` returns instead of blocking the handler thread; legacy (2025-era) connections use blocking `elicitInput()`. Only the ask-user mechanism differs across eras — progress (`notify`) and cancellation (`signal`) are identical in both. The SDK bridges modern servers to legacy clients automatically when `inputRequired.legacyShim` is enabled (default `true`).
+**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, the SDK delivers modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`; it does not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work in both eras.
 
 ## Steps
 
-### Client: register the handler first
+1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, and handle `elicitation/create` at construction. The client default is 10 rounds; `ServerOptions.inputRequired.maxRounds` defaults to 8 because the legacy shim keeps a wire request open.
 
-Clients must register the `elicitation/create` handler at construction — nothing below works until this exists. Set `inputRequired: { maxRounds }` to bound auto-fulfillment round trips. Client default is 10; the server-side `ServerOptions.inputRequired.maxRounds` defaults to a tighter 8, since the legacy shim holds a live wire request open while waiting.
+   ```ts
+   const client = new Client(
+     { name: 'client', version: '1.0' },
+     {
+       capabilities: { elicitation: { form: {} } },
+       inputRequired: { maxRounds: 10 },
+     },
+   );
+   client.setRequestHandler('elicitation/create', async (req) => {
+     if (req.params.mode !== 'form') return { action: 'decline' };
+     const content = await renderAndValidateJsonSchemaForm(
+       req.params.message,
+       req.params.requestedSchema,
+     );
+     return content === undefined ? { action: 'decline' } : { action: 'accept', content };
+   });
+   ```
 
-```ts
-const client = new Client(
-  { name: 'client', version: '1.0' },
-  {
-    capabilities: { elicitation: { form: {}, url: {} } },
-    inputRequired: { maxRounds: 10 },
-  },
-);
-client.setRequestHandler('elicitation/create', async (req) => {
-  if (req.params.mode === 'url') return { action: 'accept' };
-  return { action: 'accept', content: { confirmed: true } };
-});
-```
+   `renderAndValidateJsonSchemaForm()` renders the requested schema and resolves only validated content; `undefined` means the user declined. Add URL capability and an owned URL handler only when the client can complete that flow.
 
-### Server: mid-call interaction
+   **Done:** Every owned client that serves interaction advertises only supported modes, has a bounded handler, and returns content validated against the requested schema.
 
-1. **Dedupe before eliciting**: before returning `inputRequired`, check `ctx.mcpReq.inputResponses` — the client re-runs the whole call from the top once the user answers. Read accepted values with `acceptedContent(ctx.mcpReq.inputResponses, key, schema)` (returns `undefined` if missing, declined, or cancelled); inspect the raw action (`accept`/`decline`/`cancel`) with `inputResponse(...)` first, and bail on `decline`/`cancel` rather than re-prompting — else a declined field loops forever.
+2. **Make modern tool calls replay-safe**: Each answer restarts the tool from its beginning. Read `ctx.mcpReq.inputResponses` before returning `inputRequired`; use `acceptedContent(..., key, schema)` for accepted content and `inputResponse(...)` to exit cleanly on `decline` or `cancel`.
 
    ```ts
    server.registerTool(
@@ -54,7 +58,7 @@ client.setRequestHandler('elicitation/create', async (req) => {
        return inputRequired({
          inputRequests: {
            confirm: inputRequired.elicit({
-             message: `Deploy?`,
+             message: 'Deploy?',
              requestedSchema: { type: 'object', properties: { confirm: { type: 'boolean' } } },
            }),
          },
@@ -63,9 +67,11 @@ client.setRequestHandler('elicitation/create', async (req) => {
    );
    ```
 
-2. **Pick the request builder**: `inputRequired.elicit()` (form fields) and `inputRequired.elicitUrl()` (URL redirect, e.g. OAuth) are current — prefer them for new code. `inputRequired.createMessage()` (deprecated sampling) and `inputRequired.listRoots()` (deprecated roots) exist only to migrate old embedded flows.
+   Use `inputRequired.elicit()` for form fields and `inputRequired.elicitUrl()` for redirects such as OAuth. Migrate embedded sampling and roots flows away from deprecated `inputRequired.createMessage()` and `inputRequired.listRoots()`.
 
-3. **Carry cross-round state in `requestState`, never in memory**: for sequential rounds, mint an opaque string with an HMAC codec and return it on `requestState`; read it back with `ctx.mcpReq.requestState<State>()`. It round-trips through the client byte-for-byte, so it is **attacker-controlled** — keep it signed (not encrypted) and never place secrets in it. Tampered or expired state answers `-32602 Invalid or expired requestState` and never reaches the handler.
+   **Done:** Every modern interaction reads prior responses, returns each accepted path once, and terminates every decline or cancellation path.
+
+3. **Carry sequential state in signed `requestState`**: Return an opaque, HMAC-signed state value and read it through `ctx.mcpReq.requestState<State>()`. The client round-trips this value byte-for-byte, so keep secrets out of it and reject tampered or expired values with `-32602 Invalid or expired requestState`.
 
    ```ts
    const codec = createRequestStateCodec<{ step: string }>({
@@ -83,7 +89,9 @@ client.setRequestHandler('elicitation/create', async (req) => {
    });
    ```
 
-4. **Emit progress**: call `ctx.mcpReq.notify(...)` with a `notifications/progress` message keyed on `progressToken`; `progress` must strictly increase across updates for the same token.
+   **Done:** Every multi-round flow stores its state in a verified codec, rejects invalid state before business logic, and exposes no secret in the payload.
+
+4. **Report long work and honor cancellation**: Emit strictly increasing `notifications/progress` values for one `progressToken`. Pass `ctx.mcpReq.signal` to database and HTTP work; inspect `signal.aborted` inside recursive work and loop conditions.
 
    ```ts
    async ({ files }, ctx) => {
@@ -99,9 +107,9 @@ client.setRequestHandler('elicitation/create', async (req) => {
    };
    ```
 
-5. **Guard cancellation**: pass `ctx.mcpReq.signal` to database or HTTP calls, and check `signal.aborted` inside recursive functions or loop conditions — the v2 transport aborts in-flight handlers on close.
+   **Done:** Each long-running path propagates its abort signal, checks it during repeated work, and emits monotonic progress when the caller supplied a token.
 
-6. **Autocomplete prompt arguments**: wrap fields of a prompt's `argsSchema` in `completable(...)` to register autocomplete handlers. Resource template variables use the template's own `complete` map instead, not `completable`.
+5. **Complete prompt arguments at the schema**: Wrap prompt `argsSchema` fields with `completable(...)`. Define resource-template completion in the template’s `complete` map instead.
 
    ```ts
    import { completable } from '@modelcontextprotocol/server';
@@ -110,7 +118,7 @@ client.setRequestHandler('elicitation/create', async (req) => {
      {
        argsSchema: z.object({
          lang: completable(z.string(), (val) =>
-           ['ts', 'js', 'py'].filter((l) => l.startsWith(val)),
+           ['ts', 'js', 'py'].filter((lang) => lang.startsWith(val)),
          ),
        }),
      },
@@ -120,41 +128,27 @@ client.setRequestHandler('elicitation/create', async (req) => {
    );
    ```
 
-## Legacy Path (2025-era connections only)
+   **Done:** Every prompt argument that needs completion uses `completable(...)`, and every resource-template variable uses its template completion map.
 
-`ctx.mcpReq.elicitInput()` **throws on 2026-era connections regardless of the shim** — `legacyShim` runs the other direction: it serves modern `inputRequired(...)` returns to 2025-era clients by pushing real `elicitation/create` requests, it does not make `elicitInput()` work on modern connections. Requires the client's `elicitation` capability. Form mode is for standard inputs — never request secrets (credentials, API keys) via forms. URL mode redirects the user outside the chat (e.g. OAuth login). On `decline`/`cancel`, bail out of the handler rather than re-prompting. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` for a ported draft-07 schema.
+6. **Serve confirmed 2025 connections through the legacy branch**: Require the client’s `elicitation` capability, use form mode for standard data and URL mode for external redirects, and return from the handler on `decline` or `cancel`. Keep credentials and API keys out of forms. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` accepts only `string | number | boolean | string[]`, so return those values rather than arbitrary objects.
 
-```ts
-const result = await ctx.mcpReq.elicitInput({
-  mode: 'form',
-  message: `Rate topic`,
-  requestedSchema: {
-    type: 'object',
-    properties: { rating: { type: 'number' } },
-    required: ['rating'],
-  },
-});
-if (result.action === 'accept') {
-  return { content: [{ type: 'text', text: `Recorded: ${JSON.stringify(result.content)}` }] };
-}
-```
+   ```ts
+   const result = await ctx.mcpReq.elicitInput({
+     mode: 'form',
+     message: 'Rate topic',
+     requestedSchema: {
+       type: 'object',
+       properties: { rating: { type: 'number' } },
+       required: ['rating'],
+     },
+   });
+   if (result.action === 'accept') {
+     return { content: [{ type: 'text', text: `Recorded: ${JSON.stringify(result.content)}` }] };
+   }
+   ```
 
-> **v2 typing:** `ElicitResult.content` values are `string | number | boolean | string[]`. A handler returning arbitrary objects fails to compile and fails schema validation (`-32602`).
+   **Done:** Each legacy-only flow has a confirmed 2025 connection, supported client capability, declared schema dialect when needed, valid result content, and a terminating non-accept path.
 
-## Deprecated (SEP-2577)
+7. **Retire 2025-only facilities**: Replace `ctx.mcpReq.requestSampling` with a server direct-LLM-provider call only after recording the provider, data-handling and retention policy, consent path, and cost owner; it remains functional for 2025 connections but throws for modern ones. Replace deprecated `ctx.mcpReq.log(level, data)` with stderr or OpenTelemetry.
 
-- **Sampling** (`ctx.mcpReq.requestSampling`) routed an LLM call through the client — migrate by calling the LLM provider's API directly from the server. Functional ≥ 12 months on 2025-era connections; throws on 2026-era.
-- **MCP logging** (`ctx.mcpReq.log(level, data)`) — prefer stderr or OpenTelemetry instead.
-
-## Completion Criteria
-
-To consider elicitation and mid-call interaction complete, you must verify:
-
-- [ ] No mid-call tool handlers block threads or run synchronously while awaiting user actions.
-- [ ] Every `inputRequired` return checks `ctx.mcpReq.inputResponses` first, so answered fields are never re-requested.
-- [ ] Decline/cancel actions bail out of the flow rather than re-prompting (else a declined field loops forever).
-- [ ] The `requestState` codec is wired (HMAC-verified) and no secrets are placed in the attacker-controlled `requestState` payload.
-- [ ] Forms, input widgets, and prompt arguments are validated and exclude credentials and access-key secrets.
-- [ ] `signal.aborted` is checked on every iteration of loops or long database inquiries.
-- [ ] New interaction flows return modern `inputRequired` descriptors; legacy `elicitInput()` is used only where a connection is confirmed 2025-era.
-- [ ] No deprecated sampling (`requestSampling`) or MCP logging (`log`) call remains — replaced with a direct LLM call and stderr/OpenTelemetry respectively.
+   **Done:** Each direct LLM replacement has a recorded provider, privacy/consent, and cost decision; new interaction paths use neither sampling nor MCP logging, and every retained legacy call is isolated to a confirmed 2025 branch.
