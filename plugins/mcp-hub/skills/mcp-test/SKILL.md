@@ -12,7 +12,7 @@ Covers `2.0.0` test workflows (plus the error-code reference used by `mcp-debugg
 
 Test loop: `match transport → supply security context → probe behavior → assert its error channel`.
 
-Use [mcp-migration] for SDK-version changes, [mcp-server] for server configuration, and [mcp-client] for connection implementation.
+Use [mcp-migration](../mcp-migration/SKILL.md) for SDK-version changes, [mcp-server](../mcp-server/SKILL.md) for server configuration, and [mcp-client](../mcp-client/SKILL.md) for connection implementation.
 
 ## Steps
 
@@ -56,7 +56,7 @@ Use [mcp-migration] for SDK-version changes, [mcp-server] for server configurati
    - [ ] Every HTTP test uses in-process `handler.fetch`, every direct pairing uses `InMemoryTransport.createLinkedPair()`, and every stdio test uses `StdioClientTransport`.
    - [ ] The standard unit-test run opens no real network port.
 
-2. **Supply Security Context**: Auth-protected endpoint tests pass mock `authInfo` payloads following [mcp-auth] policies and cover their `401`/`403` controls.
+2. **Supply Security Context**: Auth-protected endpoint tests pass mock `authInfo` payloads following [mcp-auth](../mcp-auth/SKILL.md) policies and cover their `401`/`403` controls.
 
    - [ ] Every auth-protected endpoint has allowed, unauthenticated, and insufficient-scope test cases.
 
@@ -77,7 +77,7 @@ Use [mcp-migration] for SDK-version changes, [mcp-server] for server configurati
 
    - [ ] Every shipping server transport completes its representative probe without protocol framing errors.
 
-4. **Assert the error channel**: Tool business failures return `isError: true`; unknown or disabled tool names reject with `ProtocolError(InvalidParams)`. Assert rejection through `try`/`catch` and `error.code`; use `.isInstance()` or `.code`/`data` across realms and package bundles. Error-channel model: [mcp-server] “Handle Errors”. Code lookups: Error Code Reference below.
+4. **Assert the error channel**: Tool business failures return `isError: true`; unknown or disabled tool names reject with `ProtocolError(InvalidParams)`. Assert rejection through `try`/`catch` and `error.code`; use `.isInstance()` or `.code`/`data` across realms and package bundles. Error-channel model: [mcp-server](../mcp-server/SKILL.md) “Handle Errors”. Code lookups: Error Code Reference below.
 
    - [ ] Every error assertion uses the matching `ProtocolError`, `SdkError`, or `SdkHttpError` entry below.
    - [ ] Tool business failures assert `isError: true`; unknown and disabled names assert `ProtocolError(InvalidParams)` via `try`/`catch` plus `.code`.
@@ -93,7 +93,7 @@ Use [mcp-migration] for SDK-version changes, [mcp-server] for server configurati
 | `SdkError(code, message)`             | server/client | Local SDK failure — never a wire error                                                                                                                                    |
 | `SdkHttpError`                        | server/client | HTTP-level failure; HTTP status on `.status`/`.statusText`, **not** `.code` (`.code` is a `SdkErrorCode` string)                                                          |
 
-OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationServerMismatchError`, `OAuthError`, `InsufficientScopeError`, `InsecureTokenEndpointError`) aren't re-described here — see [mcp-client] "Authenticate the client" and [mcp-auth] "Error Reference".
+OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationServerMismatchError`, `OAuthError`, `InsufficientScopeError`, `InsecureTokenEndpointError`) aren't re-described here — see [mcp-client](../mcp-client/SKILL.md) "Authenticate the client" and [mcp-auth](../mcp-auth/SKILL.md) "Error Reference".
 
 ### ProtocolErrorCode (wire codes)
 
@@ -131,7 +131,7 @@ OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationSe
 | Error                                                                                   | Fix                                                                                                                                                                                                                                                                                    |
 | :-------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SyntaxError: ... is not valid JSON`                                                    | Something wrote to stdout on a stdio server. Log with `console.error`, never `console.log`.                                                                                                                                                                                            |
-| `TS2589: Type instantiation is excessively deep`                                        | Multiple Zod versions in the tree. Dedupe to a single `zod ^4.2.0` — see [mcp-server] "Register Capabilities" gotcha.                                                                                                                                                                  |
+| `TS2589: Type instantiation is excessively deep`                                        | Multiple Zod versions in the tree. Dedupe to a single `zod ^4.2.0` — see [mcp-server](../mcp-server/SKILL.md) "Register Capabilities" gotcha.                                                                                                                                          |
 | `ReferenceError: crypto is not defined`                                                 | Node < 20. Upgrade, or polyfill: `globalThis.crypto = webcrypto`.                                                                                                                                                                                                                      |
 | `SdkError: ERA_NEGOTIATION_FAILED`                                                      | Client and server share no protocol era. Two shapes: (1) a `pin` the server doesn't offer — widen the pin or use `mode: 'auto'`; (2) `mode: 'auto'` with a `supportedProtocolVersions` list lacking a pre-2026 entry — add a legacy revision to the list so the fallback is available. |
 | `SdkError: METHOD_NOT_SUPPORTED_BY_PROTOCOL_VERSION`                                    | Calling a method the negotiated era doesn't have — the error names the replacement.                                                                                                                                                                                                    |
@@ -142,6 +142,6 @@ OAuth-flow classes (`UnauthorizedError`, `IssuerMismatchError`, `AuthorizationSe
 
 ## See Also
 
-- Handling errors on the server: [mcp-server] "Handle Errors"
-- Mocking auth in tests: [mcp-auth]
+- Handling errors on the server: [mcp-server](../mcp-server/SKILL.md) "Handle Errors"
+- Mocking auth in tests: [mcp-auth](../mcp-auth/SKILL.md)
 - Diagnosing a live failure instead of writing new tests: dispatch the `mcp-debugger` agent

@@ -1,6 +1,6 @@
 ---
 name: mcp-planning
-description: Plan: MCP SDK v2 design decisions before implementation; [mcp-router] owns workflows, [mcp-server] and [mcp-client] own builds.
+description: Plan: MCP SDK v2 design decisions before implementation; mcp-router owns workflows, mcp-server and mcp-client own builds.
 user-invocable: false
 metadata:
   category: technique
@@ -40,7 +40,7 @@ metadata:
 
 1. **Scope** (default `server`) — Ask when the codebase does not establish server versus client. Choices: Server | Client.
 2. **Transport** (default `stdio`) — Ask for remote, multi-user, or deployed use. Choices: stdio | Streamable HTTP. **Gotcha:** current SSE and WebSocket transports are absent; frozen SSE remains at `@modelcontextprotocol/server-legacy/sse`.
-3. **Auth** (default `none` for local or stdio use) — For every remote HTTP deployment, ask: Authenticated | Private no-auth. Record `none` only for an explicit private deployment; public endpoints use [mcp-auth]. When authenticated, choose: OAuth (client `OAuthClientProvider`; server `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server `verifyAccessToken`) | Legacy authorization-server helpers (`server-legacy/auth`). **Gotchas:** token endpoints require `https:` except loopback (`InsecureTokenEndpointError`, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
+3. **Auth** (default `none` for local or stdio use) — For every remote HTTP deployment, ask: Authenticated | Private no-auth. Record `none` only for an explicit private deployment; public endpoints use [mcp-auth](../mcp-auth/SKILL.md). When authenticated, choose: OAuth (client `OAuthClientProvider`; server `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server `verifyAccessToken`) | Legacy authorization-server helpers (`server-legacy/auth`). **Gotchas:** token endpoints require `https:` except loopback (`InsecureTokenEndpointError`, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
 4. **Tool Surface** (default `Few simple`) — Ask for more than three tools or complex operations. Choices: Many simple | Few big with settings.
 5. **Input Schemas** (default Standard Schema via `zod ^4.2.0`) — Silently retain the project’s existing Standard Schema library; otherwise use zod. Use `fromJsonSchema()` only for existing raw JSON Schema.
 6. **Interaction** (default `Request-response`) — Ask for long-running work or required user input. Choices: Progress/Cancel | Multi-round-trip.
@@ -52,7 +52,7 @@ metadata:
 12. **Notifications** (default `None`) — Ask when clients need list or data change updates. Choices: `subscriptions/listen` stream | None.
 13. **Era / Protocol Revision** (default both eras, `legacy: 'stateless'`) — Ask only when modern 2026 behavior is required. **Three choices:** Both eras (`legacy: 'stateless'`) | Modern only (`legacy: 'reject'`) | 2025-era only (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler` or `legacy:` setting).
 14. **Runtime** (default Node ≥20, ESM-first) — Apply without a question; v2 also ships a CommonJS build.
-15. **Staging** (default `one-shot`) — Ask when a large, multi-directory codebase already uses SDK v1. Choices: one-shot | stage by directory. Execute the selected posture in [mcp-migration] step 1.
+15. **Staging** (default `one-shot`) — Ask when a large, multi-directory codebase already uses SDK v1. Choices: one-shot | stage by directory. Execute the selected posture in [mcp-migration](../mcp-migration/SKILL.md) step 1.
 
 ## Record Format
 

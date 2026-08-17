@@ -1,6 +1,6 @@
 # Client authentication
 
-Use this reference for a static bearer token or browser `authorization_code`. For client credentials or host-session exchange, use [mcp-auth].
+Use this reference for a static bearer token or browser `authorization_code`. For client credentials or host-session exchange, use [mcp-auth](../mcp-auth/SKILL.md).
 
 The transport accepts `AuthProvider | OAuthClientProvider`. For a static bearer token, provide `token()` and an `onUnauthorized()` refresh; the transport retries once after a 401:
 
@@ -38,7 +38,7 @@ The SDK validates callback `iss` (RFC 9207) and throws `IssuerMismatchError` on 
 
 `auth()` stamps `issuer` on values passed to `saveTokens()` and `saveClientInformation()`, then supplies `{ issuer }` to those methods plus `tokens()` and `clientInformation()`. Store the objects intact and key multi-AS storage by `ctx.issuer`; a no-context `tokens()` call returns the most recently saved set for its per-request bearer read.
 
-`InsufficientScopeError` (SEP-2350, extending `OAuthClientFlowError`) is a transport class distinct from the server verifier's `OAuthError(OAuthErrorCode.InsufficientScope)`; see [mcp-auth] “Handle authorization errors.” `onInsufficientScope` defaults to `'reauthorize'`, which requests the union of requested and challenged scope. For client-credentials clients, set `'throw'`; step-up retries default to one through `maxStepUpRetries`.
+`InsufficientScopeError` (SEP-2350, extending `OAuthClientFlowError`) is a transport class distinct from the server verifier's `OAuthError(OAuthErrorCode.InsufficientScope)`; see [mcp-auth](../mcp-auth/SKILL.md) “Handle authorization errors.” `onInsufficientScope` defaults to `'reauthorize'`, which requests the union of requested and challenged scope. For client-credentials clients, set `'throw'`; step-up retries default to one through `maxStepUpRetries`.
 
 - [ ] Static credentials refresh once after 401, and browser callbacks validate `state` before `finishAuth()`.
 - [ ] Stored issuer-stamped values remain intact and isolated per authorization server.

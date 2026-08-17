@@ -12,7 +12,7 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
 ## Steps
 
-1. **Scope the migration**: Identify every legacy dependency and import. For a large, multi-directory project, follow [mcp-planning] decision 15: migrate one directory at a time, retain both SDK versions only while untouched v1 code remains, and remove v1 once `rg '@modelcontextprotocol/sdk'` finds no source imports. SDK objects cannot cross the v1/v2 boundary: their nominal types and `instanceof` checks differ.
+1. **Scope the migration**: Identify every legacy dependency and import. For a large, multi-directory project, follow [mcp-planning](../mcp-planning/SKILL.md) decision 15: migrate one directory at a time, retain both SDK versions only while untouched v1 code remains, and remove v1 once `rg '@modelcontextprotocol/sdk'` finds no source imports. SDK objects cannot cross the v1/v2 boundary: their nominal types and `instanceof` checks differ.
 
    **Done:** The migration scope and one-shot or staged posture are explicit; every staged boundary isolates v1 and v2 SDK objects.
 
@@ -28,7 +28,7 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
    **Done:** The migrated scope has zero `@mcp-codemod-error` comments and typechecks against installed packages.
 
-5. **Set the era posture**: Honor [mcp-planning] decision 13; without a record, serve both eras. HTTP uses `createMcpHandler(factory, { legacy: 'stateless' })` and stdio uses `serveStdio(factory, { legacy: 'serve' })` for both; modern-only uses `legacy: 'reject'`; 2025-only retains the hand-wired `*StreamableHTTPServerTransport` stack, which has no `legacy:` setting.
+5. **Set the era posture**: Honor [mcp-planning](../mcp-planning/SKILL.md) decision 13; without a record, serve both eras. HTTP uses `createMcpHandler(factory, { legacy: 'stateless' })` and stdio uses `serveStdio(factory, { legacy: 'serve' })` for both; modern-only uses `legacy: 'reject'`; 2025-only retains the hand-wired `*StreamableHTTPServerTransport` stack, which has no `legacy:` setting.
 
    **Done:** Every server entry point implements the selected both-era, modern-only, or 2025-only posture.
 
@@ -36,15 +36,15 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
    **Done:** Each interaction, cross-round state, and change-notification path uses APIs supported by its selected connection era.
 
-7. **Adopt `McpServer` where possible**: Convert low-level `Server` instances unless custom or vendor JSON-RPC methods require the low-level class; send those cases to [mcp-protocol]. Use Standard Schema objects: `z.object(...)` from zod ≥4.2.0, or existing ArkType or Valibot schemas.
+7. **Adopt `McpServer` where possible**: Convert low-level `Server` instances unless custom or vendor JSON-RPC methods require the low-level class; send those cases to [mcp-protocol](../mcp-protocol/SKILL.md). Use Standard Schema objects: `z.object(...)` from zod ≥4.2.0, or existing ArkType or Valibot schemas.
 
-   **Done:** Every server is either an `McpServer` or has documented custom methods that require low-level [mcp-protocol] handling.
+   **Done:** Every server is either an `McpServer` or has documented custom methods that require low-level [mcp-protocol](../mcp-protocol/SKILL.md) handling.
 
 8. **Choose and verify the module mode**: Default to ESM with `"module": "NodeNext"`, `"moduleResolution": "NodeNext"`, and `"type": "module"`. v2 is ESM-first, and CommonJS projects can directly `require('@modelcontextprotocol/…')`.
 
    **Done:** The selected ESM or CommonJS mode resolves every v2 import in the project’s compiler and runtime.
 
-9. **Verify behavior**: Run the tests described by [mcp-test], then review every [Silent Behavior Change](#silent-behavior-changes) against the migrated code. Tests—not the codemod or compiler—cover those differences. At the final staged slice, remove the legacy package and confirm no source import remains.
+9. **Verify behavior**: Run the tests described by [mcp-test](../mcp-test/SKILL.md), then review every [Silent Behavior Change](#silent-behavior-changes) against the migrated code. Tests—not the codemod or compiler—cover those differences. At the final staged slice, remove the legacy package and confirm no source import remains.
 
    **Done:** The migrated scope compiles and passes its tests; every silent change is accounted for; and a complete migration has no legacy package or source import.
 

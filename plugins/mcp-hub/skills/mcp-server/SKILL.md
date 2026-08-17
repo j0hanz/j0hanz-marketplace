@@ -1,6 +1,6 @@
 ---
 name: mcp-server
-description: 'Server: high-level MCP SDK v2 servers with McpServer—capabilities, stdio/HTTP hosting, scaling, or packaging; low-level JSON-RPC and custom transports use [mcp-protocol].'
+description: 'Server: high-level MCP SDK v2 servers with McpServer—capabilities, stdio/HTTP hosting, scaling, or packaging; low-level JSON-RPC and custom transports use mcp-protocol.'
 user-invocable: false
 metadata:
   category: technique
@@ -8,7 +8,7 @@ metadata:
 
 # MCP SDK v2 Servers
 
-Covers `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Start a new design with [mcp-planning], then validate the built server with [mcp-test]. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Covers `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Start a new design with [mcp-planning](../mcp-planning/SKILL.md), then validate the built server with [mcp-test](../mcp-test/SKILL.md). Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 Minimal stdio stub (see Step 5 for the full transport picture):
 
@@ -48,7 +48,7 @@ serveStdio(() => {
    - [ ] `name`/`version` are stable identifiers matching `package.json` exactly.
    - [ ] Optional constructor behavior (capabilities, instructions, enforceStrictCapabilities, cacheHints) is declared wherever the server relies on it.
 
-3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4 or ArkType as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema`, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol].
+3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4 or ArkType as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema`, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol](../mcp-protocol/SKILL.md).
 
    ```ts
    server.registerTool(
@@ -121,7 +121,7 @@ serveStdio(() => {
    throw new ResourceNotFoundError(uri.href); // -32602 with data: { uri }
    ```
 
-   Tool handlers **cannot** emit a protocol error — every throw (even `ProtocolError`) becomes `isError: true`; the sole exception is `UrlElicitationRequiredError`, which propagates (`-32042`). Full code tables in [mcp-test].
+   Tool handlers **cannot** emit a protocol error — every throw (even `ProtocolError`) becomes `isError: true`; the sole exception is `UrlElicitationRequiredError`, which propagates (`-32042`). Full code tables in [mcp-test](../mcp-test/SKILL.md).
 
    > **Gotcha — caller side:** an unknown or disabled tool name rejects the `callTool()` promise with `ProtocolError(InvalidParams)` (`-32602`) — it does **not** resolve `{ isError: true }`. Catch the promise and inspect `error.code`; a registered tool's own business failure still returns `isError: true`.
    - [ ] Tool handlers return or throw business failures; the SDK emits their tool-error result.
@@ -181,7 +181,7 @@ serveStdio(() => {
 
      | Framework | Install                                                                                         | App factory             | Mount delta                                                                                                                                                                                                                                                                       |
      | --------- | ----------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-     | Express   | `@modelcontextprotocol/server @modelcontextprotocol/express express @modelcontextprotocol/node` | `createMcpExpressApp()` | as above; also ships OAuth Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) — see [mcp-auth]                                                                                                                                                                |
+     | Express   | `@modelcontextprotocol/server @modelcontextprotocol/express express @modelcontextprotocol/node` | `createMcpExpressApp()` | as above; also ships OAuth Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) — see [mcp-auth](../mcp-auth/SKILL.md)                                                                                                                                          |
      | Fastify   | `@modelcontextprotocol/server @modelcontextprotocol/fastify @modelcontextprotocol/node fastify` | `createMcpFastifyApp()` | `app.all('/mcp', async (req, reply) => nodeHandler(req.raw, reply.raw, req.body))`                                                                                                                                                                                                |
      | Hono      | `@modelcontextprotocol/server @modelcontextprotocol/hono hono`                                  | `createMcpHonoApp()`    | `app.all('/mcp', (c: Context) => handler.fetch(c.req.raw, { parsedBody: c.get('parsedBody') }))` — annotate `c: Context` explicitly, else the compiler mis-narrows the key; runs on Node (`@hono/node-server`'s `serve({ fetch: app.fetch })`), Bun, Deno, and Cloudflare Workers |
 
@@ -190,7 +190,7 @@ serveStdio(() => {
    - [ ] Stdio servers route every diagnostic to `console.error()`.
    - [ ] HTTP factories instantiate a fresh server per request.
    - [ ] A server bound beyond localhost, or on a bare runtime, has Host/Origin validation wired.
-   - [ ] Public HTTP endpoints verify bearer tokens through [mcp-auth].
+   - [ ] Public HTTP endpoints verify bearer tokens through [mcp-auth](../mcp-auth/SKILL.md).
 
 6. **Manage Sessions & Scale**:
 
@@ -204,10 +204,10 @@ serveStdio(() => {
    - [ ] Stateless serving remains the default; 2025-era sessions use `NodeStreamableHTTPServerTransport` with `sessionIdGenerator`, while 2026-era state uses `requestState`.
    - [ ] `eventStore` passed when clients must reconnect via `Last-Event-ID`.
 
-7. **Distribute**: ship only after testing with [mcp-test].
+7. **Distribute**: ship only after testing with [mcp-test](../mcp-test/SKILL.md).
 
    - **stdio via npm/npx**: entry file's first line must be exactly `#!/usr/bin/env node`; `package.json` needs `"type": "module"` plus the standard npm `bin`/`files`/`engines` fields. Pin the `@modelcontextprotocol/*` packages together with an exact version (no `^`) so the split packages never drift apart. Smoke-test the packed artifact before publishing: `npm pack && npx @modelcontextprotocol/inspector npx -y ./example-mcp-0.1.0.tgz`.
-   - **HTTP**: protect every public endpoint through [mcp-auth].
+   - **HTTP**: protect every public endpoint through [mcp-auth](../mcp-auth/SKILL.md).
    - **Host registration** (copy into the README):
 
      | App         | How to connect                                                                                                           |
@@ -218,7 +218,7 @@ serveStdio(() => {
 
    - **Versioning**: changing what a tool requires is a breaking change — prefer adding optional fields; otherwise bump the major version.
 
-   - [ ] Packed artifacts pass the inspector smoke test, public endpoints use [mcp-auth], and host-registration instructions match the released package.
+   - [ ] Packed artifacts pass the inspector smoke test, public endpoints use [mcp-auth](../mcp-auth/SKILL.md), and host-registration instructions match the released package.
 
 ## Handler Context (`ctx`)
 
@@ -239,6 +239,6 @@ Match each handler to the context members it needs; Step 3 verifies cancellation
 
 ## See Also
 
-- Writing/running tests, inspector sessions: [mcp-test]
-- Custom transports, gateways, raw wire messages: [mcp-protocol]
-- OAuth/bearer-token wiring for HTTP servers: [mcp-auth]
+- Writing/running tests, inspector sessions: [mcp-test](../mcp-test/SKILL.md)
+- Custom transports, gateways, raw wire messages: [mcp-protocol](../mcp-protocol/SKILL.md)
+- OAuth/bearer-token wiring for HTTP servers: [mcp-auth](../mcp-auth/SKILL.md)

@@ -1,6 +1,6 @@
 ---
 name: mcp-protocol
-description: 'Protocol: low-level MCP SDK v2 work—custom Server handlers, transports, raw wire data, or gateway/relay forwarding; high-level servers use [mcp-server].'
+description: 'Protocol: low-level MCP SDK v2 work—custom Server handlers, transports, raw wire data, or gateway/relay forwarding; high-level servers use mcp-server.'
 user-invocable: false
 metadata:
   category: technique
@@ -8,7 +8,7 @@ metadata:
 
 # MCP SDK v2 Protocol
 
-Use [mcp-server] for standard tools, resources, prompts, and hosted stdio/HTTP servers. This skill owns the boundaries that need the low-level `Server`: it skips `McpServer`'s automatic validation, capability advertisement, and error wrapping. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Use [mcp-server](../mcp-server/SKILL.md) for standard tools, resources, prompts, and hosted stdio/HTTP servers. This skill owns the boundaries that need the low-level `Server`: it skips `McpServer`'s automatic validation, capability advertisement, and error wrapping. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 ## Paths
 
@@ -52,13 +52,13 @@ server.setRequestHandler('tools/call', async (req) => {
 });
 ```
 
-> Throw `ProtocolError(InvalidParams)` for an unknown tool or invalid call shape. A known tool's business failure returns `isError: true` (see [mcp-server] “Handle Errors”).
+> Throw `ProtocolError(InvalidParams)` for an unknown tool or invalid call shape. A known tool's business failure returns `isError: true` (see [mcp-server](../mcp-server/SKILL.md) “Handle Errors”).
 
 - [ ] `capabilities` in the second constructor argument declares every extension the server advertises, with matching request handlers; every low-level tool validates its name and arguments against the schema advertised by `tools/list`.
 
 ### Custom RPC
 
-**Define custom methods**: use a vendor namespace such as `acme/search` and an explicit `{ params, result }` schema. `Server` accepts the same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, and `fromJsonSchema()`; see [mcp-server]).
+**Define custom methods**: use a vendor namespace such as `acme/search` and an explicit `{ params, result }` schema. `Server` accepts the same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, and `fromJsonSchema()`; see [mcp-server](../mcp-server/SKILL.md)).
 
 ```ts
 import { z } from 'zod';
@@ -151,7 +151,7 @@ class SocketTransport implements Transport {
 
 ### Era gateway
 
-**Route protocol eras and gateways**: apply the resource-server policy from [mcp-auth] and Host/Origin validation before using `isLegacyRequest()` to split 2025-era clients (without a per-request `_meta` envelope) from modern ones.
+**Route protocol eras and gateways**: apply the resource-server policy from [mcp-auth](../mcp-auth/SKILL.md) and Host/Origin validation before using `isLegacyRequest()` to split 2025-era clients (without a per-request `_meta` envelope) from modern ones.
 
 ```ts
 import {
@@ -175,7 +175,7 @@ export default {
 };
 ```
 
-> `isLegacyRequest()` returns a Promise; await it. Gateways route through `fetch`; for in-process dispatch call `handler.fetch(new Request(...))` directly (harness patterns in [mcp-test]).
+> `isLegacyRequest()` returns a Promise; await it. Gateways route through `fetch`; for in-process dispatch call `handler.fetch(new Request(...))` directly (harness patterns in [mcp-test](../mcp-test/SKILL.md)).
 
 - [ ] Multi-client gateways verify access and validate Host/Origin before branching on awaited `isLegacyRequest()`; both era handlers receive the same verified `authInfo`.
 - [ ] Handler dispatch contains failures so a long-lived stream continues.
@@ -257,5 +257,5 @@ A schema-less call to a **spec** method now enforces the spec result schema — 
 
 ## Related
 
-- Testing & debugging custom transports/gateways: [mcp-test]
-- Gateway authentication boundary controls: [mcp-auth]
+- Testing & debugging custom transports/gateways: [mcp-test](../mcp-test/SKILL.md)
+- Gateway authentication boundary controls: [mcp-auth](../mcp-auth/SKILL.md)

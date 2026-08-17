@@ -1,6 +1,6 @@
 ---
 name: mcp-auth
-description: 'Authorize MCP SDK v2 resource servers with bearer validation, service clients with credentials, or host-session exchanges; browser authorization_code flows use [mcp-client].'
+description: 'Authorize MCP SDK v2 resource servers with bearer validation, service clients with credentials, or host-session exchanges; browser authorization_code flows use mcp-client.'
 user-invocable: false
 metadata:
   category: technique
@@ -14,7 +14,7 @@ Ref: https://ts.sdk.modelcontextprotocol.io/v2/
 
 > v1 Authorization Server helpers (`mcpAuthRouter`, `OAuthServerProvider`) are frozen in `@modelcontextprotocol/server-legacy/auth`; Resource Server helpers (`requireBearerAuth`, `mcpAuthMetadataRouter`) come from `@modelcontextprotocol/express` (Node) or `@modelcontextprotocol/server` (web-standard hosts). Migrate the AS role to a dedicated IdP.
 
-Browser/SPA login (`connect`, `finishAuth`, `IssuerMismatchError`) belongs in [mcp-client] “Authenticate the client.” Mock `authInfo` with [mcp-test].
+Browser/SPA login (`connect`, `finishAuth`, `IssuerMismatchError`) belongs in [mcp-client](../mcp-client/SKILL.md) “Authenticate the client.” Mock `authInfo` with [mcp-test](../mcp-test/SKILL.md).
 
 ## Protect a resource server
 
@@ -90,7 +90,7 @@ For another grant model, implement `OAuthClientProvider` with static `clientMeta
 ## Handle authorization errors
 
 - **OAuth consolidation**: the v1 `Invalid*Error` family and `OAUTH_ERRORS` are replaced by `OAuthError` + `OAuthErrorCode`; switch `instanceof` to `error.code`.
-- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, surfaced as a 403 by `requireBearerAuth` scope enforcement) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client].
+- **`InsufficientScopeError`** — two distinct classes: the **OAuth** one (`OAuthError(OAuthErrorCode.InsufficientScope)`, surfaced as a 403 by `requireBearerAuth` scope enforcement) and a separate **transport** class (client-side, SEP-2350) covered in [mcp-client](../mcp-client/SKILL.md).
 
 - [ ] Error handling uses `error.code` for the consolidated OAuth errors and distinguishes the OAuth and transport `InsufficientScopeError` classes.
-- [ ] Tests use mock issuers from [mcp-test].
+- [ ] Tests use mock issuers from [mcp-test](../mcp-test/SKILL.md).

@@ -1,6 +1,6 @@
 ---
 name: mcp-client
-description: 'Connect MCP SDK v2 clients, invoke server features, add browser authorization_code, subscribe to changes, cache responses, or wrap HTTP fetch; service credentials use [mcp-auth], custom transports use [mcp-protocol].'
+description: 'Connect MCP SDK v2 clients, invoke server features, add browser authorization_code, subscribe to changes, cache responses, or wrap HTTP fetch; service credentials use mcp-auth, custom transports use mcp-protocol.'
 user-invocable: false
 metadata:
   category: technique
@@ -20,7 +20,7 @@ Standardize to ESM (`"type": "module"` in `package.json`, `"NodeNext"` resolutio
 
 ### Initialize the client
 
-Create `new Client({...})` with only the capabilities the client implements. Sampling (`createMessage`) and roots (`roots/list`) are deprecated by SEP-2577; declare them only for legacy support and pass paths through tool arguments, resource URIs, or host configuration instead. Add elicitation only with the matching `elicitation/create` handler from [mcp-elicitation].
+Create `new Client({...})` with only the capabilities the client implements. Sampling (`createMessage`) and roots (`roots/list`) are deprecated by SEP-2577; declare them only for legacy support and pass paths through tool arguments, resource URIs, or host configuration instead. Add elicitation only with the matching `elicitation/create` handler from [mcp-elicitation](../mcp-elicitation/SKILL.md).
 
 ```ts
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -60,13 +60,13 @@ For a spawn-per-invocation stdio wrapper, pin its era with `versionNegotiation: 
 
 ### Register declared handlers
 
-Register every advertised handler before `connect()` so an arriving server request always has an owner. Register `sampling/createMessage` or `roots/list` only when its deprecated capability was declared. For `elicitation/create`, use [mcp-elicitation] “Register owned clients before calls.”
+Register every advertised handler before `connect()` so an arriving server request always has an owner. Register `sampling/createMessage` or `roots/list` only when its deprecated capability was declared. For `elicitation/create`, use [mcp-elicitation](../mcp-elicitation/SKILL.md) “Register owned clients before calls.”
 
 - [ ] Every registered handler has a declared capability and is ready before `connect()`.
 
 ### Invoke server features
 
-No-argument `listTools()`, `listPrompts()`, and `listResources()` aggregate every page; pass `{ cursor }` to request one page. Treat `result.isError` as the normal tool failure signal. Unknown or disabled tool names reject with `ProtocolError(InvalidParams)`; handle that separately (see [mcp-server] “Handle Errors”).
+No-argument `listTools()`, `listPrompts()`, and `listResources()` aggregate every page; pass `{ cursor }` to request one page. Treat `result.isError` as the normal tool failure signal. Unknown or disabled tool names reject with `ProtocolError(InvalidParams)`; handle that separately (see [mcp-server](../mcp-server/SKILL.md) “Handle Errors”).
 
 ```ts
 const { tools } = await client.listTools();
@@ -101,7 +101,7 @@ On shutdown and error paths, call `await transport.terminateSession()` then `awa
 
 ### Authenticate the client
 
-For static bearer tokens or browser `authorization_code`, follow [client authentication](authentication.md). Service credentials and host-session exchange use [mcp-auth].
+For static bearer tokens or browser `authorization_code`, follow [client authentication](authentication.md). Service credentials and host-session exchange use [mcp-auth](../mcp-auth/SKILL.md).
 
 ### Subscribe to changes
 
@@ -117,6 +117,6 @@ For HTTP headers, logs, or retries, follow [fetch middleware](http-middleware.md
 
 ## See Also
 
-- Error-code lookup: [mcp-test]; runtime diagnosis: dispatch `mcp-debugger`.
-- Server token verification: [mcp-auth].
+- Error-code lookup: [mcp-test](../mcp-test/SKILL.md); runtime diagnosis: dispatch `mcp-debugger`.
+- Server token verification: [mcp-auth](../mcp-auth/SKILL.md).
 - SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/
