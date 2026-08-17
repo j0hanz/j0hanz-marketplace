@@ -2,10 +2,10 @@
 
 <!-- docs-maintainer:START -->
 
-![Claude](https://img.shields.io/badge/Claude-D97757?logo=claude&logoColor=fff&style=for-the-badge) ![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-000000?logo=githubcopilot&logoColor=fff&style=for-the-badge) ![Version](https://img.shields.io/github/v/tag/j0hanz/j0hanz-marketplace?label=version&style=for-the-badge) ![License](https://img.shields.io/github/license/j0hanz/j0hanz-marketplace?style=for-the-badge)
+![Claude](https://img.shields.io/badge/Claude-D97757?logo=claude&logoColor=fff&style=for-the-badge) ![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-000000?logo=githubcopilot&logoColor=fff&style=for-the-badge)![License](https://img.shields.io/github/license/j0hanz/j0hanz-marketplace?style=for-the-badge)
 <!-- docs-maintainer:END -->
 
-A plugin for [Claude Code](https://claude.com/claude-code) and [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli): skills and agents for building, testing, auditing, distributing, and migrating MCP servers and clients with the [MCP TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/) (`2.0.0-beta.3`, protocol revision `2026-07-28`).
+A plugin for [Claude Code](https://claude.com/claude-code) and [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli): skills and agents for building, testing, auditing, distributing, and migrating MCP servers and clients with the [MCP TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/)
 
 ## Install
 
@@ -64,10 +64,6 @@ Three subagents handle work that's autonomous or context-heavy rather than a sin
 | `mcp-debugger` | Diagnoses connection failures and `ProtocolError`/`SdkError` codes      | Restricted (no Write/Edit; Bash retained for probes) |
 
 Defined under `agents/*.md`; each loads the matching `mcp-*` skill for its checklist instead of duplicating it.
-
-## Contributing
-
-Issues and PRs are welcome at [j0hanz/j0hanz-marketplace](https://github.com/j0hanz/j0hanz-marketplace). Skills live under `plugins/mcp-hub/skills/*/SKILL.md`, agents under `plugins/mcp-hub/agents/*.md`. See [Maintenance](#maintenance) for what to keep in sync when the SDK version changes.
 
 ## Maintenance
 
