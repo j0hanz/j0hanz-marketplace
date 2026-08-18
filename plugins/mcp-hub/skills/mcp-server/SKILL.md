@@ -91,7 +91,7 @@ serveStdio(() => {
 
    > Wrap a **prompt `argsSchema`** field in `completable(schema, async (value, ctx) => candidates)` to add argument completion — `ctx?.arguments` exposes sibling arguments already filled in, useful for dependent fields (e.g. filtering a `branch` field's candidates by an already-chosen `repo`). Resource template URI variables complete through the template's `complete` map instead (shown above).
 
-   > **Gotcha — zod version pin:** pin `zod ^4.2.0`; it self-converts via `~standard.jsonSchema`. Zod 3 typechecks cleanly under the v2 peer range but fails only at runtime — registration swallows the conversion failure, the server starts and connects, and the first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: `import { z } from 'zod'` falls back to the bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — a silent degradation, not a failure. The `zod/v4` subpath import instead **fails to compile** (`TS2769 No overload matches this call`). For other schema libs (or older zod), use `fromJsonSchema()` from `@modelcontextprotocol/server`.
+   > **Gotcha — zod version pin:** pin `zod ^4.2.0` and import via `import * as z from 'zod/v4'`; it self-converts via `~standard.jsonSchema`. Zod 3 typechecks cleanly under the v2 peer range but fails only at runtime — registration swallows the conversion failure, the server starts and connects, and the first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: the bare `import { z } from 'zod'` falls back to the bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — a silent degradation, not a failure. The namespace `import * as z from 'zod/v4'` works; the named `import { z } from 'zod/v4'` fails to compile (`TS2769 No overload matches this call`). For other schema libs (or older zod), use `fromJsonSchema()` from `@modelcontextprotocol/server`.
    - [ ] Each capability registered via the matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with a Standard Schema.
    - [ ] Resource template URIs are resolved and boundary-checked against their root before serving.
    - [ ] Tool handlers return or throw business failures; the SDK wraps ordinary exceptions into `{ isError: true }`.
@@ -141,7 +141,7 @@ serveStdio(() => {
 
      ```ts
      const handler = createMcpHandler(() => new McpServer({ name: 'notes', version: '1.0.0' }), {
-       responseMode: 'auto', // 'auto' | 'json' | 'sse' — 'auto' upgrades to SSE only when a notification precedes the result
+       responseMode: 'json', // 'json' | 'sse' — 'json' never streams (drops mid-call notifications); 'sse' always streams. Omit to auto-upgrade to SSE when a notification precedes the result.
        legacy: 'stateless', // 'stateless' (default, serves 2025-era clients) | 'reject'
      });
      ```
@@ -224,16 +224,15 @@ serveStdio(() => {
 
 Every handler receives context as its second argument:
 
-| Member                                         | Purpose                                                                                |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `ctx.mcpReq.signal`                            | `AbortSignal` — aborts on client cancel/disconnect; check in loops, forward to `fetch` |
-| `ctx.mcpReq.id` / `ctx.mcpReq._meta`           | JSON-RPC request id / request `_meta` (e.g. `progressToken`)                           |
-| `ctx.mcpReq.notify(n)` / `ctx.mcpReq.send(r)`  | Send notification / request tied to this request                                       |
-| `ctx.mcpReq.elicitInput(params)`               | Ask user mid-call (2025-era; throws on 2026-era)                                       |
-| `ctx.mcpReq.inputResponses` / `requestState()` | 2026-era multi-round-trip surfaces                                                     |
-| `ctx.mcpReq.envelope`                          | Per-request client identity & capabilities (2026-era; legacy: `getClientVersion()`)    |
-| `ctx.sessionId`                                | Session id when transport has one                                                      |
-| `ctx.http?.authInfo` / `ctx.http?.req`         | Verified `AuthInfo` / inbound `Request` (HTTP only — `undefined` on stdio)             |
+| Member                                                 | Purpose                                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `ctx.mcpReq.signal`                                    | `AbortSignal` — aborts on client cancel/disconnect; check in loops, forward to `fetch` |
+| `ctx.mcpReq.id` / `ctx.mcpReq._meta`                   | JSON-RPC request id / request `_meta` (e.g. `progressToken`)                           |
+| `ctx.mcpReq.notify(n)` / `ctx.mcpReq.log(level, data)` | Send notification / emit a `notifications/message` log from this handler               |
+| `ctx.mcpReq.elicitInput(params)`                       | Ask user mid-call (2025-era; throws on 2026-era)                                       |
+| `ctx.mcpReq.inputResponses` / `requestState()`         | 2026-era multi-round-trip surfaces                                                     |
+| `ctx.sessionId`                                        | Session id when transport has one                                                      |
+| `ctx.http?.authInfo` / `ctx.http?.req`                 | Verified `AuthInfo` / inbound `Request` (HTTP only — `undefined` on stdio)             |
 
 Match each handler to the context members it needs; Step 3 verifies cancellation propagation and caller identity handling.
 

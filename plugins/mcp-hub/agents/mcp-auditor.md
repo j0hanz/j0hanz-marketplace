@@ -29,7 +29,7 @@ Ranked list, most severe first. Name skipped steps and why (e.g., "Security: ski
 Categories:
 
 - **Blockers**: Broken/unsafe for production (v1 SDK, unauthenticated HTTP).
-- **Should Fix**: Breaks a design rule from loaded skill or contradicts `docs/mcp-decisions.md`; bare `instanceof` for protocol errors (use `.code`/`data` or `.isInstance()` — `instanceof` fails cross-bundle).
+- **Should Fix**: Breaks a design rule from loaded skill or contradicts `docs/mcp-decisions.md`; bare `instanceof` for protocol errors (use `.code`/`data` or `.isInstance()` — `instanceof` also matches across separately bundled copies on brand-aware releases; match by `code`/`data` only when peers run pre-brand copies or hand you plain wire shapes).
 - **Nice to Have**: Missing but non-critical (no decision record, low test coverage).
 
 Format: `- [file:line] | [Issue] | [Fixing skill]`

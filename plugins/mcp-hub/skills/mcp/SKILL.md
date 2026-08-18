@@ -18,7 +18,7 @@ Read `<job>` from an explicit `/mcp <job>` command, load its target, and continu
 - **Build** — load [mcp-server](../mcp-server/SKILL.md) for a server or [mcp-client](../mcp-client/SKILL.md) for a client; load [mcp-planning](../mcp-planning/SKILL.md) first when `docs/mcp-decisions.md` is absent.
 - **Audit** — dispatch `mcp-auditor` for a read-only MCP SDK v2 readiness review.
 - **Migrate** — dispatch `mcp-migrator` to move an MCP SDK v1 codebase to v2.
-- **Authorize** — load [mcp-auth](../mcp-auth/SKILL.md) for resource-server bearer validation or service credentials.
+- **Auth** — load [mcp-auth](../mcp-auth/SKILL.md) for resource-server bearer validation or service credentials.
 - **Test** — load [mcp-test](../mcp-test/SKILL.md) to author or run tests; dispatch `mcp-debugger` for runtime failures.
 - **Elicit** — load [mcp-elicitation](../mcp-elicitation/SKILL.md) for user interaction, progress, or cancellation.
 - **Protocol** — load [mcp-protocol](../mcp-protocol/SKILL.md) for custom transports or low-level messages.

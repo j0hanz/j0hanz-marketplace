@@ -241,11 +241,11 @@ await worker.connect(new StreamableHTTPClientTransport(url), {
 
 ### Gateway forwarding
 
-**Forward arbitrary methods safely** (gateways and proxies relaying methods they do not own): pass an explicit result schema and re-emit upstream JSON-RPC errors through `ProtocolError.fromError`.
+**Forward arbitrary methods safely** (gateways and proxies relaying methods they do not own): pass an explicit result schema and re-emit upstream JSON-RPC errors as `new ProtocolError(code, message, data?)` (narrow with `ProtocolError.isInstance(err)` first if the upstream error may not already be one).
 
 ```ts
-import { ResultSchema } from '@modelcontextprotocol/core';
-const result = await upstream.request({ method, params }, ResultSchema); // v1-identical passthrough
+import { JSONRPCResultResponseSchema } from '@modelcontextprotocol/core';
+const result = await upstream.request({ method, params }, JSONRPCResultResponseSchema); // generic result envelope — validates the JSON-RPC result, not a method-specific shape
 ```
 
 A schema-less call to a **spec** method now enforces the spec result schema — a non-conforming upstream result rejects locally with `SdkError(SdkErrorCode.InvalidResult)`. A schema-less call to a **non-spec** method throws `TypeError` at the call site (`'…' is not a spec method; pass a result schema`) — always pass one for those. For byte-exact forwarding (member order preserved), pass an accept-anything Standard Schema instead of a spec schema.
@@ -253,7 +253,7 @@ A schema-less call to a **spec** method now enforces the spec result schema — 
 > Legacy `-32002` normalizes to `-32602` at encode; typed subclasses drop extra upstream `data` keys. In a process using both `@modelcontextprotocol/client` and `@modelcontextprotocol/server`, `instanceof` does not cross the bundles — match on `error.code`/`error.status` instead.
 
 - [ ] Every forwarded call carries an explicit result schema (spec or accept-anything).
-- [ ] Re-emitted upstream errors use `throw ProtocolError.fromError(code, message, data)`.
+- [ ] Re-emitted upstream errors use `ProtocolError.isInstance(err)` to narrow before re-throwing.
 
 ## Related
 

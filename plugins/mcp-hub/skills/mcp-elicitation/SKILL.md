@@ -10,11 +10,11 @@ metadata:
 
 Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, the SDK delivers modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`; it does not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work in both eras.
+**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, the SDK delivers modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`, `sampling/createMessage`, and `roots/list`; it does not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work in both eras.
 
 ## Steps
 
-1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, and handle `elicitation/create` at construction. The client default is 10 rounds; `ServerOptions.inputRequired.maxRounds` defaults to 8 because the legacy shim keeps a wire request open.
+1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, and handle `elicitation/create` at construction. The client default is 10 rounds; past it the client rejects with an `SdkError` (`INPUT_REQUIRED_ROUNDS_EXCEEDED`).
 
    ```ts
    const client = new Client(
@@ -130,7 +130,7 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
 
    **Done:** Every prompt argument that needs completion uses `completable(...)`, and every resource-template variable uses its template completion map.
 
-6. **Serve confirmed 2025 connections through the legacy branch**: Require the client’s `elicitation` capability, use form mode for standard data and URL mode for external redirects, and return from the handler on `decline` or `cancel`. Keep credentials and API keys out of forms. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` accepts only `string | number | boolean | string[]`, so return those values rather than arbitrary objects.
+6. **Serve confirmed 2025 connections through the legacy branch**: Require the client’s `elicitation` capability, use form mode for standard data and URL mode for external redirects, and return from the handler on `decline` or `cancel`. Keep credentials and API keys out of forms. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` in form mode is the submitted form fields as an object (e.g. `{ rating: 5, comment: '…' }`) validated against `requestedSchema`, so return a schema-shaped object.
 
    ```ts
    const result = await ctx.mcpReq.elicitInput({

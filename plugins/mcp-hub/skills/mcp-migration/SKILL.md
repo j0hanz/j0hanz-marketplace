@@ -70,17 +70,20 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
 #### API and type
 
-| v1                                                       | v2                                                                               |
-| :------------------------------------------------------- | :------------------------------------------------------------------------------- |
-| `server.setRequestHandler(CallToolRequestSchema, ...)`   | `server.setRequestHandler('tools/call', ...)` (low-level method string)          |
-| `.tool(...)` (variadic high-level)                       | `.registerTool(name, config, handler)` (high-level)                              |
-| `McpError` / `ErrorCode`                                 | `ProtocolError` / `ProtocolErrorCode` (or `SdkErrorCode`)                        |
-| `StreamableHTTPError`                                    | `SdkHttpError`                                                                   |
-| `SchemaInput<T>`                                         | `StandardSchemaWithJSON.InferInput<T>`                                           |
-| `ResourceTemplate` wire type                             | `ResourceTemplateType`                                                           |
-| `JSONRPCError` / `JSONRPCErrorSchema` / `isJSONRPCError` | `JSONRPCErrorResponse` / `JSONRPCErrorResponseSchema` / `isJSONRPCErrorResponse` |
-| `ResourceReference` / `ResourceReferenceSchema`          | `ResourceTemplateReference` / `ResourceTemplateReferenceSchema`                  |
-| `IsomorphicHeaders`                                      | Web Standard `Headers` with `.get()` and `.set()`                                |
+| v1                                                                                                                            | v2                                                                                                                                     |
+| :---------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| `server.setRequestHandler(CallToolRequestSchema, ...)`                                                                        | `server.setRequestHandler('tools/call', ...)` (low-level method string)                                                                |
+| `.tool(...)` (variadic high-level)                                                                                            | `.registerTool(name, config, handler)` (high-level)                                                                                    |
+| `McpError` / `ErrorCode`                                                                                                      | `ProtocolError` / `ProtocolErrorCode` (or `SdkErrorCode`)                                                                              |
+| `StreamableHTTPError`                                                                                                         | `SdkHttpError`                                                                                                                         |
+| `SchemaInput<T>`                                                                                                              | `StandardSchemaWithJSON.InferInput<T>`                                                                                                 |
+| `ResourceTemplate` wire type                                                                                                  | `ResourceTemplateType`                                                                                                                 |
+| `JSONRPCError` / `JSONRPCErrorSchema` / `isJSONRPCError`                                                                      | `JSONRPCErrorResponse` / `JSONRPCErrorResponseSchema` / `isJSONRPCErrorResponse`                                                       |
+| `JSONRPCResponse` / `JSONRPCResponseSchema` / `isJSONRPCResponse`                                                             | `JSONRPCResultResponse` / `JSONRPCResultResponseSchema` / `isJSONRPCResultResponse`                                                    |
+| `InMemoryTransport` (single export)                                                                                           | Split across `@modelcontextprotocol/server` and `/client`; both halves of a linked pair must come from the same package                |
+| `schemaToJson` / `parseSchemaAsync` / `getSchemaShape` / `getSchemaDescription` / `isOptionalSchema` / `unwrapOptionalSchema` | Removed (`@mcp-codemod-error`); `schemaToJson`→`fromJsonSchema()`, `parseSchemaAsync`→schema-library validation, others no replacement |
+| `ResourceReference` / `ResourceReferenceSchema`                                                                               | `ResourceTemplateReference` / `ResourceTemplateReferenceSchema`                                                                        |
+| `IsomorphicHeaders`                                                                                                           | Web Standard `Headers` with `.get()` and `.set()`                                                                                      |
 
 **Call-site gotcha:** low-level `setRequestHandler(Schema)` becomes `setRequestHandler('method/string')`; high-level `.tool()` becomes `.registerTool()`. These are distinct conversions.
 
@@ -95,6 +98,13 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 | `extra.sessionId`                                   | `ctx.sessionId`                                                                           |
 | `extra.closeSSEStream` / `closeStandaloneSSEStream` | `ctx.http?.closeSSE` / `closeStandaloneSSE`                                               |
 | `server.sendLoggingMessage`                         | `ctx.mcpReq.log` (deprecated, SEP-2577; modern replacement: per-request `_meta.logLevel`) |
+| `server.createMessage`                              | Deprecated (SEP-2577); removed in a later major                                           |
+| `server.listRoots`                                  | Deprecated (SEP-2577); removed in a later major                                           |
+| `McpServer.sendLoggingMessage`                      | Deprecated (SEP-2577); removed in a later major                                           |
+| `Client.setLoggingLevel`                            | Deprecated (SEP-2577); removed in a later major                                           |
+| `Client.sendRootsListChanged`                       | Deprecated (SEP-2577); removed in a later major                                           |
+| `ctx.mcpReq.requestSampling`                        | Deprecated (SEP-2577); removed in a later major                                           |
+| `registerClient`                                    | Deprecated (SEP-2577); prefer Client ID Metadata Documents per SEP-991                    |
 | `elicitInput`                                       | `inputRequired(...)`; retain `ctx.mcpReq.elicitInput` only for 2025 branches              |
 | `StreamableHTTPServerTransport`                     | `Node/WebStandardStreamableHTTPServerTransport`                                           |
 | `extra.taskStore` / `taskId` / `taskRequestedTtl`   | Removed (experimental tasks, SEP-2663); delete usages                                     |

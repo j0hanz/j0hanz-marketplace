@@ -6,7 +6,7 @@ const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
   /@modelcontextprotocol\/sdk(?![\w-])/,
-  /\b(McpError|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra|StreamableHTTPError|JSONRPCError|ResourceReference|IsomorphicHeaders|registerToolTask|Experimental\w*Tasks|callToolStream|createMessageStream|elicitInputStream)\b|TaskStore\b/,
+  /\b(McpError|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra|StreamableHTTPError|JSONRPCError|ResourceReference|IsomorphicHeaders|registerToolTask|Experimental\w*Tasks|callToolStream|createMessageStream|elicitInputStream|Invalid\w*Error)\b|TaskStore\b/,
   /\b(server|mcpServer|client|mcp)\s*\.\s*(tool|prompt|resource)\s*\(/,
   /\bsetRequestHandler\s*\(\s*[A-Za-z_$]/,
 ];
