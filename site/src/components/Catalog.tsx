@@ -134,8 +134,8 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape' && query) {
-              setQuery('');
+            if (e.key === 'Escape' && (query || category !== ALL)) {
+              reset();
               e.preventDefault();
             }
           }}
