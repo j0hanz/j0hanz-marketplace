@@ -250,7 +250,7 @@ const result = await upstream.request({ method, params }, JSONRPCResultResponseS
 
 Schema-less call to **spec** method now enforces spec result schema — non-conforming upstream result rejects local with `SdkError(SdkErrorCode.InvalidResult)`. Schema-less call to **non-spec** method throws `TypeError` at call site (`'…' is not a spec method; pass a result schema`) — always pass one for those. For byte-exact forwarding (member order preserved), pass accept-anything Standard Schema instead of spec schema.
 
-> Legacy `-32002` normalizes to `-32602` at encode; typed subclasses drop extra upstream `data` keys. In process using both `@modelcontextprotocol/client` and `@modelcontextprotocol/server`, `instanceof` not cross bundles — match on `error.code`/`error.status` instead.
+> Legacy `-32002` normalizes to `-32602` at encode; typed subclasses drop extra upstream `data` keys. In process using both `@modelcontextprotocol/client` and `@modelcontextprotocol/server`, `instanceof` **does** cross bundles on brand-aware releases; `ProtocolError.isInstance(err)` reads same brand. Match `error.code`/`error.status` only for pre-brand copies, mixed-version rollouts, or errors crossing worker/`structuredClone` boundary — that drops symbol-keyed brand.
 
 - [ ] Every forwarded call carries explicit result schema (spec or accept-anything).
 - [ ] Re-emitted upstream errors use `ProtocolError.isInstance(err)` to narrow before re-throwing.
