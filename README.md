@@ -110,7 +110,7 @@ Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — wi
 
 Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists
 
-- Model-loaded skills: `nodejs-backend-patterns`, `nodejs-best-practices`
+- Commands: `/nodejs:nodejs-backend-patterns`, `/nodejs:nodejs-best-practices`
 
 ### typescript-pro
 

@@ -16,7 +16,7 @@ if (!root) throw new Error('#root is missing from index.html');
 // Gates every hidden start-state in index.css, so the page is only ever
 // withheld from a visitor whose browser can and will animate it back.
 if (matchMedia('(prefers-reduced-motion: no-preference)').matches)
-  document.documentElement.dataset.motion = 'on';
+  document.documentElement.dataset['motion'] = 'on';
 
 createRoot(root).render(
   <StrictMode>

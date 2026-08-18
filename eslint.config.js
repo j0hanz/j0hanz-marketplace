@@ -1,17 +1,10 @@
-// ESLint flat config. Syntax-only.
-//
-// Why no typescript-eslint: typescript-eslint hard-bails on TS 7.0 (the repo's
-// compiler) until upstream ships support. Type errors still gate via
-// `tsc --noEmit` in `npm run check`. Re-enable tseslint + type-aware rules
-// once https://github.com/typescript-eslint/typescript-eslint/issues/10940
-// closes.
 import js from '@eslint/js';
 import babelParser from '@babel/eslint-parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
 import deMorgan from 'eslint-plugin-de-morgan';
-import unusedImports from 'eslint-plugin-unused-imports';
+import regexp from 'eslint-plugin-regexp';
 import globals from 'globals';
 
 const sharedLanguageOptions = {
@@ -48,7 +41,6 @@ export default [
     plugins: {
       react,
       'react-hooks': reactHooks,
-      'unused-imports': unusedImports,
     },
     settings: { react: { version: 'detect' } },
     rules: {
@@ -77,5 +69,6 @@ export default [
     },
   },
   deMorgan.configs.recommended,
+  regexp.configs.recommended,
   prettier,
 ];

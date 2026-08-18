@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import babel from '@rolldown/plugin-babel';
@@ -28,8 +29,8 @@ const logger = {
   },
 };
 
-const ORIGIN = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/`
+const ORIGIN = process.env['VERCEL_PROJECT_PRODUCTION_URL']
+  ? `https://${process.env['VERCEL_PROJECT_PRODUCTION_URL']}/`
   : '';
 
 const THEME_SCRIPT_HASH = 'sha256-qtbieZlDsmW7yCtw/DDZy9Zdyb9cOgyCVPs9MC22EJs=';
@@ -130,6 +131,7 @@ export default defineConfig({
           if (id.includes('/node_modules/@mui/') || id.includes('/node_modules/@emotion/')) {
             return 'mui';
           }
+          return undefined;
         },
       },
     },

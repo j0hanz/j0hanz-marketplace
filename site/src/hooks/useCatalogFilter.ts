@@ -52,7 +52,7 @@ export function useCatalogFilter() {
     () =>
       site.plugins.filter((plugin) => {
         if (category !== ALL && plugin.category !== category) return false;
-        if (needle && !haystacks.get(plugin)!.includes(needle)) return false;
+        if (needle && !(haystacks.get(plugin) ?? '').includes(needle)) return false;
         return true;
       }),
     [category, needle],

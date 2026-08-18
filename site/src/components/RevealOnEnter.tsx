@@ -6,10 +6,10 @@ export function RevealOnEnter({ children, dep }: { children: ReactNode; dep?: un
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = root.current;
-    if (!node || !document.documentElement.dataset.motion) return;
+    if (!node || !document.documentElement.dataset['motion']) return;
 
     const pending = [node, ...node.querySelectorAll<HTMLElement>(SELECTOR)].filter(
-      (el) => el.dataset.shown === undefined,
+      (el) => el.dataset['shown'] === undefined,
     );
     if (pending.length === 0) return;
 
@@ -17,7 +17,7 @@ export function RevealOnEnter({ children, dep }: { children: ReactNode; dep?: un
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          (entry.target as HTMLElement).dataset.shown = '';
+          (entry.target as HTMLElement).dataset['shown'] = '';
           observer.unobserve(entry.target);
         }
       },

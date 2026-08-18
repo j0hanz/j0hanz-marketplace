@@ -11,6 +11,7 @@ node_modules
 __pycache__
 .ruff_cache
 .venv
+tsconfig.tsbuildinfo
 
 # Tooling scratch
 /.playwright-mcp

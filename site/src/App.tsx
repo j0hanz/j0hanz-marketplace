@@ -13,7 +13,7 @@ export function App() {
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      document.documentElement.dataset.ready = '';
+      document.documentElement.dataset['ready'] = '';
     });
   }, []);
 

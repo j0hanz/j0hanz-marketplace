@@ -26,8 +26,8 @@ export function ModeToggle() {
   const swap = usePressedKey();
   // `mode` is undefined until MUI mounts, so `current` falls back to the first
   // row and `next` reads off it — the first paint never offers the mode showing.
-  const current = modes.find((m) => m.key === mode) ?? modes[0];
-  const next = modes[(modes.indexOf(current) + 1) % modes.length];
+  const current = modes.find((m) => m.key === mode) ?? modes[0]!;
+  const next = modes[(modes.indexOf(current) + 1) % modes.length]!;
 
   // index.html ships one meta per scheme so the first paint is right. A manual
   // choice outranks the OS, so both are pinned to whichever scheme resolved —
