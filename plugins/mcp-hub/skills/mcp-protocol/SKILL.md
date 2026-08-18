@@ -20,7 +20,7 @@ Pick narrowest path that own integration. Combine paths only where same componen
 
 ```ts
 import { ProtocolError, ProtocolErrorCode, Server } from '@modelcontextprotocol/server';
-import { z } from 'zod';
+import * as z from 'zod/v4';
 
 const server = new Server({ name: 'catalog', version: '1.0.0' }, { capabilities: { tools: {} } });
 const SearchArguments = z.object({ query: z.string().min(1) });
@@ -61,7 +61,7 @@ server.setRequestHandler('tools/call', async (req) => {
 **Define custom methods**: use vendor namespace like `acme/search`, explicit `{ params, result }` schema. `Server` accepts same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, `fromJsonSchema()`; see [mcp-server](../mcp-server/SKILL.md)).
 
 ```ts
-import { z } from 'zod';
+import * as z from 'zod/v4';
 
 const SearchParams = z.object({ query: z.string(), limit: z.number().int().default(10) });
 const SearchResult = z.object({ items: z.array(z.string()) });

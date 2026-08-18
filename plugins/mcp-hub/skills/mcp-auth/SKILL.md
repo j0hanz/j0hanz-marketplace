@@ -79,11 +79,10 @@ new PrivateKeyJwtProvider({
   privateKey,
   algorithm: 'RS256',
   jwtLifetimeSeconds: 300,
-  expectedIssuer,
 });
 ```
 
-`expectedIssuer` pins credentials; mismatched discovery throws `AuthorizationServerMismatchError`.
+`expectedIssuer` pins `ClientCredentialsProvider` credentials; mismatched discovery throws `AuthorizationServerMismatchError`. Other two providers take none.
 
 For authenticated host session, exchange its assertion with `CrossAppAccessProvider`:
 
@@ -93,7 +92,6 @@ new CrossAppAccessProvider({
     (await discoverAndRequestJwtAuthGrant({/* issuer/audience */})).jwtAuthGrant,
   clientId,
   clientSecret,
-  expectedIssuer,
 });
 ```
 
