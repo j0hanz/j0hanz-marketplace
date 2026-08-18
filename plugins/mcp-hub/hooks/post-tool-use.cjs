@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { isMcpProject } = require('./mcp-project.cjs');
+const { isMcpProject, escapeContextText } = require('./mcp-project.cjs');
 const {
   hasUsableSessionId,
   storePath,
@@ -11,8 +11,8 @@ const {
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
   /@modelcontextprotocol\/sdk(?![\w-])/,
-  /\b(McpError|ErrorCode|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra)\b/,
-  /\.\s*(tool|prompt|resource)\s*\(/,
+  /\b(McpError|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra|StreamableHTTPError|JSONRPCError|ResourceReference|IsomorphicHeaders|registerToolTask|Experimental\w*Tasks|callToolStream|createMessageStream|elicitInputStream)\b|TaskStore\b/,
+  /\b(server|mcpServer|client|mcp)\s*\.\s*(tool|prompt|resource)\s*\(/,
   /\bsetRequestHandler\s*\(\s*[A-Za-z_$]/,
 ];
 const SDK_ERROR_INSTANCEOF_PATTERN =
@@ -48,7 +48,7 @@ function firstMatchingLine(sourceLines, ...patterns) {
 
 function scanSourceFile(sourcePath, projectRoot) {
   const sourceLines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
-  const displayPath = path.relative(projectRoot, sourcePath) || sourcePath;
+  const displayPath = escapeContextText(path.relative(projectRoot, sourcePath) || sourcePath);
 
   return [
     { rule: 'R5', line: firstMatchingLine(sourceLines, ...V1_CONTAMINATION_PATTERNS) },
@@ -134,7 +134,7 @@ function main() {
   const projectRoot = process.cwd();
   const sourcePath = resolveProjectSourceFile(filePath, projectRoot);
   if (!sourcePath || !SOURCE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) return;
-  if (!isMcpProject(projectRoot)) return;
+  if (!isMcpProject(projectRoot, path.dirname(sourcePath))) return;
 
   const findings = scanSourceFile(sourcePath, projectRoot);
   if (!fs.existsSync(path.join(projectRoot, 'docs', 'mcp-decisions.md'))) {

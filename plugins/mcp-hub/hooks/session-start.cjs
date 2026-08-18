@@ -1,18 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const { detectMcpProject } = require('./mcp-project.cjs');
+const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
 
 const skillPath = path.join(__dirname, '..', 'skills', 'mcp-router', 'SKILL.md');
 
 function stripFrontmatter(content) {
   return content.replace(/^---[\s\S]*?---\r?\n/, '');
-}
-
-function escapeContextText(content) {
-  return content.replace(
-    /[<>&\u0000-\u001F]/g,
-    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
-  );
 }
 
 function emitRouter() {

@@ -7,9 +7,27 @@ const TOOLING_PACKAGES = new Set([
   '@modelcontextprotocol/codemod',
   '@modelcontextprotocol/inspector',
 ]);
+const CONTEXT_UNSAFE_PATTERN = new RegExp('[<>&\\u0000-\\u001F]', 'g');
 
-function detectMcpProject(cwd) {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+function escapeContextText(content) {
+  return content.replace(
+    CONTEXT_UNSAFE_PATTERN,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+}
+
+function findNearestPackageJson(startDir, projectRoot) {
+  for (let directory = startDir; ; directory = path.dirname(directory)) {
+    const candidate = path.join(directory, 'package.json');
+    if (fs.existsSync(candidate)) return candidate;
+    if (directory === projectRoot) return null;
+  }
+}
+
+function detectMcpProject(cwd, startDir = cwd) {
+  const manifestPath = findNearestPackageJson(startDir, cwd);
+  if (!manifestPath) return { hasV1: false, v2Packages: [] };
+  const packageJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8').trimStart());
   const dependencyNames = Object.keys({
     ...packageJson.dependencies,
     ...packageJson.devDependencies,
@@ -24,9 +42,9 @@ function detectMcpProject(cwd) {
   return { hasV1, v2Packages };
 }
 
-function isMcpProject(cwd) {
-  const { hasV1, v2Packages } = detectMcpProject(cwd);
+function isMcpProject(cwd, startDir = cwd) {
+  const { hasV1, v2Packages } = detectMcpProject(cwd, startDir);
   return hasV1 || v2Packages.length > 0;
 }
 
-module.exports = { detectMcpProject, isMcpProject };
+module.exports = { detectMcpProject, isMcpProject, escapeContextText };

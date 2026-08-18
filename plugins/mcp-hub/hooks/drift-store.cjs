@@ -17,15 +17,11 @@ function hasUsableSessionId(sessionId) {
 }
 
 function readDedupeKeys(storeFile) {
-  let serializedKeys;
   try {
-    serializedKeys = fs.readFileSync(storeFile, 'utf8');
-  } catch (error) {
-    // A missing store is normal on a session's first advisory.
-    if (error.code === 'ENOENT') return new Set();
-    throw error;
+    return new Set(JSON.parse(fs.readFileSync(storeFile, 'utf8')));
+  } catch {
+    return new Set();
   }
-  return new Set(JSON.parse(serializedKeys));
 }
 
 function writeDedupeKeys(storeFile, keys) {

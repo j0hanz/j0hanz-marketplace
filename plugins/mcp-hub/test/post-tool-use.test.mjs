@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -124,6 +132,47 @@ test('R1: a tooling-only project (codemod/inspector, no server/sdk) does not sca
   }
 });
 
+test('R1: an MCP dependency in a workspace package.json is detected', () => {
+  const hook = makeHook();
+  const cwd = makeProj(
+    JSON.stringify({ private: true, workspaces: ['packages/*'] }),
+    {
+      'packages/server/package.json': MCP_PKG,
+      'packages/server/src/a.ts': "import { Server } from '@modelcontextprotocol/sdk';\n",
+    },
+    { decisions: true },
+  );
+  const sid = 'r1-monorepo';
+  try {
+    const { stdout, status } = run(
+      hook,
+      cwd,
+      payload(join(cwd, 'packages', 'server', 'src', 'a.ts'), sid),
+    );
+    assert.equal(status, 0);
+    assert.match(stdout, /mcp-hub:mcp-migration/);
+  } finally {
+    clean(hook, cwd, sid);
+  }
+});
+
+test('R1: a BOM-prefixed root package.json is still detected', () => {
+  const hook = makeHook();
+  const cwd = makeProj(
+    String.fromCharCode(0xfeff) + MCP_PKG,
+    { 'src/a.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
+    { decisions: true },
+  );
+  const sid = 'r1-bom';
+  try {
+    const { stdout, status } = run(hook, cwd, payload(join(cwd, 'src', 'a.ts'), sid));
+    assert.equal(status, 0);
+    assert.match(stdout, /mcp-hub:mcp-migration/);
+  } finally {
+    clean(hook, cwd, sid);
+  }
+});
+
 // --- R2: stdin / file_path malformed --------------------------------------
 
 test('R2: empty stdin emits nothing, exit 0', () => {
@@ -233,6 +282,24 @@ test('R3/R8: a v1 symbol emits exactly one <mcp-hub-drift> block with skill, loc
   }
 });
 
+test('R8: a path character needing escaping is escaped in the advisory', () => {
+  const hook = makeHook();
+  const cwd = makeProj(
+    MCP_PKG,
+    { 'src/a&b.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
+    { decisions: true },
+  );
+  const sid = 'r8-escape';
+  try {
+    const { stdout, status } = run(hook, cwd, payload(join(cwd, 'src', 'a&b.ts'), sid));
+    assert.equal(status, 0);
+    const ctx = ctxOf(stdout);
+    assert.match(ctx, /a\\u0026b\.ts:/);
+  } finally {
+    clean(hook, cwd, sid);
+  }
+});
+
 // --- R4: no finding -------------------------------------------------------
 
 test('R4: a clean source file (no v1, no instanceof, decisions present) emits nothing', () => {
@@ -267,85 +334,82 @@ test('R4: an empty source file emits nothing', () => {
 
 // --- R5: v1-contamination -> mcp-hub:mcp-migration ------------------------
 
-test('R5: import from @modelcontextprotocol/sdk cites mcp-hub:mcp-migration', () => {
-  const hook = makeHook();
-  const cwd = makeProj(
-    MCP_PKG,
-    { 'src/s.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
-    { decisions: true },
-  );
-  const sid = 'r5-import';
-  try {
-    const { stdout } = run(hook, cwd, payload(join(cwd, 'src', 's.ts'), sid));
-    assert.match(stdout, /mcp-hub:mcp-migration/);
-  } finally {
-    clean(hook, cwd, sid);
-  }
-});
+// [what the source shows, source file, source text, cites mcp-hub:mcp-migration]
+const R5_CASES = [
+  [
+    'import from @modelcontextprotocol/sdk',
+    'src/s.ts',
+    "import { Server } from '@modelcontextprotocol/sdk';\n",
+    true,
+  ],
+  [
+    'setRequestHandler with a schema first arg',
+    'src/h.ts',
+    'server.setRequestHandler(CallToolRequestSchema, h);\n',
+    true,
+  ],
+  ['variadic .tool(', 'src/t.ts', "server.tool('n', schema, h);\n", true],
+  [
+    'a removed tasks API (InMemoryTaskStore)',
+    'src/t.ts',
+    'const store = new InMemoryTaskStore();\n',
+    true,
+  ],
+  [
+    'a renamed type (StreamableHTTPError)',
+    'src/t.ts',
+    "catch (e) { if (e.name === 'StreamableHTTPError') x; }\n",
+    true,
+  ],
+  [
+    'a v1 import of ErrorCode',
+    'src/t.ts',
+    "import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';\n",
+    true,
+  ],
+  ['v2 .registerTool(', 'src/t.ts', "server.registerTool('n', cfg, h);\n", false],
+  [
+    'a .md file with @modelcontextprotocol/sdk prose',
+    'README.md',
+    'See @modelcontextprotocol/sdk for v1.\n',
+    false,
+  ],
+  ['the v2 name JSONRPCErrorResponse', 'src/t.ts', 'const r: JSONRPCErrorResponse = x;\n', false],
+  [
+    'the v2 name ResourceTemplateReference',
+    'src/t.ts',
+    'const r: ResourceTemplateReference = x;\n',
+    false,
+  ],
+  [
+    'an inquirer .prompt( call',
+    'src/t.ts',
+    'const answers = await inquirer.prompt(questions);\n',
+    false,
+  ],
+  [
+    'a project-local ErrorCode enum',
+    'src/t.ts',
+    'export enum ErrorCode { NotFound = 404 }\n',
+    false,
+  ],
+];
 
-test('R5: setRequestHandler with a schema first arg cites mcp-hub:mcp-migration', () => {
-  const hook = makeHook();
-  const cwd = makeProj(
-    MCP_PKG,
-    { 'src/h.ts': 'server.setRequestHandler(CallToolRequestSchema, h);\n' },
-    { decisions: true },
-  );
-  const sid = 'r5-setreq';
-  try {
-    const { stdout } = run(hook, cwd, payload(join(cwd, 'src', 'h.ts'), sid));
-    assert.match(stdout, /mcp-hub:mcp-migration/);
-  } finally {
-    clean(hook, cwd, sid);
-  }
-});
-
-test('R5: variadic .tool( cites mcp-hub:mcp-migration', () => {
-  const hook = makeHook();
-  const cwd = makeProj(
-    MCP_PKG,
-    { 'src/t.ts': "server.tool('n', schema, h);\n" },
-    { decisions: true },
-  );
-  const sid = 'r5-tool';
-  try {
-    const { stdout } = run(hook, cwd, payload(join(cwd, 'src', 't.ts'), sid));
-    assert.match(stdout, /mcp-hub:mcp-migration/);
-  } finally {
-    clean(hook, cwd, sid);
-  }
-});
-
-test('R5: v2 .registerTool( emits no R5 advisory', () => {
-  const hook = makeHook();
-  const cwd = makeProj(
-    MCP_PKG,
-    { 'src/t.ts': "server.registerTool('n', cfg, h);\n" },
-    { decisions: true },
-  );
-  const sid = 'r5-reg';
-  try {
-    const { stdout } = run(hook, cwd, payload(join(cwd, 'src', 't.ts'), sid));
-    assert.equal(stdout, '');
-  } finally {
-    clean(hook, cwd, sid);
-  }
-});
-
-test('R5: a .md file with @modelcontextprotocol/sdk prose emits no R5 advisory', () => {
-  const hook = makeHook();
-  const cwd = makeProj(
-    MCP_PKG,
-    { 'README.md': 'See @modelcontextprotocol/sdk for v1.\n' },
-    { decisions: true },
-  );
-  const sid = 'r5-md';
-  try {
-    const { stdout } = run(hook, cwd, payload(join(cwd, 'README.md'), sid));
-    assert.equal(stdout, '');
-  } finally {
-    clean(hook, cwd, sid);
-  }
-});
+for (const [index, [what, sourceFile, source, cites]] of R5_CASES.entries()) {
+  const outcome = cites ? 'cites mcp-hub:mcp-migration' : 'emits no R5 advisory';
+  test(`R5: ${what} ${outcome}`, () => {
+    const hook = makeHook();
+    const cwd = makeProj(MCP_PKG, { [sourceFile]: source }, { decisions: true });
+    const sid = `r5-${index}`;
+    try {
+      const { stdout } = run(hook, cwd, payload(join(cwd, sourceFile), sid));
+      if (cites) assert.match(stdout, /mcp-hub:mcp-migration/);
+      else assert.equal(stdout, '');
+    } finally {
+      clean(hook, cwd, sid);
+    }
+  });
+}
 
 // --- R6: instanceof on SDK error -> mcp-hub:mcp-test ----------------------
 
@@ -539,6 +603,27 @@ test('R13: a read-only store file still emits on the next run (dedupe skipped)',
     } catch {
       // store may already be gone
     }
+    clean(hook, cwd, sid);
+  }
+});
+
+test('R13: a corrupt store file is repaired and the advisory still emits', () => {
+  const hook = makeHook();
+  const cwd = makeProj(
+    MCP_PKG,
+    { 'src/a.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
+    { decisions: true },
+  );
+  const sid = 'r13-corrupt';
+  try {
+    writeFileSync(storePath(sid), 'not json');
+    const { stdout, status } = run(hook, cwd, payload(join(cwd, 'src', 'a.ts'), sid));
+    assert.equal(status, 0);
+    assert.match(stdout, /mcp-hub:mcp-migration/);
+    const keys = JSON.parse(readFileSync(storePath(sid), 'utf8'));
+    assert.ok(Array.isArray(keys));
+    assert.ok(keys.length > 0);
+  } finally {
     clean(hook, cwd, sid);
   }
 });
