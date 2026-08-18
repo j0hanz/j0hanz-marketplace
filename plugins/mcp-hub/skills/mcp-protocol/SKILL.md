@@ -8,15 +8,15 @@ metadata:
 
 # MCP SDK v2 Protocol
 
-Use [mcp-server](../mcp-server/SKILL.md) for standard tools, resources, prompts, and hosted stdio/HTTP servers. This skill owns the boundaries that need the low-level `Server`: it skips `McpServer`'s automatic validation, capability advertisement, and error wrapping. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Use [mcp-server](../mcp-server/SKILL.md) for standard tools, resources, prompts, hosted stdio/HTTP servers. This skill own boundaries need low-level `Server`: skip `McpServer` automatic validation, capability advertisement, error wrapping. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 ## Paths
 
-Choose the narrowest path that owns the integration. Combine paths only where the same component implements both boundaries; every selected path's checks are its completion criteria.
+Pick narrowest path that own integration. Combine paths only where same component implement both boundaries; each selected path's checks its completion criteria.
 
 ### Low-level server
 
-**Wire the low-level `Server`**: instantiate with explicit `capabilities`, then register `tools/list`/`tools/call` by hand. Validate the requested tool name and its arguments before business logic; `Server` does not derive either check from `tools/list`.
+**Wire low-level `Server`**: instantiate with explicit `capabilities`, register `tools/list`/`tools/call` by hand. Validate requested tool name and args before business logic; `Server` not derive either check from `tools/list`.
 
 ```ts
 import { ProtocolError, ProtocolErrorCode, Server } from '@modelcontextprotocol/server';
@@ -52,13 +52,13 @@ server.setRequestHandler('tools/call', async (req) => {
 });
 ```
 
-> Throw `ProtocolError(InvalidParams)` for an unknown tool or invalid call shape. A known tool's business failure returns `isError: true` (see [mcp-server](../mcp-server/SKILL.md) “Handle Errors”).
+> Throw `ProtocolError(InvalidParams)` for unknown tool or invalid call shape. Known tool's business failure returns `isError: true` (see [mcp-server](../mcp-server/SKILL.md) "Handle Errors").
 
-- [ ] `capabilities` in the second constructor argument declares every extension the server advertises, with matching request handlers; every low-level tool validates its name and arguments against the schema advertised by `tools/list`.
+- [ ] `capabilities` in second constructor arg declares every extension server advertises, matching request handlers; every low-level tool validates name and args against schema advertised by `tools/list`.
 
 ### Custom RPC
 
-**Define custom methods**: use a vendor namespace such as `acme/search` and an explicit `{ params, result }` schema. `Server` accepts the same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, and `fromJsonSchema()`; see [mcp-server](../mcp-server/SKILL.md)).
+**Define custom methods**: use vendor namespace like `acme/search`, explicit `{ params, result }` schema. `Server` accepts same Standard Schema libraries as `McpServer` (Zod v4, ArkType, Valibot, `fromJsonSchema()`; see [mcp-server](../mcp-server/SKILL.md)).
 
 ```ts
 import { z } from 'zod';
@@ -90,11 +90,11 @@ client.setNotificationHandler(
 );
 ```
 
-- [ ] Every custom RPC method and notification name carries a unique vendor prefix (for example, `acme/`), and every custom request has explicit parameter and result schemas.
+- [ ] Every custom RPC method and notification name carries unique vendor prefix (e.g. `acme/`), every custom request has explicit param and result schemas.
 
 ### Custom transport
 
-**Build a custom transport**: implement `start()`, `send()`, `close()`, and forward `onclose`/`onerror`/`onmessage`.
+**Build custom transport**: implement `start()`, `send()`, `close()`, forward `onclose`/`onerror`/`onmessage`.
 
 ```ts
 import {
@@ -146,12 +146,12 @@ class SocketTransport implements Transport {
 }
 ```
 
-- [ ] Socket and read-buffer errors invoke `onerror`; invalid or oversized input closes the socket, and a synchronous `send()` failure rejects after reporting through `onerror`.
+- [ ] Socket and read-buffer errors invoke `onerror`; invalid or oversized input closes socket, synchronous `send()` failure rejects after reporting through `onerror`.
 - [ ] `onclose` fires on termination; `server.connect(transport)` owns `transport.start()`.
 
 ### Era gateway
 
-**Route protocol eras and gateways**: apply the resource-server policy from [mcp-auth](../mcp-auth/SKILL.md) and Host/Origin validation before using `isLegacyRequest()` to split 2025-era clients (without a per-request `_meta` envelope) from modern ones.
+**Route protocol eras and gateways**: apply resource-server policy from [mcp-auth](../mcp-auth/SKILL.md) and Host/Origin validation before using `isLegacyRequest()` to split 2025-era clients (no per-request `_meta` envelope) from modern ones.
 
 ```ts
 import {
@@ -175,14 +175,14 @@ export default {
 };
 ```
 
-> `isLegacyRequest()` returns a Promise; await it. Gateways route through `fetch`; for in-process dispatch call `handler.fetch(new Request(...))` directly (harness patterns in [mcp-test](../mcp-test/SKILL.md)).
+> `isLegacyRequest()` returns Promise; await it. Gateways route through `fetch`; for in-process dispatch call `handler.fetch(new Request(...))` direct (harness patterns in [mcp-test](../mcp-test/SKILL.md)).
 
-- [ ] Multi-client gateways verify access and validate Host/Origin before branching on awaited `isLegacyRequest()`; both era handlers receive the same verified `authInfo`.
-- [ ] Handler dispatch contains failures so a long-lived stream continues.
+- [ ] Multi-client gateways verify access and validate Host/Origin before branching on awaited `isLegacyRequest()`; both era handlers receive same verified `authInfo`.
+- [ ] Handler dispatch contains failures so long-lived stream continues.
 
 ### Raw wire data
 
-**Parse raw wire schemas** (gateways, proxies, and logs) with the Zod constants from `@modelcontextprotocol/core` (requires `zod`):
+**Parse raw wire schemas** (gateways, proxies, logs) with Zod constants from `@modelcontextprotocol/core` (needs `zod`):
 
 ```ts
 import {
@@ -198,13 +198,13 @@ if ('method' in message && message.method === 'tools/call') {
 }
 ```
 
-Naming: `<SpecType>Schema`, `<SpecType>RequestSchema`/`ResultSchema`/`NotificationSchema`, `*ParamsSchema`; OAuth adds `OAuthTokensSchema`, `OAuthProtectedResourceMetadataSchema`, `OpenIdProviderDiscoveryMetadataSchema`. Types, guards, and error classes live in `server`/`client`, not `core`.
+Naming: `<SpecType>Schema`, `<SpecType>RequestSchema`/`ResultSchema`/`NotificationSchema`, `*ParamsSchema`; OAuth add `OAuthTokensSchema`, `OAuthProtectedResourceMetadataSchema`, `OpenIdProviderDiscoveryMetadataSchema`. Types, guards, error classes live in `server`/`client`, not `core`.
 
-- [ ] Every raw JSON value is validated by its matching `@modelcontextprotocol/core` schema before downstream use.
+- [ ] Every raw JSON value validated by matching `@modelcontextprotocol/core` schema before downstream use.
 
 ### Fleet discovery
 
-**Persist discovery for worker fleets**: probe once, persist an era verdict with a short TTL, then let workers adopt the valid verdict with zero discovery round trips per worker.
+**Persist discovery for worker fleets**: probe once, persist era verdict with short TTL, let workers adopt valid verdict with zero discovery round trips per worker.
 
 ```ts
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -234,25 +234,25 @@ await worker.connect(new StreamableHTTPClientTransport(url), {
 });
 ```
 
-> `getDiscoverResult()` is undefined for a successful legacy probe, so persist `{ kind: 'legacy' }` instead of parsing an absent result. `refreshPrior()` repeats the bootstrap probe and replaces the expired cache. An incompatible `prior` rejects with `SdkError(SdkErrorCode.EraNegotiationFailed)` before transport start; catch it, delete the cached verdict, and initiate a fresh probe.
+> `getDiscoverResult()` undefined for successful legacy probe, so persist `{ kind: 'legacy' }` instead of parsing absent result. `refreshPrior()` repeats bootstrap probe, replaces expired cache. Incompatible `prior` rejects with `SdkError(SdkErrorCode.EraNegotiationFailed)` before transport start; catch it, delete cached verdict, start fresh probe.
 
-- [ ] `PriorDiscovery` state is keyed by authorization context, has a bounded TTL, persists an explicit legacy verdict, and re-probes after expiry or `EraNegotiationFailed`.
+- [ ] `PriorDiscovery` state keyed by authorization context, has bounded TTL, persists explicit legacy verdict, re-probes after expiry or `EraNegotiationFailed`.
 - [ ] Prior-connected workers call `listen()` before relying on `listChanged`.
 
 ### Gateway forwarding
 
-**Forward arbitrary methods safely** (gateways and proxies relaying methods they do not own): pass an explicit result schema and re-emit upstream JSON-RPC errors as `new ProtocolError(code, message, data?)` (narrow with `ProtocolError.isInstance(err)` first if the upstream error may not already be one).
+**Forward arbitrary methods safely** (gateways, proxies relaying methods they not own): pass explicit result schema, re-emit upstream JSON-RPC errors as `new ProtocolError(code, message, data?)` (narrow with `ProtocolError.isInstance(err)` first if upstream error maybe not already one).
 
 ```ts
 import { JSONRPCResultResponseSchema } from '@modelcontextprotocol/core';
 const result = await upstream.request({ method, params }, JSONRPCResultResponseSchema); // generic result envelope — validates the JSON-RPC result, not a method-specific shape
 ```
 
-A schema-less call to a **spec** method now enforces the spec result schema — a non-conforming upstream result rejects locally with `SdkError(SdkErrorCode.InvalidResult)`. A schema-less call to a **non-spec** method throws `TypeError` at the call site (`'…' is not a spec method; pass a result schema`) — always pass one for those. For byte-exact forwarding (member order preserved), pass an accept-anything Standard Schema instead of a spec schema.
+Schema-less call to **spec** method now enforces spec result schema — non-conforming upstream result rejects local with `SdkError(SdkErrorCode.InvalidResult)`. Schema-less call to **non-spec** method throws `TypeError` at call site (`'…' is not a spec method; pass a result schema`) — always pass one for those. For byte-exact forwarding (member order preserved), pass accept-anything Standard Schema instead of spec schema.
 
-> Legacy `-32002` normalizes to `-32602` at encode; typed subclasses drop extra upstream `data` keys. In a process using both `@modelcontextprotocol/client` and `@modelcontextprotocol/server`, `instanceof` does not cross the bundles — match on `error.code`/`error.status` instead.
+> Legacy `-32002` normalizes to `-32602` at encode; typed subclasses drop extra upstream `data` keys. In process using both `@modelcontextprotocol/client` and `@modelcontextprotocol/server`, `instanceof` not cross bundles — match on `error.code`/`error.status` instead.
 
-- [ ] Every forwarded call carries an explicit result schema (spec or accept-anything).
+- [ ] Every forwarded call carries explicit result schema (spec or accept-anything).
 - [ ] Re-emitted upstream errors use `ProtocolError.isInstance(err)` to narrow before re-throwing.
 
 ## Related

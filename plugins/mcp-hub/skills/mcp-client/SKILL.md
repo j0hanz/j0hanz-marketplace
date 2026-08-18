@@ -14,13 +14,13 @@ Covers `@modelcontextprotocol/client` `2.0.0`.
 
 ### Configure the runtime
 
-Standardize to ESM (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`). v2 also ships CJS, where `require()` resolves natively.
+Standardize to ESM (`"type": "module"` in `package.json`, `"NodeNext"` resolutions in `tsconfig.json`). v2 ships CJS too — `require()` resolves native.
 
-- [ ] ESM settings are active, or the implementation deliberately uses native CJS resolution.
+- [ ] ESM settings active, or implementation deliberately uses native CJS resolution.
 
 ### Initialize the client
 
-Create `new Client({...})` with only the capabilities the client implements. Sampling (`createMessage`) and roots (`roots/list`) are deprecated by SEP-2577; declare them only for legacy support and pass paths through tool arguments, resource URIs, or host configuration instead. Add elicitation only with the matching `elicitation/create` handler from [mcp-elicitation](../mcp-elicitation/SKILL.md).
+Create `new Client({...})` with only capabilities client implements. Sampling (`createMessage`) and roots (`roots/list`) deprecated by SEP-2577; declare only for legacy support, pass paths through tool arguments, resource URIs, or host config instead. Add elicitation only with matching `elicitation/create` handler from [mcp-elicitation](../mcp-elicitation/SKILL.md).
 
 ```ts
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -41,32 +41,32 @@ const client = new Client(
 );
 ```
 
-- [ ] Constructor capabilities precede every handler registration; each declared capability has its matching handler or feature, and deprecated capabilities appear only for required legacy support.
+- [ ] Constructor capabilities precede every handler registration; each declared capability has matching handler/feature; deprecated capabilities appear only for required legacy support.
 
 ### Connect with the matching transport
 
-Use `StreamableHTTPClientTransport` by default:
+Use `StreamableHTTPClientTransport` default:
 
 ```ts
 const transport = new StreamableHTTPClientTransport(new URL('http://localhost:3000/mcp'));
 await client.connect(transport);
 ```
 
-Use `StdioClientTransport` from `@modelcontextprotocol/client/stdio` for stdio. An SSE-only legacy server uses `SSEClientTransport` after Streamable HTTP fails.
+Use `StdioClientTransport` from `@modelcontextprotocol/client/stdio` for stdio. SSE-only legacy server uses `SSEClientTransport` after Streamable HTTP fails.
 
-For a spawn-per-invocation stdio wrapper, pin its era with `versionNegotiation: { mode: { pin: '2026-07-28' } }` for modern protocol or `{ mode: 'legacy' }` for legacy protocol. Cold spawns stall with `mode: 'auto'`; reserve automatic negotiation for long-lived connections.
+For spawn-per-invocation stdio wrapper, pin era with `versionNegotiation: { mode: { pin: '2026-07-28' } }` for modern protocol or `{ mode: 'legacy' }` for legacy. Cold spawns stall with `mode: 'auto'`; reserve auto negotiation for long-lived connections.
 
-- [ ] The transport matches the server and `mode: 'auto'` is used only for a long-lived connection.
+- [ ] Transport matches server; `mode: 'auto'` used only for long-lived connection.
 
 ### Register declared handlers
 
-Register every advertised handler before `connect()` so an arriving server request always has an owner. Register `sampling/createMessage` or `roots/list` only when its deprecated capability was declared. For `elicitation/create`, use [mcp-elicitation](../mcp-elicitation/SKILL.md) “Register owned clients before calls.”
+Register every advertised handler before `connect()` so arriving server request always has owner. Register `sampling/createMessage` or `roots/list` only when its deprecated capability declared. For `elicitation/create`, use [mcp-elicitation](../mcp-elicitation/SKILL.md) "Register owned clients before calls."
 
-- [ ] Every registered handler has a declared capability and is ready before `connect()`.
+- [ ] Every registered handler has declared capability, ready before `connect()`.
 
 ### Invoke server features
 
-No-argument `listTools()`, `listPrompts()`, and `listResources()` aggregate every page; pass `{ cursor }` to request one page. Treat `result.isError` as the normal tool failure signal. Unknown or disabled tool names reject with `ProtocolError(InvalidParams)`; handle that separately (see [mcp-server](../mcp-server/SKILL.md) “Handle Errors”).
+No-argument `listTools()`, `listPrompts()`, `listResources()` aggregate every page; pass `{ cursor }` for one page. Treat `result.isError` as normal tool failure signal. Unknown/disabled tool names reject with `ProtocolError(InvalidParams)`; handle separate (see [mcp-server](../mcp-server/SKILL.md) "Handle Errors").
 
 ```ts
 const { tools } = await client.listTools();
@@ -89,31 +89,31 @@ const { completion } = await client.complete({
 });
 ```
 
-- [ ] Tool handling distinguishes `result.isError` business failures from rejected `ProtocolError(InvalidParams)` calls, and type narrowing uses SDK guards instead of `in`.
+- [ ] Tool handling distinguishes `result.isError` business failures from rejected `ProtocolError(InvalidParams)` calls; type narrowing uses SDK guards, not `in`.
 
 ### Close every connection
 
-On shutdown and error paths, call `await transport.terminateSession()` then `await client.close()` for Streamable HTTP. `terminateSession()` is harmless without a server-issued session ID. Stdio and in-memory transports use `await client.close()` alone.
+On shutdown/error paths, call `await transport.terminateSession()` then `await client.close()` for Streamable HTTP. `terminateSession()` harmless without server-issued session ID. Stdio and in-memory transports use `await client.close()` alone.
 
-- [ ] Every shutdown and error path closes the client; Streamable HTTP also terminates its session first.
+- [ ] Every shutdown/error path closes client; Streamable HTTP also terminates session first.
 
 ## Add a needed capability
 
 ### Authenticate the client
 
-For static bearer tokens or browser `authorization_code`, follow [client authentication](authentication.md). Service credentials and host-session exchange use [mcp-auth](../mcp-auth/SKILL.md).
+Static bearer tokens or browser `authorization_code`: follow [client authentication](authentication.md). Service credentials + host-session exchange: [mcp-auth](../mcp-auth/SKILL.md).
 
 ### Subscribe to changes
 
-For server change notifications or resource listeners, follow [change subscriptions](subscriptions.md).
+Server change notifications or resource listeners: follow [change subscriptions](subscriptions.md).
 
 ### Cache responses
 
-For local caching of list or resource responses, follow [response caching](response-cache.md).
+Local caching of list/resource responses: follow [response caching](response-cache.md).
 
 ### Add HTTP middleware
 
-For HTTP headers, logs, or retries, follow [fetch middleware](http-middleware.md).
+HTTP headers, logs, retries: follow [fetch middleware](http-middleware.md).
 
 ## See Also
 

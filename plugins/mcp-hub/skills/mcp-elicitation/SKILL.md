@@ -10,11 +10,11 @@ metadata:
 
 Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, the SDK delivers modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`, `sampling/createMessage`, and `roots/list`; it does not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work in both eras.
+**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, SDK deliver modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`, `sampling/createMessage`, and `roots/list`; not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work both eras.
 
 ## Steps
 
-1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, and handle `elicitation/create` at construction. The client default is 10 rounds; past it the client rejects with an `SdkError` (`INPUT_REQUIRED_ROUNDS_EXCEEDED`).
+1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, handle `elicitation/create` at construction. Client default 10 rounds; past it client rejects with `SdkError` (`INPUT_REQUIRED_ROUNDS_EXCEEDED`).
 
    ```ts
    const client = new Client(
@@ -34,11 +34,11 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    });
    ```
 
-   A host-implemented `renderAndValidateJsonSchemaForm()` (not an SDK export) renders the requested schema and resolves only validated content; `undefined` means the user declined. Add URL capability and an owned URL handler only when the client can complete that flow.
+   Host-implemented `renderAndValidateJsonSchemaForm()` (not SDK export) renders requested schema, resolves only validated content; `undefined` means user declined. Add URL capability + owned URL handler only when client can complete that flow.
 
-   **Done:** Every owned client that serves interaction advertises only supported modes, has a bounded handler, and returns content validated against the requested schema.
+   **Done:** Every owned client serving interaction advertises only supported modes, has bounded handler, returns content validated against requested schema.
 
-2. **Make modern tool calls replay-safe**: Each answer restarts the tool from its beginning. Read `ctx.mcpReq.inputResponses` before returning `inputRequired`; use `acceptedContent(..., key, schema)` for accepted content and `inputResponse(...)` to exit cleanly on `decline` or `cancel`.
+2. **Make modern tool calls replay-safe**: Each answer restarts tool from beginning. Read `ctx.mcpReq.inputResponses` before returning `inputRequired`; use `acceptedContent(..., key, schema)` for accepted content, `inputResponse(...)` to exit clean on `decline` or `cancel`.
 
    ```ts
    server.registerTool(
@@ -67,11 +67,11 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    );
    ```
 
-   Use `inputRequired.elicit()` for form fields and `inputRequired.elicitUrl()` for redirects such as OAuth. Migrate embedded sampling and roots flows away from deprecated `inputRequired.createMessage()` and `inputRequired.listRoots()`.
+   Use `inputRequired.elicit()` for form fields, `inputRequired.elicitUrl()` for redirects like OAuth. Migrate embedded sampling and roots flows off deprecated `inputRequired.createMessage()` and `inputRequired.listRoots()`.
 
-   **Done:** Every modern interaction reads prior responses, returns each accepted path once, and terminates every decline or cancellation path.
+   **Done:** Every modern interaction reads prior responses, returns each accepted path once, terminates every decline/cancel path.
 
-3. **Carry sequential state in signed `requestState`**: Return an opaque, HMAC-signed state value and read it through `ctx.mcpReq.requestState<State>()`. The client round-trips this value byte-for-byte, so keep secrets out of it and reject tampered or expired values with `-32602 Invalid or expired requestState`.
+3. **Carry sequential state in signed `requestState`**: Return opaque, HMAC-signed state value, read via `ctx.mcpReq.requestState<State>()`. Client round-trips value byte-for-byte — keep secrets out, reject tampered/expired values with `-32602 Invalid or expired requestState`.
 
    ```ts
    const codec = createRequestStateCodec<{ step: string }>({
@@ -89,9 +89,9 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    });
    ```
 
-   **Done:** Every multi-round flow stores its state in a verified codec, rejects invalid state before business logic, and exposes no secret in the payload.
+   **Done:** Every multi-round flow stores state in verified codec, rejects invalid state before business logic, exposes no secret in payload.
 
-4. **Report long work and honor cancellation**: Emit strictly increasing `notifications/progress` values for one `progressToken`. Pass `ctx.mcpReq.signal` to database and HTTP work; inspect `signal.aborted` inside recursive work and loop conditions.
+4. **Report long work, honor cancellation**: Emit strictly increasing `notifications/progress` values for one `progressToken`. Pass `ctx.mcpReq.signal` to DB/HTTP work; check `signal.aborted` inside recursive work and loop conditions.
 
    ```ts
    async ({ files }, ctx) => {
@@ -107,9 +107,9 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    };
    ```
 
-   **Done:** Each long-running path propagates its abort signal, checks it during repeated work, and emits monotonic progress when the caller supplied a token.
+   **Done:** Each long-running path propagates abort signal, checks it during repeated work, emits monotonic progress when caller supplied token.
 
-5. **Complete prompt arguments at the schema**: Wrap prompt `argsSchema` fields with `completable(...)`. Define resource-template completion in the template’s `complete` map instead.
+5. **Complete prompt arguments at schema**: Wrap prompt `argsSchema` fields with `completable(...)`. Define resource-template completion in template's `complete` map instead.
 
    ```ts
    import { completable } from '@modelcontextprotocol/server';
@@ -128,9 +128,9 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    );
    ```
 
-   **Done:** Every prompt argument that needs completion uses `completable(...)`, and every resource-template variable uses its template completion map.
+   **Done:** Every prompt argument needing completion uses `completable(...)`, every resource-template variable uses its template completion map.
 
-6. **Serve confirmed 2025 connections through the legacy branch**: Require the client’s `elicitation` capability, use form mode for standard data and URL mode for external redirects, and return from the handler on `decline` or `cancel`. Keep credentials and API keys out of forms. `requestedSchema` defaults to JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` in form mode is the submitted form fields as an object (e.g. `{ rating: 5, comment: '…' }`) validated against `requestedSchema`, so return a schema-shaped object.
+6. **Serve confirmed 2025 connections through legacy branch**: Require client's `elicitation` capability, use form mode for standard data, URL mode for external redirects, return from handler on `decline`/`cancel`. Keep credentials, API keys out of forms. `requestedSchema` defaults JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` in form mode is submitted form fields as object (e.g. `{ rating: 5, comment: '…' }`) validated against `requestedSchema` — return schema-shaped object.
 
    ```ts
    const result = await ctx.mcpReq.elicitInput({
@@ -147,8 +147,8 @@ Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference
    }
    ```
 
-   **Done:** Each legacy-only flow has a confirmed 2025 connection, supported client capability, declared schema dialect when needed, valid result content, and a terminating non-accept path.
+   **Done:** Each legacy-only flow has confirmed 2025 connection, supported client capability, declared schema dialect when needed, valid result content, terminating non-accept path.
 
-7. **Retire 2025-only facilities**: Replace `ctx.mcpReq.requestSampling` with a server direct-LLM-provider call only after recording the provider, data-handling and retention policy, consent path, and cost owner; it remains functional for 2025 connections but throws for modern ones. Replace deprecated `ctx.mcpReq.log(level, data)` with stderr or OpenTelemetry.
+7. **Retire 2025-only facilities**: Replace `ctx.mcpReq.requestSampling` with server direct-LLM-provider call only after recording provider, data-handling/retention policy, consent path, cost owner; stays functional for 2025 connections but throws for modern ones. Replace deprecated `ctx.mcpReq.log(level, data)` with stderr or OpenTelemetry.
 
-   **Done:** Each direct LLM replacement has a recorded provider, privacy/consent, and cost decision; new interaction paths use neither sampling nor MCP logging, and every retained legacy call is isolated to a confirmed 2025 branch.
+   **Done:** Each direct LLM replacement has recorded provider, privacy/consent, cost decision; new interaction paths use neither sampling nor MCP logging; every retained legacy call isolated to confirmed 2025 branch.

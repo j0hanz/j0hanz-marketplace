@@ -8,9 +8,9 @@ metadata:
 
 # MCP SDK v2 Servers
 
-Covers `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Start a new design with [mcp-planning](../mcp-planning/SKILL.md), then validate the built server with [mcp-test](../mcp-test/SKILL.md). Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Cover `@modelcontextprotocol/server` SDK v2 (protocol revision `2026-07-28`) on Node.js ≥ 20. Start new design with [mcp-planning](../mcp-planning/SKILL.md), then validate built server with [mcp-test](../mcp-test/SKILL.md). Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
-Minimal stdio stub (see Step 5 for the full transport picture):
+Minimal stdio stub (Step 5 has full transport picture):
 
 ```ts
 serveStdio(() => {
@@ -28,9 +28,9 @@ serveStdio(() => {
 
 1. **Configure module resolution**: Use `"type": "module"` with `"NodeNext"` resolutions for ESM projects. SDK v2 also resolves native CommonJS `require()` for CommonJS projects.
 
-   - [ ] The project's ESM or CommonJS entrypoints resolve every MCP SDK import.
+   - [ ] Project's ESM or CommonJS entrypoints resolve every MCP SDK import.
 
-2. **Initialize Server**: instantiate `McpServer` with a stable identifier and declare optional constructor behavior up front.
+2. **Initialize Server**: instantiate `McpServer` with stable identifier, declare optional constructor behavior up front.
 
    ```ts
    const server = new McpServer(
@@ -44,11 +44,11 @@ serveStdio(() => {
    );
    ```
 
-   > `capabilities: { logging: {} }` enables the **deprecated** MCP logging subsystem (SEP-2577) — prefer `console.error` (stderr) or OpenTelemetry for new servers. `resources: { subscribe: true }` is not deprecated.
-   - [ ] `name`/`version` are stable identifiers matching `package.json` exactly.
-   - [ ] Optional constructor behavior (capabilities, instructions, enforceStrictCapabilities, cacheHints) is declared wherever the server relies on it.
+   > `capabilities: { logging: {} }` enables **deprecated** MCP logging subsystem (SEP-2577) — prefer `console.error` (stderr) or OpenTelemetry for new servers. `resources: { subscribe: true }` not deprecated.
+   - [ ] `name`/`version` stable identifiers, match `package.json` exactly.
+   - [ ] Optional constructor behavior (capabilities, instructions, enforceStrictCapabilities, cacheHints) declared wherever server relies on it.
 
-3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, and prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4 or ArkType as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema`, or raw JSON Schema via `fromJsonSchema()`). For gateway/proxy and custom (vendor-prefixed) JSON-RPC methods, see [mcp-protocol](../mcp-protocol/SKILL.md).
+3. **Register Capabilities**: register tools via `.registerTool()`, dynamic resource templates via `.registerResource()`, prompts via `.registerPrompt()`. `inputSchema`/`outputSchema`/`argsSchema` accept any **Standard Schema** (Zod v4 or ArkType as-is, Valibot via `toStandardJsonSchema` from `@valibot/to-json-schema`, raw JSON Schema via `fromJsonSchema()`). Gateway/proxy and custom (vendor-prefixed) JSON-RPC methods: see [mcp-protocol](../mcp-protocol/SKILL.md).
 
    ```ts
    server.registerTool(
@@ -89,20 +89,20 @@ serveStdio(() => {
    );
    ```
 
-   > Wrap a **prompt `argsSchema`** field in `completable(schema, async (value, ctx) => candidates)` to add argument completion — `ctx?.arguments` exposes sibling arguments already filled in, useful for dependent fields (e.g. filtering a `branch` field's candidates by an already-chosen `repo`). Resource template URI variables complete through the template's `complete` map instead (shown above).
+   > Wrap **prompt `argsSchema`** field in `completable(schema, async (value, ctx) => candidates)` for argument completion — `ctx?.arguments` exposes sibling arguments already filled, useful for dependent fields (e.g. filter `branch` field candidates by already-chosen `repo`). Resource template URI variables complete through template's `complete` map instead (shown above).
 
-   > **Gotcha — zod version pin:** pin `zod ^4.2.0` and import via `import * as z from 'zod/v4'`; it self-converts via `~standard.jsonSchema`. Zod 3 typechecks cleanly under the v2 peer range but fails only at runtime — registration swallows the conversion failure, the server starts and connects, and the first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: the bare `import { z } from 'zod'` falls back to the bundled Zod's `z.toJSONSchema()` with a one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — a silent degradation, not a failure. The namespace `import * as z from 'zod/v4'` works; the named `import { z } from 'zod/v4'` fails to compile (`TS2769 No overload matches this call`). For other schema libs (or older zod), use `fromJsonSchema()` from `@modelcontextprotocol/server`.
-   - [ ] Each capability registered via the matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with a Standard Schema.
-   - [ ] Resource template URIs are resolved and boundary-checked against their root before serving.
-   - [ ] Tool handlers return or throw business failures; the SDK wraps ordinary exceptions into `{ isError: true }`.
+   > **Gotcha — zod version pin:** pin `zod ^4.2.0`, import via `import * as z from 'zod/v4'`; self-converts via `~standard.jsonSchema`. Zod 3 typechecks clean under v2 peer range but fails only at runtime — registration swallows conversion failure, server starts and connects, first `tools/list` errors out of `fromJsonSchema()`. Zod 4.0–4.1 lacks `~standard.jsonSchema`: bare `import { z } from 'zod'` falls back to bundled Zod's `z.toJSONSchema()` with one-time `[mcp-sdk]` warning and **drops `.describe()` field descriptions** — silent degradation, not failure. Namespace `import * as z from 'zod/v4'` works; named `import { z } from 'zod/v4'` fails compile (`TS2769 No overload matches this call`). Other schema libs (or older zod): use `fromJsonSchema()` from `@modelcontextprotocol/server`.
+   - [ ] Each capability registered via matching `.registerTool()` / `.registerResource()` / `.registerPrompt()` method with Standard Schema.
+   - [ ] Resource template URIs resolved and boundary-checked against root before serving.
+   - [ ] Tool handlers return or throw business failures; SDK wraps ordinary exceptions into `{ isError: true }`.
    - [ ] Every cancellable operation receives `ctx.mcpReq.signal`; every identity-sensitive operation reads verified `ctx.http?.authInfo`.
 
 4. **Handle Errors**: two channels, picked by audience.
 
-   | Channel            | Shape                               | Audience                                      | Produced by                                                 |
-   | ------------------ | ----------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
-   | **Tool error**     | Result with `isError: true`         | The **model** — reads the message and retries | Tool handlers: return it, or `throw` anything               |
-   | **Protocol error** | JSON-RPC `{ code, message, data? }` | The **caller's code**                         | Resource/prompt/completion callbacks: `throw ProtocolError` |
+   | Channel            | Shape                               | Audience                               | Produced by                                                 |
+   | ------------------ | ----------------------------------- | -------------------------------------- | ----------------------------------------------------------- |
+   | **Tool error**     | Result with `isError: true`         | The **model** — reads message, retries | Tool handlers: return it, or `throw` anything               |
+   | **Protocol error** | JSON-RPC `{ code, message, data? }` | The **caller's code**                  | Resource/prompt/completion callbacks: `throw ProtocolError` |
 
    ```ts
    // Tool error — put the recovery hint in the text:
@@ -121,11 +121,11 @@ serveStdio(() => {
    throw new ResourceNotFoundError(uri.href); // -32602 with data: { uri }
    ```
 
-   Tool handlers **cannot** emit a protocol error — every throw (even `ProtocolError`) becomes `isError: true`; the sole exception is `UrlElicitationRequiredError`, which propagates (`-32042`). Full code tables in [mcp-test](../mcp-test/SKILL.md).
+   Tool handlers **cannot** emit protocol error — every throw (even `ProtocolError`) becomes `isError: true`; sole exception `UrlElicitationRequiredError`, which propagates (`-32042`). Full code tables in [mcp-test](../mcp-test/SKILL.md).
 
-   > **Gotcha — caller side:** an unknown or disabled tool name rejects the `callTool()` promise with `ProtocolError(InvalidParams)` (`-32602`) — it does **not** resolve `{ isError: true }`. Catch the promise and inspect `error.code`; a registered tool's own business failure still returns `isError: true`.
-   - [ ] Tool handlers return or throw business failures; the SDK emits their tool-error result.
-   - [ ] Resource, prompt, and completion callbacks throw `ProtocolError` or a subclass for caller-facing failures.
+   > **Gotcha — caller side:** unknown or disabled tool name rejects `callTool()` promise with `ProtocolError(InvalidParams)` (`-32602`) — does **not** resolve `{ isError: true }`. Catch promise, inspect `error.code`; registered tool's own business failure still returns `isError: true`.
+   - [ ] Tool handlers return or throw business failures; SDK emits their tool-error result.
+   - [ ] Resource, prompt, completion callbacks throw `ProtocolError` or subclass for caller-facing failures.
 
 5. **Serve & Secure a Transport**: stdio for local/CLI use, HTTP for networked/hosted use.
 

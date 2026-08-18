@@ -1,8 +1,8 @@
 # Response caching
 
-Use this reference when cacheable MCP list or resource calls need local response reuse.
+Reference for cacheable MCP list/resource calls needing local reuse.
 
-Server freshness hints (SEP-2549) cover `listTools`, `listPrompts`, `listResources`, `listResourceTemplates`, and `readResource`:
+Server freshness hints (SEP-2549) cover `listTools`, `listPrompts`, `listResources`, `listResourceTemplates`, `readResource`:
 
 ```ts
 await client.listTools(); // network, cached
@@ -11,6 +11,6 @@ await client.listTools(undefined, { cacheMode: 'refresh' }); // refetch and re-s
 await client.readResource({ uri }, { cacheMode: 'bypass' });
 ```
 
-`ttlMs` caps at 24 hours (`MAX_CACHE_TTL_MS`). `responseCacheStore` selects storage (default `InMemoryResponseCacheStore`, 512 entries); `defaultCacheTtlMs` covers servers without hints; change notifications evict matching entries. A multi-user store needs `cachePartition` so `'private'` entries remain isolated.
+`ttlMs` cap: 24h (`MAX_CACHE_TTL_MS`). `responseCacheStore` picks storage (default `InMemoryResponseCacheStore`, 512 entries); `defaultCacheTtlMs` covers servers w/o hints; change notifications evict matching entries. Multi-user store needs `cachePartition` so `'private'` entries stay isolated.
 
-- [ ] Every shared cache store sets `cachePartition`, and freshness defaults fit the data.
+- [ ] Every shared cache store sets `cachePartition`, freshness defaults fit data.

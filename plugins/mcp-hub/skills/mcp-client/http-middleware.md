@@ -1,6 +1,6 @@
 # HTTP fetch middleware
 
-Use this reference when a Streamable HTTP client needs headers, logging, or retries.
+Ref for Streamable HTTP client need headers, logging, retries.
 
 ```ts
 import { applyMiddlewares, createMiddleware, withLogging } from '@modelcontextprotocol/client';
@@ -16,6 +16,6 @@ const transport = new StreamableHTTPClientTransport(url, {
 });
 ```
 
-The final `applyMiddlewares` argument is outermost: place retries first, closest to the network. Each middleware returns a `Response`; use `response.clone()` to read a body. Give `withLogging()` a custom `logger` to keep stdio stdout clean.
+Final `applyMiddlewares` argument outermost: retries first, closest to network. Each middleware return `Response`; use `response.clone()` read body. Give `withLogging()` custom `logger` keep stdio stdout clean.
 
-- [ ] Middleware order puts retries innermost and returns `Response` values; logging uses a non-stdout logger on stdio.
+- [ ] Middleware order put retries innermost, return `Response` values; logging use non-stdout logger on stdio.

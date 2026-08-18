@@ -1,8 +1,8 @@
 # Client authentication
 
-Use this reference for a static bearer token or browser `authorization_code`. For client credentials or host-session exchange, use [mcp-auth](../mcp-auth/SKILL.md).
+Use this for static bearer token or browser `authorization_code`. For client credentials or host-session exchange, use [mcp-auth](../mcp-auth/SKILL.md).
 
-The transport accepts `AuthProvider | OAuthClientProvider`. For a static bearer token, provide `token()` and an `onUnauthorized()` refresh; the transport retries once after a 401:
+Transport accept `AuthProvider | OAuthClientProvider`. Static bearer token: give `token()` + `onUnauthorized()` refresh; transport retry once after 401:
 
 ```ts
 const authProvider: AuthProvider = {
@@ -12,7 +12,7 @@ const authProvider: AuthProvider = {
 new StreamableHTTPClientTransport(url, { authProvider });
 ```
 
-For browser `authorization_code`, catch `UnauthorizedError` from `connect()` to begin discovery and redirect. Validate callback `state`, call `finishAuth()` on the original transport, then connect a fresh transport:
+Browser `authorization_code`: catch `UnauthorizedError` from `connect()`, begin discovery + redirect. Validate callback `state`, call `finishAuth()` on original transport, then connect fresh transport:
 
 ```ts
 const transport = new StreamableHTTPClientTransport(url, { authProvider });
@@ -34,12 +34,12 @@ try {
 }
 ```
 
-The SDK validates callback `iss` (RFC 9207) and throws `IssuerMismatchError` on a mismatch. Treat callback `error` and `error_description` as attacker-controlled.
+SDK validates callback `iss` (RFC 9207), throws `IssuerMismatchError` on mismatch. Treat callback `error` and `error_description` as attacker-controlled.
 
-`saveTokens(tokens: OAuthTokens)` and `tokens()` take no `ctx`/issuer; store tokens as a single set and let the no-argument `tokens()` return the most recently saved one for per-request bearer reads. Only `clientInformation(ctx?)` and `saveClientInformation(info, ctx?)` accept an optional `OAuthClientInformationContext`, keyed by `ctx.issuer` so a `client_id` registered with one authorization server is never sent to another (SEP-2352).
+`saveTokens(tokens: OAuthTokens)` and `tokens()` take no `ctx`/issuer; store tokens as single set, no-arg `tokens()` return most recent for per-request bearer reads. Only `clientInformation(ctx?)` and `saveClientInformation(info, ctx?)` accept optional `OAuthClientInformationContext`, keyed by `ctx.issuer` — `client_id` registered with one authorization server never sent to another (SEP-2352).
 
-`InsufficientScopeError` (SEP-2350, extending `OAuthClientFlowError`) is a transport class distinct from the server verifier's `OAuthError(OAuthErrorCode.InsufficientScope)`; see [mcp-auth](../mcp-auth/SKILL.md) “Handle authorization errors.” `onInsufficientScope` defaults to `'reauthorize'`, which requests the union of requested and challenged scope. For client-credentials clients, set `'throw'`; step-up retries default to one through `maxStepUpRetries`.
+`InsufficientScopeError` (SEP-2350, extends `OAuthClientFlowError`) is transport class, distinct from server verifier's `OAuthError(OAuthErrorCode.InsufficientScope)`; see [mcp-auth](../mcp-auth/SKILL.md) "Handle authorization errors." `onInsufficientScope` defaults `'reauthorize'` — requests union of requested + challenged scope. Client-credentials clients: set `'throw'`. Step-up retries default one, via `maxStepUpRetries`.
 
-- [ ] Static credentials refresh once after 401, and browser callbacks validate `state` before `finishAuth()`.
-- [ ] Client information stays isolated per authorization server (`ctx.issuer`), and tokens are stored as a single set.
-- [ ] Browser callback errors remain unrendered, and machine clients use `'throw'` for insufficient scope.
+- [ ] Static credentials refresh once after 401, browser callbacks validate `state` before `finishAuth()`.
+- [ ] Client information stays isolated per authorization server (`ctx.issuer`), tokens stored as single set.
+- [ ] Browser callback errors stay unrendered, machine clients use `'throw'` for insufficient scope.

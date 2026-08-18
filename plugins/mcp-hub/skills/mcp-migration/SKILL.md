@@ -8,45 +8,45 @@ metadata:
 
 # Migrating MCP SDK v1 to v2
 
-Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 packages. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to split v2 packages. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
 
 ## Steps
 
-1. **Scope the migration**: Identify every legacy dependency and import. For a large, multi-directory project, follow [mcp-planning](../mcp-planning/SKILL.md) decision 15: migrate one directory at a time, retain both SDK versions only while untouched v1 code remains, and remove v1 once `rg '@modelcontextprotocol/sdk'` finds no source imports. SDK objects cannot cross the v1/v2 boundary: their nominal types and `instanceof` checks differ.
+1. **Scope migration**: Find every legacy dependency and import. Large multi-directory project: follow [mcp-planning](../mcp-planning/SKILL.md) decision 15 — migrate one directory at a time, keep both SDK versions only while untouched v1 code remains, remove v1 once `rg '@modelcontextprotocol/sdk'` finds no source imports. SDK objects can't cross v1/v2 boundary: nominal types and `instanceof` checks differ.
 
-   **Done:** The migration scope and one-shot or staged posture are explicit; every staged boundary isolates v1 and v2 SDK objects.
+   **Done:** Migration scope and one-shot-or-staged posture explicit; every staged boundary isolates v1 and v2 SDK objects.
 
-2. **Run the codemod on that scope**: Execute `npx @modelcontextprotocol/codemod@latest v1-to-v2 .`, replacing `.` with the target **directory** when staging — a subdirectory run still updates the nearest manifest walking up (including removing the v1 dependency), so preview with `--dry-run`. It updates split-package imports, renames symbols, converts `extra` to `ctx`, rewrites schema-based `setRequestHandler` calls to method strings, and changes `.tool()`/`.prompt()`/`.resource()` registrations to `registerTool`/`registerPrompt`/`registerResource` with `z.object()` schemas. It writes `@mcp-codemod-error` where a safe rewrite is unavailable.
+2. **Run codemod on that scope**: Execute `npx @modelcontextprotocol/codemod@latest v1-to-v2 .`, replace `.` with target **directory** when staging — subdirectory run still updates nearest manifest walking up (including removing v1 dependency), preview with `--dry-run`. Updates split-package imports, renames symbols, converts `extra` to `ctx`, rewrites schema-based `setRequestHandler` calls to method strings, changes `.tool()`/`.prompt()`/`.resource()` registrations to `registerTool`/`registerPrompt`/`registerResource` with `z.object()` schemas. Writes `@mcp-codemod-error` where safe rewrite unavailable.
 
-   **Done:** Every targeted file either compiles after the rewrite or has an `@mcp-codemod-error` marker to resolve.
+   **Done:** Every targeted file compiles after rewrite or has `@mcp-codemod-error` marker to resolve.
 
-3. **Install the split packages**: Replace the v1 package with the public v2 packages used by rewritten imports (see [Package Split](#package-split)). Install `@modelcontextprotocol/server-legacy` (import from its `/sse` subpath) only for `SSEServerTransport`. In staged work, retain `@modelcontextprotocol/sdk` only for untouched v1 code; a one-shot migration removes it now.
+3. **Install split packages**: Replace v1 package with public v2 packages used by rewritten imports (see [Package Split](#package-split)). Install `@modelcontextprotocol/server-legacy` (import from its `/sse` subpath) only for `SSEServerTransport`. Staged work: keep `@modelcontextprotocol/sdk` only for untouched v1 code; one-shot migration removes it now.
 
-   **Done:** Every migrated import resolves to its v2 package, and any retained v1 dependency serves only an unmigrated scope.
+   **Done:** Every migrated import resolves to its v2 package, any retained v1 dependency serves only unmigrated scope.
 
-4. **Resolve each codemod marker**: Find `@mcp-codemod-error` within the migration scope and apply the matching [rename](#renames) before moving on.
+4. **Resolve each codemod marker**: Find `@mcp-codemod-error` within migration scope, apply matching [rename](#renames) before moving on.
 
-   **Done:** The migrated scope has zero `@mcp-codemod-error` comments and typechecks against installed packages.
+   **Done:** Migrated scope has zero `@mcp-codemod-error` comments, typechecks against installed packages.
 
-5. **Set the era posture**: Honor [mcp-planning](../mcp-planning/SKILL.md) decision 13; without a record, serve both eras. HTTP uses `createMcpHandler(factory, { legacy: 'stateless' })` and stdio uses `serveStdio(factory, { legacy: 'serve' })` for both; modern-only uses `legacy: 'reject'`; 2025-only retains the hand-wired `*StreamableHTTPServerTransport` stack, which has no `legacy:` setting.
+5. **Set era posture**: Honor [mcp-planning](../mcp-planning/SKILL.md) decision 13; no record = serve both eras. HTTP uses `createMcpHandler(factory, { legacy: 'stateless' })`, stdio uses `serveStdio(factory, { legacy: 'serve' })` for both; modern-only uses `legacy: 'reject'`; 2025-only keeps hand-wired `*StreamableHTTPServerTransport` stack, no `legacy:` setting.
 
-   **Done:** Every server entry point implements the selected both-era, modern-only, or 2025-only posture.
+   **Done:** Every server entry point implements selected both-era, modern-only, or 2025-only posture.
 
-6. **Modernize interaction and change flow for the selected era**: Both-era and modern servers return `inputRequired(...)` instead of blocking for input; a both-era server keeps `ctx.mcpReq.elicitInput` only inside its 2025 branch, because it throws for modern calls. Use `requestState` for modern multi-round data and `subscriptions/listen` for modern change streams. A 2025-only stack retains its 2025 interaction and notification mechanisms.
+6. **Modernize interaction and change flow for selected era**: Both-era and modern servers return `inputRequired(...)` instead of blocking for input; both-era server keeps `ctx.mcpReq.elicitInput` only inside its 2025 branch — throws for modern calls. Use `requestState` for modern multi-round data, `subscriptions/listen` for modern change streams. 2025-only stack keeps its 2025 interaction and notification mechanisms.
 
-   **Done:** Each interaction, cross-round state, and change-notification path uses APIs supported by its selected connection era.
+   **Done:** Each interaction, cross-round state, change-notification path uses APIs supported by selected connection era.
 
-7. **Adopt `McpServer` where possible**: Convert low-level `Server` instances unless custom or vendor JSON-RPC methods require the low-level class; send those cases to [mcp-protocol](../mcp-protocol/SKILL.md). Use Standard Schema objects: `z.object(...)` from zod ≥4.2.0, or existing ArkType or Valibot schemas.
+7. **Adopt `McpServer` where possible**: Convert low-level `Server` instances unless custom or vendor JSON-RPC methods need low-level class — send those to [mcp-protocol](../mcp-protocol/SKILL.md). Use Standard Schema objects: `z.object(...)` from zod ≥4.2.0, or existing ArkType/Valibot schemas.
 
-   **Done:** Every server is either an `McpServer` or has documented custom methods that require low-level [mcp-protocol](../mcp-protocol/SKILL.md) handling.
+   **Done:** Every server is either `McpServer` or has documented custom methods needing low-level [mcp-protocol](../mcp-protocol/SKILL.md) handling.
 
-8. **Choose and verify the module mode**: Default to ESM with `"module": "NodeNext"`, `"moduleResolution": "NodeNext"`, and `"type": "module"`. v2 is ESM-first, and CommonJS projects can directly `require('@modelcontextprotocol/…')`.
+8. **Choose and verify module mode**: Default ESM with `"module": "NodeNext"`, `"moduleResolution": "NodeNext"`, `"type": "module"`. v2 is ESM-first; CommonJS projects can `require('@modelcontextprotocol/…')` directly.
 
-   **Done:** The selected ESM or CommonJS mode resolves every v2 import in the project’s compiler and runtime.
+   **Done:** Selected ESM or CommonJS mode resolves every v2 import in project's compiler and runtime.
 
-9. **Verify behavior**: Run the tests described by [mcp-test](../mcp-test/SKILL.md), then review every [Silent Behavior Change](#silent-behavior-changes) against the migrated code. Tests—not the codemod or compiler—cover those differences. At the final staged slice, remove the legacy package and confirm no source import remains.
+9. **Verify behavior**: Run tests from [mcp-test](../mcp-test/SKILL.md), review every [Silent Behavior Change](#silent-behavior-changes) against migrated code. Tests — not codemod or compiler — cover those differences. Final staged slice: remove legacy package, confirm no source import remains.
 
-   **Done:** The migrated scope compiles and passes its tests; every silent change is accounted for; and a complete migration has no legacy package or source import.
+   **Done:** Migrated scope compiles and passes tests; every silent change accounted for; complete migration has no legacy package or source import.
 
 ## Reference
 
@@ -54,38 +54,38 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 
 | Package                               | Purpose                                                                                  |
 | :------------------------------------ | :--------------------------------------------------------------------------------------- |
-| `@modelcontextprotocol/server`        | `McpServer`, `Server`, `createMcpHandler`, validation, and errors                        |
-| `@modelcontextprotocol/client`        | `Client`, transport, auth, middleware, and caching                                       |
+| `@modelcontextprotocol/server`        | `McpServer`, `Server`, `createMcpHandler`, validation, errors                            |
+| `@modelcontextprotocol/client`        | `Client`, transport, auth, middleware, caching                                           |
 | `@modelcontextprotocol/core`          | Raw Zod wire schemas for gateways and proxies                                            |
 | `@modelcontextprotocol/node`          | Node HTTP adapter: `toNodeHandler` and stream transport                                  |
 | `@modelcontextprotocol/codemod`       | Migration CLI                                                                            |
 | `@modelcontextprotocol/server-legacy` | Frozen v1 `SSEServerTransport` (`/sse`) and Authorization Server OAuth helpers (`/auth`) |
-| `@modelcontextprotocol/express`       | Express adapter when the v1 server owns HTTP integration                                 |
-| `@modelcontextprotocol/hono`          | Hono adapter when the v1 server owns HTTP integration                                    |
-| `@modelcontextprotocol/fastify`       | Fastify adapter when the v1 server owns HTTP integration                                 |
+| `@modelcontextprotocol/express`       | Express adapter when v1 server owns HTTP integration                                     |
+| `@modelcontextprotocol/hono`          | Hono adapter when v1 server owns HTTP integration                                        |
+| `@modelcontextprotocol/fastify`       | Fastify adapter when v1 server owns HTTP integration                                     |
 
-**stdio subpath gotcha:** import `StdioClientTransport`, `StdioServerParameters`, `getDefaultEnvironment`, and `DEFAULT_INHERITED_ENV_VARS` from `@modelcontextprotocol/client/stdio`; import `StdioServerTransport` from `@modelcontextprotocol/server/stdio`. The runtime-neutral package roots omit these exports, while `ReadBuffer`, `serializeMessage`, and `deserializeMessage` remain at the root.
+**stdio subpath gotcha:** import `StdioClientTransport`, `StdioServerParameters`, `getDefaultEnvironment`, `DEFAULT_INHERITED_ENV_VARS` from `@modelcontextprotocol/client/stdio`; import `StdioServerTransport` from `@modelcontextprotocol/server/stdio`. Runtime-neutral package roots omit these exports; `ReadBuffer`, `serializeMessage`, `deserializeMessage` stay at root.
 
 ### Renames
 
 #### API and type
 
-| v1                                                                                                                            | v2                                                                                                                                     |
-| :---------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
-| `server.setRequestHandler(CallToolRequestSchema, ...)`                                                                        | `server.setRequestHandler('tools/call', ...)` (low-level method string)                                                                |
-| `.tool(...)` (variadic high-level)                                                                                            | `.registerTool(name, config, handler)` (high-level)                                                                                    |
-| `McpError` / `ErrorCode`                                                                                                      | `ProtocolError` / `ProtocolErrorCode` (or `SdkErrorCode`)                                                                              |
-| `StreamableHTTPError`                                                                                                         | `SdkHttpError`                                                                                                                         |
-| `SchemaInput<T>`                                                                                                              | `StandardSchemaWithJSON.InferInput<T>`                                                                                                 |
-| `ResourceTemplate` wire type                                                                                                  | `ResourceTemplateType`                                                                                                                 |
-| `JSONRPCError` / `JSONRPCErrorSchema` / `isJSONRPCError`                                                                      | `JSONRPCErrorResponse` / `JSONRPCErrorResponseSchema` / `isJSONRPCErrorResponse`                                                       |
-| `JSONRPCResponse` / `JSONRPCResponseSchema` / `isJSONRPCResponse`                                                             | `JSONRPCResultResponse` / `JSONRPCResultResponseSchema` / `isJSONRPCResultResponse`                                                    |
-| `InMemoryTransport` (single export)                                                                                           | Split across `@modelcontextprotocol/server` and `/client`; both halves of a linked pair must come from the same package                |
-| `schemaToJson` / `parseSchemaAsync` / `getSchemaShape` / `getSchemaDescription` / `isOptionalSchema` / `unwrapOptionalSchema` | Removed (`@mcp-codemod-error`); `schemaToJson`→`fromJsonSchema()`, `parseSchemaAsync`→schema-library validation, others no replacement |
-| `ResourceReference` / `ResourceReferenceSchema`                                                                               | `ResourceTemplateReference` / `ResourceTemplateReferenceSchema`                                                                        |
-| `IsomorphicHeaders`                                                                                                           | Web Standard `Headers` with `.get()` and `.set()`                                                                                      |
+| v1                                                                                                                            | v2                                                                                                                                   |
+| :---------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| `server.setRequestHandler(CallToolRequestSchema, ...)`                                                                        | `server.setRequestHandler('tools/call', ...)` (low-level method string)                                                              |
+| `.tool(...)` (variadic high-level)                                                                                            | `.registerTool(name, config, handler)` (high-level)                                                                                  |
+| `McpError` / `ErrorCode`                                                                                                      | `ProtocolError` / `ProtocolErrorCode` (or `SdkErrorCode`)                                                                            |
+| `StreamableHTTPError`                                                                                                         | `SdkHttpError`                                                                                                                       |
+| `SchemaInput<T>`                                                                                                              | `StandardSchemaWithJSON.InferInput<T>`                                                                                               |
+| `ResourceTemplate` wire type                                                                                                  | `ResourceTemplateType`                                                                                                               |
+| `JSONRPCError` / `JSONRPCErrorSchema` / `isJSONRPCError`                                                                      | `JSONRPCErrorResponse` / `JSONRPCErrorResponseSchema` / `isJSONRPCErrorResponse`                                                     |
+| `JSONRPCResponse` / `JSONRPCResponseSchema` / `isJSONRPCResponse`                                                             | `JSONRPCResultResponse` / `JSONRPCResultResponseSchema` / `isJSONRPCResultResponse`                                                  |
+| `InMemoryTransport` (single export)                                                                                           | Split across `@modelcontextprotocol/server` and `/client`; both halves of linked pair must come from same package                    |
+| `schemaToJson` / `parseSchemaAsync` / `getSchemaShape` / `getSchemaDescription` / `isOptionalSchema` / `unwrapOptionalSchema` | Removed (`@mcp-codemod-error`); `schemaToJson`→`fromJsonSchema()`, `parseSchemaAsync`→schema-library validation, rest no replacement |
+| `ResourceReference` / `ResourceReferenceSchema`                                                                               | `ResourceTemplateReference` / `ResourceTemplateReferenceSchema`                                                                      |
+| `IsomorphicHeaders`                                                                                                           | Web Standard `Headers` with `.get()` and `.set()`                                                                                    |
 
-**Call-site gotcha:** low-level `setRequestHandler(Schema)` becomes `setRequestHandler('method/string')`; high-level `.tool()` becomes `.registerTool()`. These are distinct conversions.
+**Call-site gotcha:** low-level `setRequestHandler(Schema)` becomes `setRequestHandler('method/string')`; high-level `.tool()` becomes `.registerTool()`. Distinct conversions.
 
 #### Context and property
 
@@ -98,33 +98,33 @@ Migrate Node ≥20 projects from `@modelcontextprotocol/sdk` v1 to the split v2 
 | `extra.sessionId`                                   | `ctx.sessionId`                                                                           |
 | `extra.closeSSEStream` / `closeStandaloneSSEStream` | `ctx.http?.closeSSE` / `closeStandaloneSSE`                                               |
 | `server.sendLoggingMessage`                         | `ctx.mcpReq.log` (deprecated, SEP-2577; modern replacement: per-request `_meta.logLevel`) |
-| `server.createMessage`                              | Deprecated (SEP-2577); removed in a later major                                           |
-| `server.listRoots`                                  | Deprecated (SEP-2577); removed in a later major                                           |
-| `McpServer.sendLoggingMessage`                      | Deprecated (SEP-2577); removed in a later major                                           |
-| `Client.setLoggingLevel`                            | Deprecated (SEP-2577); removed in a later major                                           |
-| `Client.sendRootsListChanged`                       | Deprecated (SEP-2577); removed in a later major                                           |
-| `ctx.mcpReq.requestSampling`                        | Deprecated (SEP-2577); removed in a later major                                           |
+| `server.createMessage`                              | Deprecated (SEP-2577); removed in later major                                             |
+| `server.listRoots`                                  | Deprecated (SEP-2577); removed in later major                                             |
+| `McpServer.sendLoggingMessage`                      | Deprecated (SEP-2577); removed in later major                                             |
+| `Client.setLoggingLevel`                            | Deprecated (SEP-2577); removed in later major                                             |
+| `Client.sendRootsListChanged`                       | Deprecated (SEP-2577); removed in later major                                             |
+| `ctx.mcpReq.requestSampling`                        | Deprecated (SEP-2577); removed in later major                                             |
 | `registerClient`                                    | Deprecated (SEP-2577); prefer Client ID Metadata Documents per SEP-991                    |
-| `elicitInput`                                       | `inputRequired(...)`; retain `ctx.mcpReq.elicitInput` only for 2025 branches              |
+| `elicitInput`                                       | `inputRequired(...)`; keep `ctx.mcpReq.elicitInput` only for 2025 branches                |
 | `StreamableHTTPServerTransport`                     | `Node/WebStandardStreamableHTTPServerTransport`                                           |
 | `extra.taskStore` / `taskId` / `taskRequestedTtl`   | Removed (experimental tasks, SEP-2663); delete usages                                     |
 
 #### OAuth migration
 
-Map each `<Name>Error` class to `OAuthErrorCode.<Name>` without the `Error` suffix (`InvalidGrantError` → `OAuthErrorCode.InvalidGrant`), except `ServerError`, which retains its name; map `CustomOAuthError` to a defined custom code. Replace `OAUTH_ERRORS` and `instanceof` checks with a switch on `error.code`. Token verifiers throw `OAuthError(OAuthErrorCode.InvalidToken)` for invalid tokens so the response is not an HTTP 500. `InsufficientScopeError` from SEP-2350 is a transport-layer `OAuthClientFlowError`, distinct from `OAuthErrorCode.InsufficientScope`.
+Map each `<Name>Error` class to `OAuthErrorCode.<Name>` without `Error` suffix (`InvalidGrantError` → `OAuthErrorCode.InvalidGrant`), except `ServerError`, keeps its name; map `CustomOAuthError` to defined custom code. Replace `OAUTH_ERRORS` and `instanceof` checks with switch on `error.code`. Token verifiers throw `OAuthError(OAuthErrorCode.InvalidToken)` for invalid tokens so response isn't HTTP 500. `InsufficientScopeError` from SEP-2350 is transport-layer `OAuthClientFlowError`, distinct from `OAuthErrorCode.InsufficientScope`.
 
 ### Silent Behavior Changes
 
-The compiler and codemod cannot detect these changes.
+Compiler and codemod can't catch these.
 
-| Behavior                                                                                         | v1                                         | v2                                                                                                              |
-| :----------------------------------------------------------------------------------------------- | :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| Unknown or disabled tool name                                                                    | Resolves `CallToolResult{ isError: true }` | Rejects `ProtocolError(InvalidParams)`; catch the promise and read `error.code`                                 |
-| `listTools()` / `listPrompts()` / `listResources()` / `listResourceTemplates()` without a cursor | One page                                   | Auto-aggregates all pages; `listMaxPages` defaults to 64 and overflow throws `SdkError(ListPaginationExceeded)` |
-| Declared empty `tools`, `resources`, or `prompts`                                                | `-32601 Method not found`                  | `*/list` returns `[]` and advertises `listChanged: true`; set `listChanged: false` to opt out                   |
-| POST `Content-Type`                                                                              | Substring match                            | Parsed media type; non-`application/json` returns `415 Unsupported Media Type`                                  |
-| Default JSON Schema dialect                                                                      | draft-07                                   | 2020-12; explicit draft-07/06 remains honored                                                                   |
-| `WebSocketClientTransport`                                                                       | Available                                  | Removed; use `StreamableHTTPClientTransport` or `StdioClientTransport`                                          |
+| Behavior                                                                                       | v1                                         | v2                                                                                                           |
+| :--------------------------------------------------------------------------------------------- | :----------------------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| Unknown or disabled tool name                                                                  | Resolves `CallToolResult{ isError: true }` | Rejects `ProtocolError(InvalidParams)`; catch the promise, read `error.code`                                 |
+| `listTools()` / `listPrompts()` / `listResources()` / `listResourceTemplates()` without cursor | One page                                   | Auto-aggregates all pages; `listMaxPages` defaults to 64, overflow throws `SdkError(ListPaginationExceeded)` |
+| Declared empty `tools`, `resources`, or `prompts`                                              | `-32601 Method not found`                  | `*/list` returns `[]`, advertises `listChanged: true`; set `listChanged: false` to opt out                   |
+| POST `Content-Type`                                                                            | Substring match                            | Parsed media type; non-`application/json` returns `415 Unsupported Media Type`                               |
+| Default JSON Schema dialect                                                                    | draft-07                                   | 2020-12; explicit draft-07/06 still honored                                                                  |
+| `WebSocketClientTransport`                                                                     | Available                                  | Removed; use `StreamableHTTPClientTransport` or `StdioClientTransport`                                       |
 
 ### Era Axes
 
@@ -134,7 +134,7 @@ The compiler and codemod cannot detect these changes.
 | Server stdio entry         | `server.connect(StdioServerTransport)`          | `serveStdio(factory)`             |
 | Client connect             | `initialize` handshake                          | `server/discover` probe           |
 | Client identity            | `getClientCapabilities/Version`                 | `ctx.mcpReq.envelope` per request |
-| Client cancellation (HTTP) | POST `notifications/cancelled`                  | Close the request’s SSE stream    |
+| Client cancellation (HTTP) | POST `notifications/cancelled`                  | Close request's SSE stream        |
 | Server-to-client requests  | `ctx.mcpReq.send`                               | `return inputRequired(...)`       |
 | Change notifications       | `list_changed` / `updated`                      | `subscriptions/listen` stream     |
 | Logging                    | `ctx.mcpReq.log()` / session `logging/setLevel` | Per-request `_meta.logLevel`      |
