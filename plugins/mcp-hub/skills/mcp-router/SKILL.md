@@ -42,7 +42,8 @@ Use this canonical read-only sweep for an existing MCP implementation. `mcp-audi
 
 2. **Version**: Treat a v1 package or import as a Blocker and load [mcp-migration](../mcp-migration/SKILL.md). Classify remaining version surfaces:
    - SEP-2577 deprecations: `listRoots`, `sendRootsListChanged`, `sendLoggingMessage`, `createMessage`, `setLoggingLevel`; `registerClient` (SEP-991); and variadic `.tool()`/`.prompt()`/`.resource()` registration are Should Fix.
-   - v1→v2 renames: `McpError`, `ErrorCode`, `StreamableHTTPError`, `JSONRPCError`, `ResourceReference`, `IsomorphicHeaders`, `RequestHandlerExtra`, schema-first `setRequestHandler(`, `SSEServerTransport`, `WebSocketClientTransport`, and `Invalid*Error` OAuth classes are Blockers.
+   - v1→v2 renames: `McpError`, `ErrorCode`, `StreamableHTTPError`, `JSONRPCError`, `ResourceReference`, `IsomorphicHeaders`, `RequestHandlerExtra`, schema-first `setRequestHandler(`, and `Invalid*Error` OAuth classes are Blockers.
+   - Removed transports (not renames): `SSEServerTransport` and `WebSocketClientTransport` are removed — migrate to Streamable HTTP (temporary v1 bridge at `@modelcontextprotocol/server-legacy/sse`; WebSocket clients use `StreamableHTTPClientTransport` or `StdioClientTransport`). Blockers.
    - Removed experimental tasks (SEP-2663): `ProtocolOptions.tasks`, `taskManager`, `registerToolTask`, `TaskStore`, `InMemoryTaskStore`, `requestStream`, `callToolStream`, `createMessageStream`, `elicitInputStream`, and `Experimental*Tasks` are Blockers; remove them rather than applying a mechanical migration.
    - [ ] Every matched version surface is ranked with the applicable finding and [mcp-migration](../mcp-migration/SKILL.md) owns its remediation.
 

@@ -23,9 +23,12 @@ Use [mcp-migration](../mcp-migration/SKILL.md) for SDK-version changes, [mcp-ser
      ```ts
      const handler = createMcpHandler(createServer); // server factory
      const transport = new StreamableHTTPClientTransport(new URL('http://test.local/mcp'), {
-       fetch: (url, init) => handler.fetch(new Request(url, init)), // in-process fetch mock
+       fetch: (url, init) => handler.fetch(new Request(url, init)), // real in-process serving: handler.fetch serves every request, the transport never dials http://test.local/mcp
      });
-     const client = new Client({ name: 'test-harness', version: '1.0.0' });
+     const client = new Client(
+       { name: 'test-harness', version: '1.0.0' },
+       { versionNegotiation: { mode: 'auto' } },
+     );
      await client.connect(transport);
 
      const failed = await client.callTool({
@@ -49,7 +52,7 @@ Use [mcp-migration](../mcp-migration/SKILL.md) for SDK-version changes, [mcp-ser
      // ... assert, then client.close()
      ```
 
-     > `InMemoryTransport` lives in `@modelcontextprotocol/client`, not `core` (Zod schemas only). It's the 2025-era in-process pattern — for 2026-07-28 server coverage prefer the `handler.fetch` harness above. Leave `sessionId` unset at construction: setting it there skips the `initialize` handshake. `close()` aborts in-flight handlers via `ctx.mcpReq.signal` and no longer double-fires `onclose` on the initiating side.
+     > `InMemoryTransport` lives in `@modelcontextprotocol/client`, not `core` (Zod schemas only). It's the 2025-era in-process pattern — for 2026-07-28 server coverage prefer the `handler.fetch` harness above. `close()` aborts in-flight handlers via `ctx.mcpReq.signal`.
 
    - **stdio server** — spawn the real process with `StdioClientTransport`; stdio has no in-process shortcut.
 

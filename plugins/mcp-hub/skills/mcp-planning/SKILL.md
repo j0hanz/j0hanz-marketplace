@@ -18,13 +18,13 @@ metadata:
 
 2. **Resolve the decision set**: Evaluate every trigger in [Decisions](#decisions). Ask about each triggered decision; apply the stated default to every other decision.
 
-   **Done:** All 15 decisions have an explicit value, every remote HTTP Auth value is explicit, and every non-default value is traced to a question.
+   **Done:** All 16 decisions have an explicit value, every remote HTTP Auth value is explicit, and every non-default value is traced to a question.
 
 3. **Ask tightly**: Ask one triggered question per turn. Offer the two stated choices; Auth asks its access gate first and its three method choices only when authenticated, while Era has three choices. Re-ask one vague answer, then use the first listed choice. Treat “you choose” as that default choice.
 
    **Done:** Each asked decision has one unambiguous selected value.
 
-4. **Write the record**: List all 15 decisions in the [record format](#record-format), marking each `(asked)` or `(default)`.
+4. **Write the record**: List all 16 decisions in the [record format](#record-format), marking each `(asked)` or `(default)`.
 
    **Done:** The record is exhaustive and every entry carries one source tag.
 
@@ -40,7 +40,7 @@ metadata:
 
 1. **Scope** (default `server`) — Ask when the codebase does not establish server versus client. Choices: Server | Client.
 2. **Transport** (default `stdio`) — Ask for remote, multi-user, or deployed use. Choices: stdio | Streamable HTTP. **Gotcha:** current SSE and WebSocket transports are absent; frozen SSE remains at `@modelcontextprotocol/server-legacy/sse`.
-3. **Auth** (default `none` for local or stdio use) — For every remote HTTP deployment, ask: Authenticated | Private no-auth. Record `none` only for an explicit private deployment; public endpoints use [mcp-auth](../mcp-auth/SKILL.md). When authenticated, choose: OAuth (client `OAuthClientProvider`; server `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server `verifyAccessToken`) | Legacy authorization-server helpers (`server-legacy/auth`). **Gotchas:** token endpoints require `https:` except loopback (`InsecureTokenEndpointError`, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
+3. **Auth** (default `none` for local or stdio use) — For every remote HTTP deployment, ask: Authenticated | Private no-auth. Record `none` only for an explicit private deployment; public endpoints use [mcp-auth](../mcp-auth/SKILL.md). When authenticated, choose: OAuth (client `OAuthClientProvider`; server `requireBearerAuth`) | Custom bearer (client `AuthProvider`; server `verifyAccessToken`) | Legacy authorization-server helpers (`server-legacy/auth`) | Machine auth (client `ClientCredentialsProvider` for `client_credentials` grant, `PrivateKeyJwtProvider` for `private_key_jwt` (RFC 7523), or `CrossAppAccessProvider` for cross-app access (SEP-990); for non-human callers such as jobs, backends, service accounts). **Gotchas:** token endpoints require `https:` except loopback (`InsecureTokenEndpointError`, SEP-2207); key credentials by `ctx.issuer` (SEP-2352).
 4. **Tool Surface** (default `Few simple`) — Ask for more than three tools or complex operations. Choices: Many simple | Few big with settings.
 5. **Input Schemas** (default Standard Schema via `zod ^4.2.0`) — Silently retain the project’s existing Standard Schema library; otherwise use zod. Use `fromJsonSchema()` only for existing raw JSON Schema.
 6. **Interaction** (default `Request-response`) — Ask for long-running work or required user input. Choices: Progress/Cancel | Multi-round-trip.
@@ -53,6 +53,7 @@ metadata:
 13. **Era / Protocol Revision** (default both eras, `legacy: 'stateless'`) — Ask only when modern 2026 behavior is required. **Three choices:** Both eras (`legacy: 'stateless'`) | Modern only (`legacy: 'reject'`) | 2025-era only (hand-wired `*StreamableHTTPServerTransport`; no `createMcpHandler` or `legacy:` setting).
 14. **Runtime** (default Node ≥20, ESM-first) — Apply without a question; v2 also ships a CommonJS build.
 15. **Staging** (default `one-shot`) — Ask when a large, multi-directory codebase already uses SDK v1. Choices: one-shot | stage by directory. Execute the selected posture in [mcp-migration](../mcp-migration/SKILL.md) step 1.
+16. **Elicitation** (default `None`) — Ask when a handler must question the end user mid-call. Choices: `ctx.mcpReq.elicitInput` (form mode with `requestedSchema`, or URL mode with `url` + `elicitationId`; client must declare the matching `elicitation` capability) | None. For tools/call, prompts/get, and resources/read handlers requesting input mid-call on older protocol revisions where `elicitInput` throws, return the `input_required` result type instead.
 
 ## Record Format
 
@@ -76,4 +77,5 @@ Append a dated section to `docs/mcp-decisions.md` that lists every decision:
 13. Era / Protocol Revision: both eras (legacy: 'stateless'). (default)
 14. Runtime: Node ≥ 20, ESM-first. (default)
 15. Staging: one-shot. (default)
+16. Elicitation: none. (default)
 ```

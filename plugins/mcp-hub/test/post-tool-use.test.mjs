@@ -157,6 +157,27 @@ test('R1: an MCP dependency in a workspace package.json is detected', () => {
   }
 });
 
+// detectMcpProject reads peerDependencies and optionalDependencies too.
+for (const depField of ['peerDependencies', 'optionalDependencies']) {
+  test(`R1: an MCP package under ${depField} is detected`, () => {
+    const pkg = JSON.stringify({ [depField]: { '@modelcontextprotocol/server': '2.0.0' } });
+    const hook = makeHook();
+    const cwd = makeProj(
+      pkg,
+      { 'src/a.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
+      { decisions: true },
+    );
+    const sid = `r1-${depField}`;
+    try {
+      const { stdout, status } = run(hook, cwd, payload(join(cwd, 'src', 'a.ts'), sid));
+      assert.equal(status, 0);
+      assert.match(stdout, /mcp-hub:mcp-migration/);
+    } finally {
+      clean(hook, cwd, sid);
+    }
+  });
+}
+
 test('R1: a BOM-prefixed root package.json is still detected', () => {
   const hook = makeHook();
   const cwd = makeProj(
@@ -429,6 +450,25 @@ test('R6: instanceof ProtocolError cites mcp-hub:mcp-test', () => {
     clean(hook, cwd, sid);
   }
 });
+
+// R6 advisory regex also matches the other v2 SDK error class names.
+for (const className of ['SdkError', 'SdkHttpError', 'OAuthError', 'McpError']) {
+  test(`R6: instanceof ${className} cites mcp-hub:mcp-test`, () => {
+    const hook = makeHook();
+    const cwd = makeProj(
+      MCP_PKG,
+      { 'src/c.ts': `if (e instanceof ${className}) x;\n` },
+      { decisions: true },
+    );
+    const sid = `r6-${className.toLowerCase()}`;
+    try {
+      const { stdout } = run(hook, cwd, payload(join(cwd, 'src', 'c.ts'), sid));
+      assert.match(stdout, /mcp-hub:mcp-test/);
+    } finally {
+      clean(hook, cwd, sid);
+    }
+  });
+}
 
 test('R6: instanceof Error (generic) emits no R6 advisory', () => {
   const hook = makeHook();
