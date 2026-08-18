@@ -2,33 +2,39 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// Shared dedupe-store helpers for hooks/post-tool-use.cjs and hooks/session-end.cjs.
-// Both hooks must agree on the store filename for a session — one hook writes it,
-// the other deletes it — so the id-sanitizing and path-building logic lives here
-// once instead of being re-derived (and risking drift) in each hook.
+const STORE_FILE_PREFIX = 'mcp-hub-drift-';
 
-function safeId(s) {
-  return String(s).replace(/[^A-Za-z0-9_-]/g, '_');
+function sanitizeSessionId(sessionId) {
+  return String(sessionId).replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 function storePath(sessionId) {
-  return path.join(os.tmpdir(), 'mcp-hub-drift-' + safeId(sessionId) + '.json');
+  return path.join(os.tmpdir(), `${STORE_FILE_PREFIX}${sanitizeSessionId(sessionId)}.json`);
 }
 
-// ENOENT -> empty set (normal first run, not an outage); other read failure throws.
-function readStore(p) {
-  let txt;
+function hasUsableSessionId(sessionId) {
+  return typeof sessionId === 'string' && sanitizeSessionId(sessionId).length > 0;
+}
+
+function readDedupeKeys(storeFile) {
+  let serializedKeys;
   try {
-    txt = fs.readFileSync(p, 'utf8');
-  } catch (e) {
-    if (e.code === 'ENOENT') return new Set();
-    throw e;
+    serializedKeys = fs.readFileSync(storeFile, 'utf8');
+  } catch (error) {
+    // A missing store is normal on a session's first advisory.
+    if (error.code === 'ENOENT') return new Set();
+    throw error;
   }
-  return new Set(JSON.parse(txt));
+  return new Set(JSON.parse(serializedKeys));
 }
 
-function writeStore(p, keys) {
-  fs.writeFileSync(p, JSON.stringify([...keys]));
+function writeDedupeKeys(storeFile, keys) {
+  fs.writeFileSync(storeFile, JSON.stringify([...keys]));
 }
 
-module.exports = { safeId, storePath, readStore, writeStore };
+module.exports = {
+  hasUsableSessionId,
+  storePath,
+  readDedupeKeys,
+  writeDedupeKeys,
+};

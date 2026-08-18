@@ -1,28 +1,31 @@
 const fs = require('fs');
-const { safeId, storePath } = require('./drift-store.cjs');
+const { hasUsableSessionId, storePath } = require('./drift-store.cjs');
 
-// SessionEnd cleanup for mcp-hub: removes this session's dedupe scratch store
-// written by hooks/post-tool-use.cjs to os.tmpdir() (mcp-hub-drift-<sid>.json),
-// so per-session store files do not accumulate across sessions. Fail open on
-// every path — no payload, no store, or unlink failure all exit 0 silently.
-// stdlib only; the store filename lives in hooks/drift-store.cjs so this hook
-// and post-tool-use.cjs can't drift out of sync on what to delete.
+function readSessionId() {
+  try {
+    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+    return typeof input?.session_id === 'string' ? input.session_id : null;
+  } catch {
+    return null;
+  }
+}
+
+function deleteDedupeStore(sessionId) {
+  try {
+    fs.unlinkSync(storePath(sessionId));
+  } catch {
+    // A missing or inaccessible store does not affect session teardown.
+  }
+}
+
+function main() {
+  const sessionId = readSessionId();
+  if (!sessionId || !hasUsableSessionId(sessionId)) return;
+  deleteDedupeStore(sessionId);
+}
 
 try {
-  let input;
-  try {
-    input = JSON.parse(fs.readFileSync(0, 'utf8'));
-  } catch {
-    input = null;
-  }
-  const sid = input && typeof input.session_id === 'string' ? input.session_id : null;
-  if (sid && safeId(sid).length > 0) {
-    try {
-      fs.unlinkSync(storePath(sid));
-    } catch {
-      // already gone or unreadable -> nothing to clean
-    }
-  }
+  main();
 } catch {
-  // never fail a SessionEnd hook over cleanup
+  // SessionEnd cleanup must never fail the enclosing session.
 }

@@ -4,52 +4,67 @@ const { detectMcpProject } = require('./mcp-project.cjs');
 
 const skillPath = path.join(__dirname, '..', 'skills', 'mcp-router', 'SKILL.md');
 
-console.log('<mcp-hub-router>');
-console.log(
-  'Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.',
-);
-console.log(
-  "Skill names below invoke via the Skill tool as 'mcp-hub:<name>' (e.g. /mcp-test -> mcp-hub:mcp-test).\n",
-);
-
-try {
-  if (fs.existsSync(skillPath)) {
-    const rawContent = fs.readFileSync(skillPath, 'utf8');
-    const cleaned = rawContent.replace(/^---[\s\S]*?---\r?\n/, '');
-    if (cleaned.includes('</mcp-hub-router>') || cleaned.includes('<system-reminder')) {
-      console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
-    } else {
-      process.stdout.write(cleaned);
-    }
-  } else {
-    console.error(`Error reading mcp router skill: ${skillPath} not readable`);
-  }
-} catch (err) {
-  console.error(`Error reading mcp router skill: ${err.message}`);
+function stripFrontmatter(content) {
+  return content.replace(/^---[\s\S]*?---\r?\n/, '');
 }
 
-console.log('\n</mcp-hub-router>');
+function emitRouter() {
+  console.log('<mcp-hub-router>');
+  console.log(
+    'Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.',
+  );
+  console.log(
+    "Skill names below invoke via the Skill tool as 'mcp-hub:<name>' (e.g. /mcp-test -> mcp-hub:mcp-test).\n",
+  );
 
-try {
-  const { hasV1, v2Packages } = detectMcpProject(process.cwd());
-  if (hasV1 || v2Packages.length > 0) {
+  try {
+    if (!fs.existsSync(skillPath)) {
+      console.error(`Error reading mcp router skill: ${skillPath} not readable`);
+    } else {
+      const routerContent = stripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
+      if (
+        routerContent.includes('</mcp-hub-router>') ||
+        routerContent.includes('<system-reminder')
+      ) {
+        console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
+      } else {
+        process.stdout.write(routerContent);
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading mcp router skill: ${error.message}`);
+  }
+
+  console.log('\n</mcp-hub-router>');
+}
+
+function projectProbeMessage({ hasV1, v2Packages }) {
+  if (!hasV1 && v2Packages.length === 0) return null;
+  if (hasV1 && v2Packages.length > 0) {
+    return `Found v1 (@modelcontextprotocol/sdk) and v2 (${v2Packages.join(', ')}). The v1 package is a blocker for v2 work; /mcp migrate is the migration path.`;
+  }
+  if (hasV1) {
+    return 'Found @modelcontextprotocol/sdk (v1). The v1 single package is a blocker for v2 work; the mcp-migrator agent handles its removal.';
+  }
+  return `Found v2 packages (${v2Packages.join(', ')}). /mcp routes MCP work to the matching specialist skill.`;
+}
+
+function emitProjectProbe() {
+  try {
+    const message = projectProbeMessage(detectMcpProject(process.cwd()));
+    if (!message) return;
     console.log('<mcp-hub-probe>');
     console.log('Scope: auto-detected MCP packages in this project package.json.');
-    if (hasV1 && v2Packages.length > 0) {
-      console.log(
-        `Found v1 (@modelcontextprotocol/sdk) and v2 (${v2Packages.join(', ')}). The v1 package is a blocker for v2 work; /mcp migrate is the migration path.`,
-      );
-    } else if (hasV1) {
-      console.log(
-        'Found @modelcontextprotocol/sdk (v1). The v1 single package is a blocker for v2 work; the mcp-migrator agent handles its removal.',
-      );
-    } else {
-      console.log(
-        `Found v2 packages (${v2Packages.join(', ')}). /mcp routes MCP work to the matching specialist skill.`,
-      );
-    }
+    console.log(message);
     console.log('</mcp-hub-probe>');
+  } catch {
+    // A missing or invalid package.json should not change the router output.
   }
-} catch {
-  // No package.json, unreadable, or invalid JSON -> stay silent (fail open).
 }
+
+function main() {
+  emitRouter();
+  emitProjectProbe();
+}
+
+main();
