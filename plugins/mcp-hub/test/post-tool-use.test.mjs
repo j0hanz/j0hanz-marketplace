@@ -163,6 +163,26 @@ test('R2: a file_path that does not exist emits nothing, exit 0', () => {
   }
 });
 
+for (const extension of ['.mts', '.cts']) {
+  test(`R2: ${extension} source files are scanned`, () => {
+    const hook = makeHook();
+    const sourceFile = `src/server${extension}`;
+    const cwd = makeProj(
+      MCP_PKG,
+      { [sourceFile]: "import { Server } from '@modelcontextprotocol/sdk';\n" },
+      { decisions: true },
+    );
+    const sid = `r2-${extension.slice(1)}`;
+    try {
+      const { stdout, status } = run(hook, cwd, payload(join(cwd, sourceFile), sid));
+      assert.equal(status, 0);
+      assert.match(ctxOf(stdout), /mcp-hub:mcp-migration/);
+    } finally {
+      clean(hook, cwd, sid);
+    }
+  });
+}
+
 test('R2: a non-Write/Edit tool_name (NotebookEdit) emits nothing, exit 0', () => {
   const hook = makeHook();
   const cwd = makeProj(

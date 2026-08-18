@@ -8,7 +8,7 @@ const {
   writeDedupeKeys,
 } = require('./drift-store.cjs');
 
-const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
   /@modelcontextprotocol\/sdk(?![\w-])/,
   /\b(McpError|ErrorCode|SSEServerTransport|WebSocketClientTransport|RequestHandlerExtra)\b/,
