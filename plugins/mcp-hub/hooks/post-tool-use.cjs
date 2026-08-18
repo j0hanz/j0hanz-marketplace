@@ -1,12 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isMcpProject, escapeContextText } = require('./mcp-project.cjs');
-const {
-  hasUsableSessionId,
-  storePath,
-  readDedupeKeys,
-  writeDedupeKeys,
-} = require('./drift-store.cjs');
+const { storePath, readDedupeKeys, writeDedupeKeys } = require('./drift-store.cjs');
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
@@ -113,9 +108,9 @@ function resolveProjectSourceFile(filePath, projectRoot) {
 }
 
 function dedupeFindings(findings, sessionId) {
-  if (!hasUsableSessionId(sessionId)) return findings;
+  const storeFile = storePath(sessionId);
+  if (!storeFile) return findings;
   try {
-    const storeFile = storePath(sessionId);
     const seenKeys = readDedupeKeys(storeFile);
     const unseenFindings = findings.filter((finding) => !seenKeys.has(findingDedupeKey(finding)));
     writeDedupeKeys(storeFile, [...seenKeys, ...unseenFindings.map(findingDedupeKey)]);
