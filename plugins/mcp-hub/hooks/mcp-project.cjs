@@ -20,7 +20,10 @@ function findNearestPackageJson(startDir, projectRoot) {
   for (let directory = startDir; ; directory = path.dirname(directory)) {
     const candidate = path.join(directory, 'package.json');
     if (fs.existsSync(candidate)) return candidate;
-    if (directory === projectRoot) return null;
+    // projectRoot is matched with ===, which is case-sensitive while win32 path
+    // containment is not, so a drive-letter-skewed startDir never matches it.
+    // path.dirname is the identity at the filesystem root, so stop there too.
+    if (directory === projectRoot || path.dirname(directory) === directory) return null;
   }
 }
 

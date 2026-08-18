@@ -80,7 +80,7 @@ Use [mcp-migration](../mcp-migration/SKILL.md) for SDK-version changes, [mcp-ser
 
    - [ ] Every shipping server transport completes representative probe, no protocol framing errors.
 
-4. **Assert error channel**: Tool business failures return `isError: true`; unknown/disabled tool names reject `ProtocolError(InvalidParams)`. Assert rejection via `try`/`catch` and `error.code`; use `.isInstance()` or `.code`/`data` across realms and package bundles. Error-channel model: [mcp-server](../mcp-server/SKILL.md) "Handle Errors". Code lookups: Error Code Reference below.
+4. **Assert error channel**: Tool business failures return `isError: true`; unknown/disabled tool names reject `ProtocolError(InvalidParams)`. Assert rejection via `try`/`catch` and `error.code`; `instanceof` and `.isInstance()` both read the SDK brand, so both match across separately bundled copies on brand-aware releases; fall back to `.code`/`data` for pre-brand copies, mixed-version rollouts, or errors crossing worker/`structuredClone` boundary. Error-channel model: [mcp-server](../mcp-server/SKILL.md) "Handle Errors". Code lookups: Error Code Reference below.
 
    - [ ] Every error assertion uses matching `ProtocolError`, `SdkError`, or `SdkHttpError` entry below.
    - [ ] Tool business failures assert `isError: true`; unknown/disabled names assert `ProtocolError(InvalidParams)` via `try`/`catch` plus `.code`.

@@ -23,7 +23,8 @@ const ADVISORY_RULES = {
   R6: {
     skill: 'mcp-hub:mcp-test',
     name: 'instanceof on SDK error',
-    suggestion: 'consider using .code/.data or .isInstance() (see mcp-hub:mcp-test)',
+    suggestion:
+      'valid on brand-aware releases; consider .isInstance() or .code/.data only for pre-brand copies, mixed versions, or worker boundaries (see mcp-hub:mcp-test)',
   },
   R7: {
     skill: 'mcp-hub:mcp-planning',
