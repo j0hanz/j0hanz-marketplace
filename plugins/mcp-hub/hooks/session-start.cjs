@@ -25,18 +25,11 @@ function emitRouter() {
   );
 
   try {
-    if (!fs.existsSync(skillPath)) {
-      console.error(`Error reading mcp router skill: ${skillPath} not readable`);
+    const routerContent = stripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
+    if (routerContent.includes('</mcp-hub-router>') || routerContent.includes('<system-reminder')) {
+      console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
     } else {
-      const routerContent = stripFrontmatter(fs.readFileSync(skillPath, 'utf8'));
-      if (
-        routerContent.includes('</mcp-hub-router>') ||
-        routerContent.includes('<system-reminder')
-      ) {
-        console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
-      } else {
-        process.stdout.write(routerContent);
-      }
+      process.stdout.write(routerContent);
     }
   } catch (error) {
     console.error(`Error reading mcp router skill: ${error.message}`);

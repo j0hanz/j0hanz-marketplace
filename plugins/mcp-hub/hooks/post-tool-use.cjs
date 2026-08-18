@@ -41,41 +41,21 @@ function findingDedupeKey(finding) {
   return finding.rule === 'R7' ? 'R7' : `${finding.rule}|${finding.file}`;
 }
 
+// 1-based line of the first match, or 0 when no line matches.
+function firstMatchingLine(sourceLines, ...patterns) {
+  return sourceLines.findIndex((line) => patterns.some((pattern) => pattern.test(line))) + 1;
+}
+
 function scanSourceFile(sourcePath, projectRoot) {
   const sourceLines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
-
-  let v1ContaminationLine = 0;
-  let sdkErrorInstanceofLine = 0;
-  for (let index = 0; index < sourceLines.length; index++) {
-    const line = sourceLines[index];
-    if (!v1ContaminationLine && V1_CONTAMINATION_PATTERNS.some((pattern) => pattern.test(line))) {
-      v1ContaminationLine = index + 1;
-    }
-    if (!sdkErrorInstanceofLine && SDK_ERROR_INSTANCEOF_PATTERN.test(line)) {
-      sdkErrorInstanceofLine = index + 1;
-    }
-    if (v1ContaminationLine && sdkErrorInstanceofLine) break;
-  }
-
   const displayPath = path.relative(projectRoot, sourcePath) || sourcePath;
-  const findings = [];
-  if (v1ContaminationLine) {
-    findings.push({
-      rule: 'R5',
-      file: sourcePath,
-      line: v1ContaminationLine,
-      displayPath,
-    });
-  }
-  if (sdkErrorInstanceofLine) {
-    findings.push({
-      rule: 'R6',
-      file: sourcePath,
-      line: sdkErrorInstanceofLine,
-      displayPath,
-    });
-  }
-  return findings;
+
+  return [
+    { rule: 'R5', line: firstMatchingLine(sourceLines, ...V1_CONTAMINATION_PATTERNS) },
+    { rule: 'R6', line: firstMatchingLine(sourceLines, SDK_ERROR_INSTANCEOF_PATTERN) },
+  ]
+    .filter((finding) => finding.line > 0)
+    .map((finding) => ({ ...finding, file: sourcePath, displayPath }));
 }
 
 function emitAdvisories(findings) {
@@ -100,20 +80,17 @@ function emitAdvisories(findings) {
   );
 }
 
+// Malformed stdin throws out to main()'s catch, which is also a silent no-op.
 function readPostToolUseInput() {
-  try {
-    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-    const filePath = input?.tool_input?.file_path;
-    if (
-      typeof filePath !== 'string' ||
-      (input?.tool_name !== 'Write' && input?.tool_name !== 'Edit')
-    ) {
-      return null;
-    }
-    return { filePath, sessionId: input.session_id };
-  } catch {
+  const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+  const filePath = input?.tool_input?.file_path;
+  if (
+    typeof filePath !== 'string' ||
+    (input?.tool_name !== 'Write' && input?.tool_name !== 'Edit')
+  ) {
     return null;
   }
+  return { filePath, sessionId: input.session_id };
 }
 
 function isPathInsideProject(projectRoot, candidatePath) {

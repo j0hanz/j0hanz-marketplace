@@ -13,7 +13,7 @@ function storePath(sessionId) {
 }
 
 function hasUsableSessionId(sessionId) {
-  return typeof sessionId === 'string' && sanitizeSessionId(sessionId).length > 0;
+  return typeof sessionId === 'string' && sessionId.length > 0;
 }
 
 function readDedupeKeys(storeFile) {
