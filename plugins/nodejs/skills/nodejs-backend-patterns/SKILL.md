@@ -1,7 +1,6 @@
 ---
 name: nodejs-backend-patterns
 description: 'Node.js backend architecture: use when building or refactoring Fastify/Express services that need fail-fast schema validation, layered controller/service/repository separation, pooled transactional data access, a single error envelope, or drain-based shutdown.'
-user-invocable: false
 metadata:
   category: reference
 ---

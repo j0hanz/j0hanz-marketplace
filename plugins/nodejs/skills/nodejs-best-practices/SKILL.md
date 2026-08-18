@@ -1,7 +1,6 @@
 ---
 name: nodejs-best-practices
 description: 'Node.js backend conventions — framework selection, API layering, error propagation, async performance, boundary validation, testing, security, and production gates. Use when architecting, building, reviewing, or deploying Node.js backend services. Not for browser/frontend JavaScript.'
-user-invocable: false
 metadata:
   category: reference
 ---
