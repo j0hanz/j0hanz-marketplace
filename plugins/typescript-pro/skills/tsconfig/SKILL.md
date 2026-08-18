@@ -1,7 +1,6 @@
 ---
 name: tsconfig
 description: Configure a tsconfig.json by runtime — pick module, moduleResolution, target, strict, and emit for a bundler, Node, library, or browser-ESM project, and fix the module/strict/emit errors a wrong config causes. Use when setting up or editing a tsconfig.json, choosing module or moduleResolution, adding project references for a monorepo, or resolving TypeScript module-resolution / verbatimModuleSyntax / declaration / strict errors. Not for bundler config files (vite.config, webpack.config) themselves — only the TypeScript compiler options.
-user-invocable: false
 metadata:
   category: reference
 ---

@@ -1,7 +1,6 @@
 ---
 name: declaration-contracts
 description: Declaration contracts for packages and untyped JavaScript APIs. Use when authoring, repairing, testing, augmenting, or publishing .d.ts files; model runtime exports, globals, callbacks, overloads, and package type entry points. Not for purely type-level utilities or tsconfig selection.
-user-invocable: false
 metadata:
   category: reference
 ---

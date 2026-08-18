@@ -46,3 +46,6 @@ export const countLabel = (count: number, word: string) =>
 
 /** Anything that leaves the page wears these, plus a new-tab announcement. */
 export const external = { target: '_blank', rel: 'noreferrer' } as const;
+
+/** The new-tab announcement every `external` link carries in its accessible name. */
+export const externalLabel = (name: string) => `${name} (opens in a new tab)`;

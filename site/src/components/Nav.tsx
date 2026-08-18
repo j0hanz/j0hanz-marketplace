@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icons';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { usePressedKey } from '../hooks/usePressedKey';
-import { external, site } from '../site';
+import { external, externalLabel, site } from '../site';
 import { accent, activeSx, drawable, litIdle, mono, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
@@ -156,7 +156,7 @@ export function Nav() {
               color="inherit"
               href={site.repoUrl}
               {...external}
-              aria-label="GitHub (opens in a new tab)"
+              aria-label={externalLabel('GitHub')}
               sx={{ display: { xs: 'none', md: 'inline-flex' } }}
             >
               <GitHubIcon />

@@ -116,7 +116,7 @@ Node.js backend conventions and implementation patterns: framework selection, la
 
 TypeScript type system skills: type-level utilities and type tests, .d.ts declaration contracts for packages and untyped APIs, JSDoc type-checking for plain .js files, and tsconfig selection by runtime
 
-- Model-loaded skills: `advanced-types`, `declaration-contracts`, `jsdoc-types`, `tsconfig`
+- Commands: `/typescript-pro:advanced-types`, `/typescript-pro:declaration-contracts`, `/typescript-pro:jsdoc-types`, `/typescript-pro:tsconfig`
 
 <!-- plugins:end -->
 

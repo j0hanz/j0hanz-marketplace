@@ -1,7 +1,6 @@
 ---
 name: advanced-types
 description: Type-level TypeScript. Use when a type resolves to any/never/unknown or refuses to narrow, when writing reusable type utilities or type tests, or when type-checking is slow or hits a depth error (ts2589).
-user-invocable: false
 metadata:
   category: reference
 ---

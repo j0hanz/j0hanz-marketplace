@@ -17,7 +17,7 @@ import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
 import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
-import { countLabel, external, site, type Plugin } from '../site';
+import { countLabel, external, externalLabel, site, type Plugin } from '../site';
 import { accent, drawable, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
@@ -64,7 +64,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
             {...external}
             color="inherit"
             underline="hover"
-            aria-label={`${plugin.displayName} homepage (opens in a new tab)`}
+            aria-label={externalLabel(`${plugin.displayName} homepage`)}
             sx={stretch}
           >
             {plugin.displayName}

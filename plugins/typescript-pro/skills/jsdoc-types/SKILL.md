@@ -1,7 +1,6 @@
 ---
 name: jsdoc-types
 description: Type-check plain .js files using JSDoc comments instead of migrating to TypeScript. Use when enabling or debugging checkJs/allowJs/`// @ts-check`, adding @type/@param/@typedef/@template annotations, typing a constructor function or ES6 class through JSDoc, or fixing a checkJs-only error (open-ended object literal, optional-by-default parameter, any-typed null/[] initializer). Not for .d.ts files shipped with a package (declaration-contracts), tsconfig option selection beyond checkJs/allowJs (tsconfig), or type-level generic utilities (advanced-types).
-user-invocable: false
 metadata:
   category: reference
 ---

@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
+import { externalLabel } from './site';
 import { srOnly } from './theme/tokens';
 
 export function MarkIcon(props: SvgIconProps) {
@@ -32,7 +33,7 @@ export function ExternalIcon(props: SvgIconProps) {
   return (
     <>
       <Box component="span" sx={srOnly}>
-        {' (opens in a new tab)'}
+        {externalLabel('')}
       </Box>
       <SvgIcon {...props} sx={{ fontSize: '0.8em', ml: 0.5, verticalAlign: '-0.1em', ...props.sx }}>
         <path d="M11 5H3v16h16v-8h-2v6H5V7h6zM14 3h7v7h-2V6.41l-7.29 7.3-1.42-1.42L17.59 5H14z" />
