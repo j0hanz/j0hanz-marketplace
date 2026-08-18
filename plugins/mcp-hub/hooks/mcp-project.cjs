@@ -7,7 +7,7 @@ const TOOLING_PACKAGES = new Set([
   '@modelcontextprotocol/codemod',
   '@modelcontextprotocol/inspector',
 ]);
-const CONTEXT_UNSAFE_PATTERN = new RegExp('[<>&\\u0000-\\u001F]', 'g');
+const CONTEXT_UNSAFE_PATTERN = /[<>&\u0000-\u001F]/g;
 
 function escapeContextText(content) {
   return content.replace(
@@ -42,9 +42,4 @@ function detectMcpProject(cwd, startDir = cwd) {
   return { hasV1, v2Packages };
 }
 
-function isMcpProject(cwd, startDir = cwd) {
-  const { hasV1, v2Packages } = detectMcpProject(cwd, startDir);
-  return hasV1 || v2Packages.length > 0;
-}
-
-module.exports = { detectMcpProject, isMcpProject, escapeContextText };
+module.exports = { detectMcpProject, escapeContextText };

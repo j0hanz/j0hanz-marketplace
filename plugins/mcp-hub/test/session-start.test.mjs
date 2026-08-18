@@ -158,7 +158,7 @@ test('v1-only (@modelcontextprotocol/sdk) emits the v1 probe message', () => {
   try {
     const { stdout } = run(root, cwd);
     assert.match(stdout, /<mcp-hub-probe>/);
-    assert.match(stdout, /Found @modelcontextprotocol\/sdk \(v1\)/);
+    assert.match(stdout, /Found v1 \(@modelcontextprotocol\/sdk\)\./);
     assert.match(stdout, /mcp-migrator agent/);
   } finally {
     rmSync(root, { recursive: true, force: true });

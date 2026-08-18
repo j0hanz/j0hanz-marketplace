@@ -13,7 +13,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import driftStore from '../hooks/drift-store.cjs';
 
 // The hook is CommonJS. Under this repo's `type: module` it will not run in
 // place, so the net copies the source into a CJS fixture and runs it there —
@@ -21,7 +20,9 @@ import driftStore from '../hooks/drift-store.cjs';
 // `type:module` parent). Mirrors test/session-start.test.mjs.
 const HOOKS_DIR = fileURLToPath(new URL('../hooks/', import.meta.url));
 
-const { storePath } = driftStore;
+// Mirrors storePath() in post-tool-use.cjs.
+const storePath = (sessionId) =>
+  join(tmpdir(), `mcp-hub-drift-${sessionId.replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
 
 const MCP_PKG = JSON.stringify({ dependencies: { '@modelcontextprotocol/server': '2.0.0' } });
 const TOOLING_PKG = JSON.stringify({
@@ -35,7 +36,7 @@ const REACT_PKG = JSON.stringify({ dependencies: { react: '1.0.0' } });
 const makeHook = () => {
   const root = mkdtempSync(join(tmpdir(), 'mcphub-drift-'));
   // Copies the whole hooks/ dir (not just post-tool-use.cjs) so the sibling
-  // mcp-project.cjs and drift-store.cjs modules it requires travel with it.
+  // mcp-project.cjs module it requires travels with it.
   cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };

@@ -1,7 +1,7 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { isMcpProject, escapeContextText } = require('./mcp-project.cjs');
-const { storePath, readDedupeKeys, writeDedupeKeys } = require('./drift-store.cjs');
+const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
@@ -10,8 +10,9 @@ const V1_CONTAMINATION_PATTERNS = [
   /\b(server|mcpServer|client|mcp)\s*\.\s*(tool|prompt|resource)\s*\(/,
   /\bsetRequestHandler\s*\(\s*[A-Za-z_$]/,
 ];
-const SDK_ERROR_INSTANCEOF_PATTERN =
-  /\binstanceof\s+(ProtocolError|SdkError|SdkHttpError|OAuthError|McpError)\b/;
+const SDK_ERROR_INSTANCEOF_PATTERNS = [
+  /\binstanceof\s+(ProtocolError|SdkError|SdkHttpError|OAuthError|McpError)\b/,
+];
 
 const ADVISORY_RULES = {
   R5: {
@@ -37,7 +38,7 @@ function findingDedupeKey(finding) {
 }
 
 // 1-based line of the first match, or 0 when no line matches.
-function firstMatchingLine(sourceLines, ...patterns) {
+function firstMatchingLine(sourceLines, patterns) {
   return sourceLines.findIndex((line) => patterns.some((pattern) => pattern.test(line))) + 1;
 }
 
@@ -46,8 +47,8 @@ function scanSourceFile(sourcePath, projectRoot) {
   const displayPath = escapeContextText(path.relative(projectRoot, sourcePath) || sourcePath);
 
   return [
-    { rule: 'R5', line: firstMatchingLine(sourceLines, ...V1_CONTAMINATION_PATTERNS) },
-    { rule: 'R6', line: firstMatchingLine(sourceLines, SDK_ERROR_INSTANCEOF_PATTERN) },
+    { rule: 'R5', line: firstMatchingLine(sourceLines, V1_CONTAMINATION_PATTERNS) },
+    { rule: 'R6', line: firstMatchingLine(sourceLines, SDK_ERROR_INSTANCEOF_PATTERNS) },
   ]
     .filter((finding) => finding.line > 0)
     .map((finding) => ({ ...finding, file: sourcePath, displayPath }));
@@ -88,18 +89,16 @@ function readPostToolUseInput() {
   return { filePath, sessionId: input.session_id };
 }
 
-function isPathInsideProject(projectRoot, candidatePath) {
-  const relativePath = path.relative(projectRoot, candidatePath);
-  return (
-    relativePath !== '..' &&
-    !relativePath.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(relativePath)
-  );
-}
-
 function resolveProjectSourceFile(filePath, projectRoot) {
   const sourcePath = path.resolve(projectRoot, filePath);
-  if (!isPathInsideProject(projectRoot, sourcePath)) return null;
+  const relativePath = path.relative(projectRoot, sourcePath);
+  if (
+    relativePath === '..' ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    return null;
+  }
   try {
     return fs.statSync(sourcePath).isFile() ? sourcePath : null;
   } catch {
@@ -107,13 +106,30 @@ function resolveProjectSourceFile(filePath, projectRoot) {
   }
 }
 
+// Returns null for an unusable session id; the caller branches on the path.
+// The store lives in os.tmpdir() and is left for the OS to reap.
+function storePath(sessionId) {
+  if (typeof sessionId !== 'string' || sessionId.length === 0) return null;
+  const safeId = sessionId.replace(/[^A-Za-z0-9_-]/g, '_');
+  return path.join(os.tmpdir(), `mcp-hub-drift-${safeId}.json`);
+}
+
 function dedupeFindings(findings, sessionId) {
   const storeFile = storePath(sessionId);
   if (!storeFile) return findings;
+  let storedKeys = [];
   try {
-    const seenKeys = readDedupeKeys(storeFile);
+    storedKeys = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+  } catch {
+    // Missing or corrupt store: start empty, the write below repairs it.
+  }
+  try {
+    const seenKeys = new Set(storedKeys);
     const unseenFindings = findings.filter((finding) => !seenKeys.has(findingDedupeKey(finding)));
-    writeDedupeKeys(storeFile, [...seenKeys, ...unseenFindings.map(findingDedupeKey)]);
+    fs.writeFileSync(
+      storeFile,
+      JSON.stringify([...seenKeys, ...unseenFindings.map(findingDedupeKey)]),
+    );
     return unseenFindings;
   } catch {
     // Store failures should not suppress an otherwise useful advisory.
@@ -129,7 +145,8 @@ function main() {
   const projectRoot = process.cwd();
   const sourcePath = resolveProjectSourceFile(filePath, projectRoot);
   if (!sourcePath || !SOURCE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) return;
-  if (!isMcpProject(projectRoot, path.dirname(sourcePath))) return;
+  const { hasV1, v2Packages } = detectMcpProject(projectRoot, path.dirname(sourcePath));
+  if (!hasV1 && v2Packages.length === 0) return;
 
   const findings = scanSourceFile(sourcePath, projectRoot);
   if (!fs.existsSync(path.join(projectRoot, 'docs', 'mcp-decisions.md'))) {
