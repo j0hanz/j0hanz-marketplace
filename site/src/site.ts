@@ -12,6 +12,11 @@ interface Agent {
   description: string;
 }
 
+interface McpServer {
+  name: string;
+  transport: string;
+}
+
 export interface Plugin {
   name: string;
   displayName: string;
@@ -23,6 +28,7 @@ export interface Plugin {
   hookEvents: string[];
   skills: Skill[];
   agents: Agent[];
+  mcpServers: McpServer[];
 }
 
 export interface Site {

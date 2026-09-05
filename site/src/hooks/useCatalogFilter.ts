@@ -20,6 +20,7 @@ const haystacks = (() => {
         .concat(
           plugin.skills.flatMap((skill) => [skill.name, skill.description]),
           plugin.agents.flatMap((agent) => [agent.name, agent.description]),
+          plugin.mcpServers.flatMap((server) => [server.name, server.transport, 'mcp']),
         )
         .join(' ')
         .toLowerCase(),

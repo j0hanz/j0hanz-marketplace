@@ -3,7 +3,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin%20marketplace-D97757)](https://code.claude.com/docs/en/plugin-marketplaces)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Claude Code plugins: skills and agents you can install into any project.
+Claude Code plugins: skills, agents, and MCP servers you can install into any project.
 
 ## Install
 
@@ -22,6 +22,7 @@ Claude Code plugins: skills and agents you can install into any project.
 /plugin install css@j0hanz-marketplace
 /plugin install frontend@j0hanz-marketplace
 /plugin install mcp-hub@j0hanz-marketplace
+/plugin install filesystem-mcp@j0hanz-marketplace
 /plugin install review@j0hanz-marketplace
 /plugin install prompt@j0hanz-marketplace
 /plugin install workbench@j0hanz-marketplace
@@ -32,7 +33,7 @@ Claude Code plugins: skills and agents you can install into any project.
 
 <!-- install:end -->
 
-**3. Use it.** Type the skill as a slash command, namespaced by plugin:
+**3. Use it.** Check MCP server connections with `/mcp`, or type an invocable skill as a slash command, namespaced by plugin:
 
 ```text
 /tutor:teach
@@ -79,6 +80,13 @@ MCP development skills for TypeScript SDK v2
 - Model-loaded skills: `mcp-auth`, `mcp-client`, `mcp-elicitation`, `mcp-migration`, `mcp-planning`, `mcp-protocol`, `mcp-router`, `mcp-server`, `mcp-test`
 - Agents: `mcp-auditor`, `mcp-debugger`, `mcp-migrator`
 - Hooks: `SessionStart`, `PostToolUse`
+
+### filesystem-mcp
+
+Project-scoped filesystem MCP tools for batched reads, RE2 search, diffs, and edits. Requires Node.js 24+
+
+- Commands: `/filesystem-mcp:filesystem`
+- MCP servers: `filesystem` (stdio)
 
 ### review
 

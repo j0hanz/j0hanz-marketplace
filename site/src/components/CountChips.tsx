@@ -10,6 +10,13 @@ export function CountChips({ plugin }: { plugin: Plugin }) {
       {plugin.agents.length > 0 && (
         <Chip size="small" variant="outlined" label={countLabel(plugin.agents.length, 'agent')} />
       )}
+      {plugin.mcpServers.length > 0 && (
+        <Chip
+          size="small"
+          variant="outlined"
+          label={countLabel(plugin.mcpServers.length, 'MCP server')}
+        />
+      )}
     </>
   );
 }

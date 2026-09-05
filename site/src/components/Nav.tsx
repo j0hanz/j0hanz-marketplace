@@ -18,7 +18,7 @@ import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
   { label: 'Plugins', href: '#plugins' },
-  { label: 'Skills', href: '#skills' },
+  { label: 'Capabilities', href: '#skills' },
 ];
 const hrefs = navLinks.map((link) => link.href);
 

@@ -14,7 +14,10 @@ const steps = [
   ...(site.example
     ? [
         { label: 'Install a plugin', value: site.example.install },
-        { label: 'Run it', value: site.example.run },
+        {
+          label: site.example.run === '/mcp' ? 'Check connection' : 'Run it',
+          value: site.example.run,
+        },
       ]
     : []),
 ];
@@ -44,7 +47,7 @@ export function Hero() {
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
-              Skills and agents for Claude Code
+              Plugins for Claude Code
             </Typography>
             {/* What the headline leaves to be counted. Same sentence the tab and
                 the search result carry, so the page opens the way it was found. */}

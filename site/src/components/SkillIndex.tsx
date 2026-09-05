@@ -25,6 +25,7 @@ const counts = (plugin: Plugin) =>
   [
     plugin.skills.length && countLabel(plugin.skills.length, 'skill'),
     plugin.agents.length && countLabel(plugin.agents.length, 'agent'),
+    plugin.mcpServers.length && countLabel(plugin.mcpServers.length, 'MCP server'),
   ]
     .filter(Boolean)
     .join(', ');
@@ -67,14 +68,21 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
 
   const skills = sum(visible, (plugin) => plugin.skills.length);
   const agents = sum(visible, (plugin) => plugin.agents.length);
+  const mcpServers = sum(visible, (plugin) => plugin.mcpServers.length);
 
   return (
     <Section
       id="skills"
-      title="Skills and agents"
+      title="Capabilities"
       count={{
-        total: skills + agents,
-        label: `${countLabel(skills, 'skill')} and ${countLabel(agents, 'agent')}`,
+        total: skills + agents + mcpServers,
+        label: [
+          skills && countLabel(skills, 'skill'),
+          agents && countLabel(agents, 'agent'),
+          mcpServers && countLabel(mcpServers, 'MCP server'),
+        ]
+          .filter(Boolean)
+          .join(', '),
       }}
     >
       {visible.length === 0 ? (
@@ -104,20 +112,24 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 <AccordionSummary
                   expandIcon={<ExpandMoreIcon />}
                   aria-label={`${plugin.displayName}: ${counts(plugin)}`}
-                  sx={{ px: { xs: 1.5, sm: 2 } }}
+                  sx={{
+                    px: { xs: 1.5, sm: 2 },
+                    '& .MuiAccordionSummary-content': { flexWrap: 'wrap', gap: 1, minWidth: 0 },
+                  }}
                 >
                   <Typography
                     component="span"
                     variant="h6"
-                    sx={{ flexGrow: 1, minWidth: 0, fontSize: '1rem' }}
+                    sx={{ flexGrow: 1, minWidth: 0, fontSize: '1rem', overflowWrap: 'anywhere' }}
                   >
                     {plugin.displayName}
                   </Typography>
                   <Stack
                     direction="row"
                     spacing={1}
+                    useFlexGap
                     aria-hidden
-                    sx={{ mr: 2, flexShrink: 0, alignSelf: 'center' }}
+                    sx={{ mr: 2, maxWidth: 1, flexWrap: 'wrap', alignSelf: 'center' }}
                   >
                     <CountChips plugin={plugin} />
                   </Stack>
@@ -149,6 +161,13 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                           {agent.name}
                         </Typography>
                         <Tag>agent</Tag>
+                      </Entry>
+                    ))}
+                    {plugin.mcpServers.map((server) => (
+                      <Entry key={server.name} description={`MCP server (${server.transport})`}>
+                        <Typography component="code" variant="body2" sx={codeSx}>
+                          {server.name}
+                        </Typography>
                       </Entry>
                     ))}
                   </List>

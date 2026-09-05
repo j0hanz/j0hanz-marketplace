@@ -139,7 +139,7 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
               e.preventDefault();
             }
           }}
-          placeholder="skill, agent, or hook name"
+          placeholder="skill, agent, hook, or MCP server"
           slotProps={{
             input: {
               startAdornment: (

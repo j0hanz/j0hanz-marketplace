@@ -31,6 +31,12 @@
       "category": "development"
     },
     {
+      "name": "filesystem-mcp",
+      "source": "./plugins/filesystem-mcp",
+      "description": "Project-scoped filesystem MCP tools for batched reads, RE2 search, diffs, and edits. Requires Node.js 24+",
+      "category": "development"
+    },
+    {
       "name": "review",
       "source": "./plugins/review",
       "description": "One strict behavior-preserving review of a diff: how the code reads, and how it is shaped",

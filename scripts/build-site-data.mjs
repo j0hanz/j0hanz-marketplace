@@ -88,6 +88,42 @@ const readHookEvents = (root) => {
   return existsSync(path) ? Object.keys(readJson(path).hooks ?? {}) : [];
 };
 
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const readMcpServers = (root, manifest) => {
+  const path = join(root, '.mcp.json');
+  if (manifest.mcpServers !== undefined) {
+    throw new Error(
+      `Plugin "${manifest.name}": use ${path}; manifest mcpServers is not supported by the site.`,
+    );
+  }
+  if (!existsSync(path)) return [];
+  let config;
+  try {
+    config = readJson(path);
+  } catch {
+    throw new Error(`Plugin "${manifest.name}": invalid JSON in ${path}.`);
+  }
+  if (!isObject(config) || !isObject(config.mcpServers)) {
+    throw new Error(`Plugin "${manifest.name}": ${path} must contain an mcpServers object.`);
+  }
+  return Object.entries(config.mcpServers)
+    .sort(([first], [second]) => (first < second ? -1 : first > second ? 1 : 0))
+    .map(([name, server]) => {
+      const transport = isObject(server) ? (server.type ?? 'stdio') : undefined;
+      const target = transport === 'stdio' ? server?.command : server?.url;
+      if (
+        !name.trim() ||
+        !['stdio', 'http', 'sse'].includes(transport) ||
+        typeof target !== 'string' ||
+        !target.trim()
+      ) {
+        throw new Error(`Plugin "${manifest.name}": invalid MCP server "${name}" in ${path}.`);
+      }
+      return { name, transport };
+    });
+};
+
 export function build() {
   const catalog = readJson('.claude-plugin/marketplace.json');
 
@@ -126,39 +162,43 @@ export function build() {
       hookEvents: readHookEvents(root),
       skills: readSkills(root, manifest.name),
       agents: readAgents(root),
+      mcpServers: readMcpServers(root, manifest),
     };
   });
-
-  // The install section walks a real plugin through steps 2 and 3. Fail here rather than
-  // let the page ship with nothing to put in them.
-  if (!plugins.some((p) => p.skills.some((s) => s.command))) {
-    throw new Error('No invocable skill in any plugin: the install steps have no command to show.');
-  }
 
   const total = (fn) => plugins.reduce((n, p) => n + fn(p), 0);
   const skills = total((p) => p.skills.length);
   const agents = total((p) => p.agents.length);
+  const mcpServers = total((plugin) => plugin.mcpServers.length);
   const categories = [...new Set(plugins.map((p) => p.category))].sort();
 
+  const capabilities = [
+    skills && count(skills, 'skill'),
+    agents && count(agents, 'agent'),
+    mcpServers && count(mcpServers, 'MCP server'),
+  ]
+    .filter(Boolean)
+    .join(', ');
   const tagline =
-    `${count(skills, 'skill')} and ${count(agents, 'agent')} across ` +
+    `${capabilities ? `${capabilities} across ` : ''}` +
     `${count(plugins.length, 'Claude Code plugin')}. Install one at a time, no build step.`;
 
   // The first command a visitor actually runs after `marketplace add`. Picked at build
   // time, so the hero ships its install steps in one import, not a flatMap at render.
+  const mcpPlugin = plugins.find((plugin) => plugin.mcpServers.length > 0);
   const example =
     plugins
       .flatMap((p) =>
         p.skills.flatMap((s) => (s.command ? { install: p.installCommand, run: s.command } : [])),
       )
-      .at(0) ?? null;
+      .at(0) ?? (mcpPlugin ? { install: mcpPlugin.installCommand, run: '/mcp' } : null);
 
   return {
     name: catalog.name,
     // The catalog line names the marketplace; a <title> has to name what the page
     // is about first. Same words the hero opens with, so the tab and the headline
     // agree. Marketplace name trails it as the brand.
-    pageTitle: `Skills and agents for Claude Code · ${catalog.name}`,
+    pageTitle: `Plugins for Claude Code · ${catalog.name}`,
     // Counted rather than authored: the catalog is the description, and one that
     // is written by hand goes stale the first time a plugin ships a skill. Front
     // sentence carries the pitch, so a search engine clipping the tail only ever
@@ -204,6 +244,10 @@ const section = (plugin) =>
       plugin.agents.map((a) => code(a.name)),
     ),
     ...bullet('Hooks', plugin.hookEvents.map(code)),
+    ...bullet(
+      'MCP servers',
+      plugin.mcpServers.map((server) => `${code(server.name)} (${server.transport})`),
+    ),
   ].join('\n');
 
 const REGIONS = {
@@ -233,8 +277,9 @@ if (process.argv[1] === import.meta.filename) {
 
   const skills = site.plugins.flatMap((p) => p.skills).length;
   const agents = site.plugins.flatMap((p) => p.agents).length;
+  const mcpServers = site.plugins.flatMap((plugin) => plugin.mcpServers).length;
   console.log(
-    `${OUT}: ${site.plugins.length} plugins, ${skills} skills, ${agents} agents` +
+    `${OUT}: ${site.plugins.length} plugins, ${skills} skills, ${agents} agents, ${mcpServers} MCP servers` +
       `${after === before ? '' : ` (${README} updated)`}`,
   );
 }
