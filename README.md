@@ -85,7 +85,6 @@ MCP development skills for TypeScript SDK v2
 
 Project-scoped filesystem MCP tools for batched reads, RE2 search, diffs, and edits. Requires Node.js 24+
 
-- Commands: `/filesystem-mcp:filesystem`
 - MCP servers: `filesystem` (stdio)
 
 ### review

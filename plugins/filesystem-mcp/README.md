@@ -4,14 +4,14 @@ Claude Code plugin for [@j0hanz/filesystem-mcp](https://github.com/j0hanz/filesy
 
 ## Install
 
-Requires **Node.js 24+**, npm, and current Claude Code. The first launch downloads the pinned server package, `@j0hanz/filesystem-mcp@2.0.0`, through npm; no source checkout or build is needed.
+Requires **Node.js 24+**, npm, and current Claude Code. The first launch downloads `@j0hanz/filesystem-mcp` from the `latest` dist-tag through npm; no source checkout or build is needed.
 
 ```text
 /plugin marketplace add j0hanz/j0hanz-marketplace
 /plugin install filesystem-mcp@j0hanz-marketplace
 ```
 
-Follow Claude's activation prompt, or run `/reload-plugins`. Use `/mcp` to check the `filesystem` connection. The server's tools are discovered as needed; `/filesystem-mcp:filesystem` loads the short workflow guide explicitly.
+Follow Claude's activation prompt, or run `/reload-plugins`. Use `/mcp` to check the `filesystem` connection. The server's tools are discovered as needed.
 
 ## Defaults
 

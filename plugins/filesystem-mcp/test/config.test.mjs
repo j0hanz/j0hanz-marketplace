@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 
-test('filesystem plugin installs the pinned server with project-scoped stdio defaults', () => {
+test('filesystem plugin installs the server with project-scoped stdio defaults', () => {
   const catalog = json('../../../.claude-plugin/marketplace.json');
   const entry = catalog.plugins.find((plugin) => plugin.name === 'filesystem-mcp');
   assert.ok(entry, 'filesystem-mcp must be installable from the catalog');
@@ -17,7 +17,7 @@ test('filesystem plugin installs the pinned server with project-scoped stdio def
   assert.deepEqual(mcpServers.filesystem, {
     type: 'stdio',
     command: 'npx',
-    args: ['-y', '@j0hanz/filesystem-mcp@2.0.0', '${CLAUDE_PROJECT_DIR}'],
+    args: ['-y', '@j0hanz/filesystem-mcp@latest', '${CLAUDE_PROJECT_DIR}'],
     env: {
       FS_PORT: '',
       FS_ALLOWED_DIRS: '',
