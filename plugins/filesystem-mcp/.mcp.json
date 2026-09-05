@@ -3,7 +3,7 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@j0hanz/filesystem-mcp@2.0.0", "${CLAUDE_PROJECT_DIR}"],
+      "args": ["-y", "@j0hanz/filesystem-mcp@2.1.0", "${CLAUDE_PROJECT_DIR}"],
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",
