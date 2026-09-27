@@ -3,14 +3,13 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@j0hanz/filesystem-mcp@2.6.1", "${CLAUDE_PROJECT_DIR}"],
+      "args": ["-y", "@j0hanz/filesystem-mcp@2.6.1", "--allow-cwd", "--root-boundary", "."],
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",
         "FS_ALLOW_CWD_WALK": "false",
         "FS_ALLOW_MISSING_ROOTS": "false",
-        "FS_ALLOW_SENSITIVE": "false",
-        "FS_ROOT_BOUNDARY": "${CLAUDE_PROJECT_DIR}"
+        "FS_ALLOW_SENSITIVE": "false"
       }
     }
   }

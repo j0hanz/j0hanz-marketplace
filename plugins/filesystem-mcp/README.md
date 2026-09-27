@@ -16,7 +16,7 @@ Follow Claude's activation prompt, or run `/reload-plugins`. Use `/mcp` to check
 ## Defaults
 
 - Native stdio transport; no HTTP listener, API key, or background service.
-- `${CLAUDE_PROJECT_DIR}` is the initial allowed root and boundary for additional grants. Inherited extra roots, CWD discovery, and HTTP settings are neutralized.
+- The project directory (Claude Code's working directory for the server) is the initial allowed root and boundary for additional grants. Inherited extra roots, CWD discovery, and HTTP settings are neutralized.
 - Read/write tools are available. Sensitive patterns such as `.env`, `*.pem`, and SSH private keys remain denied, including when inherited settings would allow them.
 - This is a server-enforced access boundary, not an OS sandbox or a restriction on Claude's other tools. It does not protect against concurrent adversarial changes to filesystem links.
 
