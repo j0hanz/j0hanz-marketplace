@@ -17,14 +17,28 @@ test('filesystem plugin pins the server to the plugin version with project-scope
   assert.deepEqual(mcpServers.filesystem, {
     type: 'stdio',
     command: 'npx',
-    args: ['-y', `@j0hanz/filesystem-mcp@${manifest.version}`, '${CLAUDE_PROJECT_DIR}'],
+    // Literal args only: the directory validator blocks any variable but
+    // ${CLAUDE_PLUGIN_ROOT}. Claude Code starts the server in the project
+    // directory, so the working directory is the root and the boundary.
+    args: [
+      '-y',
+      `@j0hanz/filesystem-mcp@${manifest.version}`,
+      '--allow-cwd',
+      '--root-boundary',
+      '.',
+    ],
     env: {
       FS_PORT: '',
       FS_ALLOWED_DIRS: '',
       FS_ALLOW_CWD_WALK: 'false',
       FS_ALLOW_MISSING_ROOTS: 'false',
       FS_ALLOW_SENSITIVE: 'false',
-      FS_ROOT_BOUNDARY: '${CLAUDE_PROJECT_DIR}',
     },
   });
+});
+
+test('filesystem plugin ships a square directory icon with no script or external links', () => {
+  const svg = readFileSync(new URL('../.claude-plugin/icon.svg', import.meta.url), 'utf8');
+  assert.match(svg, /^<svg\b[^>]*\bviewBox="0 0 512 512"/);
+  assert.doesNotMatch(svg, /<script|href=/i);
 });
