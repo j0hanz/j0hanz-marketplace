@@ -9,5 +9,10 @@
     "email": "l.johansson93@outlook.com"
   },
   "license": "MIT",
-  "keywords": ["mcp", "filesystem", "search", "batch", "diff", "edit"]
+  "keywords": ["mcp", "filesystem", "search", "batch", "diff", "edit"],
+  "homepage": "https://github.com/j0hanz/filesystem-mcp#readme",
+  "repository": "https://github.com/j0hanz/filesystem-mcp",
+  "documentationUrl": "https://github.com/j0hanz/filesystem-mcp#readme",
+  "supportUrl": "https://github.com/j0hanz/filesystem-mcp/issues",
+  "privacyPolicyUrl": "https://github.com/j0hanz/filesystem-mcp#privacy-policy"
 }
