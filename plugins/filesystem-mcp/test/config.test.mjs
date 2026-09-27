@@ -37,6 +37,16 @@ test('filesystem plugin pins the server to the plugin version with project-scope
   });
 });
 
+test('filesystem plugin manifest links the server repo for the directory listing', () => {
+  const manifest = json('../.claude-plugin/plugin.json');
+  const repo = 'https://github.com/j0hanz/filesystem-mcp';
+  assert.equal(manifest.homepage, `${repo}#readme`);
+  assert.equal(manifest.repository, repo);
+  assert.equal(manifest.documentationUrl, `${repo}#readme`);
+  assert.equal(manifest.supportUrl, `${repo}/issues`);
+  assert.equal(manifest.privacyPolicyUrl, `${repo}#privacy-policy`);
+});
+
 test('filesystem plugin ships a square directory icon with no script or external links', () => {
   const svg = readFileSync(new URL('../.claude-plugin/icon.svg', import.meta.url), 'utf8');
   assert.match(svg, /^<svg\b[^>]*\bviewBox="0 0 512 512"/);
