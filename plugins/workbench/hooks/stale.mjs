@@ -3,9 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { projectRoot } from './effort.mjs';
+import { notice } from './client.mjs';
 
 const SKIP = new Set(['node_modules', '.git', '.venv', '__pycache__']);
-const CACHED = /[\\/]plugins[\\/]cache[\\/]/;
+// Claude Code caches under plugins/cache/, Copilot CLI under installed-plugins/.
+const CACHED = /[\\/](?:plugins[\\/]cache|installed-plugins)[\\/]/;
 const MAX_DEPTH = 8;
 
 const slug = (v) => String(v ?? 'main').replace(/[^\w-]/g, '_');
@@ -69,7 +71,7 @@ if (import.meta.filename === process.argv[1]) {
     try {
       writeFileSync(marker, 'warned\n');
     } catch {}
-    process.stdout.write(JSON.stringify({ systemMessage: note }));
+    notice('Stop', note);
   } catch {
     process.exit(0);
   }

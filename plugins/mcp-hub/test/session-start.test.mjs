@@ -36,10 +36,11 @@ const makeFixture = (skillContent) => {
 };
 
 // Run the hook with cwd set to `cwd`, return { stdout, stderr }.
-const run = (fixtureRoot, cwd) => {
+const run = (fixtureRoot, cwd, env = {}) => {
   const r = spawnSync(process.execPath, [join(fixtureRoot, 'hooks', 'session-start.cjs')], {
     cwd,
     encoding: 'utf8',
+    env: { ...process.env, COPILOT_PLUGIN_ROOT: '', ...env },
   });
   return { stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
 };
@@ -224,6 +225,25 @@ test('invalid JSON package.json stays silent (fail open)', () => {
   try {
     const { stdout, stderr } = run(root, cwd);
     assert.doesNotMatch(stdout, /<mcp-hub-probe>/);
+    assert.equal(stderr, '');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('Copilot: router and probe arrive as one JSON additionalContext', () => {
+  const root = makeFixture(SKILL_FIXTURE);
+  const cwd = projCwd(
+    JSON.stringify({ dependencies: { '@modelcontextprotocol/server': '2.0.0' } }),
+  );
+  try {
+    const { stdout, stderr } = run(root, cwd, { COPILOT_PLUGIN_ROOT: root });
+    const { additionalContext } = JSON.parse(stdout);
+    assert.match(additionalContext, /^<mcp-hub-router>\n/);
+    assert.match(additionalContext, /SPECIAL_MARKER_XYZ/);
+    assert.match(additionalContext, /by their bare name/);
+    assert.match(additionalContext, /<mcp-hub-probe>/);
     assert.equal(stderr, '');
   } finally {
     rmSync(root, { recursive: true, force: true });

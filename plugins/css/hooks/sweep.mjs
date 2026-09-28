@@ -14,6 +14,7 @@ import {
   repoChanges,
   stateFile,
 } from './changed.mjs';
+import { stopContext } from './client.mjs';
 import { CUSTOM_PROPERTY_DECLARED } from './rules.mjs';
 import { blankStrings, LINE_COMMENT_LANGS, stripComments } from './strip.mjs';
 
@@ -204,14 +205,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     }
     if (!parts.length) process.exit(0);
 
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: payload.hook_event_name || 'Stop',
-          additionalContext: parts.join('\n\n'),
-        },
-      }),
-    );
+    process.stdout.write(stopContext(payload.hook_event_name || 'Stop', parts.join('\n\n')));
   } catch {
     process.exit(0);
   }

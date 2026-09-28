@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -239,6 +239,29 @@ test('a non-repo cwd and a broken payload both fail open', () => {
   try {
     assert.equal(run(dir, session('norepo')), '');
     assert.equal(runRaw(dir, 'not json'), '');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Copilot: the note goes to stderr with exit 2, the channel Copilot shows the user', () => {
+  const dir = repo({
+    'package.json': '{"dependencies":{"react":"19.0.0"}}',
+    'App.tsx': 'export const App = () => null;\n',
+  });
+  try {
+    const r = spawnSync('node', [HOOK], {
+      cwd: dir,
+      input: JSON.stringify({ cwd: dir, session_id: session('copilot') }),
+      encoding: 'utf8',
+      env: { ...process.env, COPILOT_PLUGIN_ROOT: dir },
+    });
+    assert.equal(r.status, 2);
+    assert.equal(r.stdout, '');
+    assert.match(
+      r.stderr,
+      /^frontend: 1 changed FE file — run frontend:guidelines\n {2}- App\.tsx\n$/,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,6 +1,6 @@
 ---
 name: mcp-elicitation
-description: Elicitation: MCP SDK v2 user-input rounds, prompt completion, progress, or cancellation.
+description: "Elicitation: MCP SDK v2 user-input rounds, prompt completion, progress, or cancellation."
 user-invocable: false
 metadata:
   category: technique

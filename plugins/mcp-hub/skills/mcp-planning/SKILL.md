@@ -1,6 +1,6 @@
 ---
 name: mcp-planning
-description: Plan: MCP SDK v2 design decisions before implementation; mcp-router owns workflows, mcp-server and mcp-client own builds.
+description: "Plan: MCP SDK v2 design decisions before implementation; mcp-router owns workflows, mcp-server and mcp-client own builds."
 user-invocable: false
 metadata:
   category: technique

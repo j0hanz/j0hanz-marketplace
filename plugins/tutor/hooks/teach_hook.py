@@ -108,9 +108,13 @@ def event_session_start(cwd):
     # Name the entry point so the loop survives the session boundary.
     lines.append("next: load the tutor:teach skill before teaching")
     # ponytail: plain stdout -> added to Claude's context (verified). SessionStart
-    # cannot block. If a future harness requires hookSpecificOutput wrapping,
-    # wrap here — one-line change.
-    print("\n".join(lines))
+    # cannot block. Copilot CLI (it sets COPILOT_PLUGIN_ROOT, Claude never does)
+    # parses stdout only as JSON, so there the same text rides additionalContext.
+    text = "\n".join(lines)
+    if os.environ.get("COPILOT_PLUGIN_ROOT"):
+        print(json.dumps({"additionalContext": text}))
+    else:
+        print(text)
     return 0
 
 

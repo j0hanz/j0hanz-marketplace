@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
+const { context, toolFilePath, toolName } = require('./client.cjs');
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
@@ -70,21 +71,15 @@ function emitAdvisories(findings) {
 
   // Reflex hooks must return this shape for advisory context to reach the agent.
   const block = `<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`;
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: block },
-    }),
-  );
+  process.stdout.write(context('PostToolUse', block));
 }
 
 // Malformed stdin throws out to main()'s catch, which is also a silent no-op.
 function readPostToolUseInput() {
   const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-  const filePath = input?.tool_input?.file_path;
-  if (
-    typeof filePath !== 'string' ||
-    (input?.tool_name !== 'Write' && input?.tool_name !== 'Edit')
-  ) {
+  const filePath = toolFilePath(input);
+  const tool = toolName(input);
+  if (typeof filePath !== 'string' || (tool !== 'Write' && tool !== 'Edit')) {
     return null;
   }
   return { filePath, sessionId: input.session_id };

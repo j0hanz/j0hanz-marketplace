@@ -1,16 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
+const { context, onCopilot } = require('./client.cjs');
 
 const skillPath = path.join(__dirname, '..', 'skills', 'mcp-router', 'SKILL.md');
 
+// Collected, then written once: Copilot reads SessionStart context only as one JSON object.
+const out = [];
+const line = (text) => out.push(`${text}\n`);
+
 function emitRouter() {
-  console.log('<mcp-hub-router>');
-  console.log(
-    'Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.',
-  );
-  console.log(
-    "Skill names below invoke via the Skill tool as 'mcp-hub:<name>' (e.g. /mcp-test -> mcp-hub:mcp-test).\n",
+  line('<mcp-hub-router>');
+  line('Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.');
+  line(
+    onCopilot()
+      ? 'Skill names below invoke via the skill tool by their bare name (e.g. /mcp-test -> mcp-test).\n'
+      : "Skill names below invoke via the Skill tool as 'mcp-hub:<name>' (e.g. /mcp-test -> mcp-hub:mcp-test).\n",
   );
 
   try {
@@ -18,13 +23,13 @@ function emitRouter() {
     if (routerContent.includes('</mcp-hub-router>') || routerContent.includes('<system-reminder')) {
       console.error('mcp-hub: refusing to inject router content containing reserved sentinels');
     } else {
-      process.stdout.write(routerContent);
+      out.push(routerContent);
     }
   } catch (error) {
     console.error(`Error reading mcp router skill: ${error.message}`);
   }
 
-  console.log('\n</mcp-hub-router>');
+  line('\n</mcp-hub-router>');
 }
 
 function projectProbeMessage({ hasV1, v2Packages }) {
@@ -42,10 +47,10 @@ function emitProjectProbe() {
   try {
     const message = projectProbeMessage(detectMcpProject(process.cwd()));
     if (!message) return;
-    console.log('<mcp-hub-probe>');
-    console.log('Scope: auto-detected MCP packages in this project package.json.');
-    console.log(message);
-    console.log('</mcp-hub-probe>');
+    line('<mcp-hub-probe>');
+    line('Scope: auto-detected MCP packages in this project package.json.');
+    line(message);
+    line('</mcp-hub-probe>');
   } catch {
     // A missing or invalid package.json should not change the router output.
   }
@@ -53,3 +58,4 @@ function emitProjectProbe() {
 
 emitRouter();
 emitProjectProbe();
+process.stdout.write(context('SessionStart', out.join('')));

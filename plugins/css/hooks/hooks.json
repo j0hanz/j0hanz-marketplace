@@ -2,11 +2,12 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|create|edit",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/runtime.mjs\" pre",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/runtime.mjs\" pre",
             "timeout": 10
           }
         ]
@@ -14,11 +15,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|create|edit",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/runtime.mjs\" post",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/runtime.mjs\" post",
             "timeout": 10
           }
         ]
@@ -30,6 +32,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/sweep.mjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/sweep.mjs\"",
             "timeout": 20
           }
         ]
@@ -37,11 +40,12 @@
     ],
     "SessionStart": [
       {
-        "matcher": "startup|clear",
+        "matcher": "startup|clear|new",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/onstart.mjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/onstart.mjs\"",
             "timeout": 10
           }
         ]
