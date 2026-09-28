@@ -159,6 +159,11 @@ export function build() {
       // forked or renamed, and then it is the one card still pointing at the old place.
       homepage: `https://github.com/${repo}/tree/main/${root.replace(/^\.\//, '')}`,
       installCommand: `/plugin install ${manifest.name}@${catalog.name}`,
+      // Same catalog, second client. A `claude-code-only` tag marks a plugin that installs
+      // under Copilot CLI but has nothing to do there, so it gets no Copilot line.
+      copilotInstallCommand: entry.tags?.includes('claude-code-only')
+        ? null
+        : `copilot plugin install ${manifest.name}@${catalog.name}`,
       hookEvents: readHookEvents(root),
       skills: readSkills(root, manifest.name),
       agents: readAgents(root),
@@ -181,7 +186,8 @@ export function build() {
     .join(', ');
   const tagline =
     `${capabilities ? `${capabilities} across ` : ''}` +
-    `${count(plugins.length, 'Claude Code plugin')}. Install one at a time, no build step.`;
+    `${count(plugins.length, 'plugin')} for Claude Code and GitHub Copilot CLI. ` +
+    'Install one at a time, no build step.';
 
   // The first command a visitor actually runs after `marketplace add`. Picked at build
   // time, so the hero ships its install steps in one import, not a flatMap at render.
@@ -198,7 +204,7 @@ export function build() {
     // The catalog line names the marketplace; a <title> has to name what the page
     // is about first. Same words the hero opens with, so the tab and the headline
     // agree. Marketplace name trails it as the brand.
-    pageTitle: `Plugins for Claude Code · ${catalog.name}`,
+    pageTitle: `Plugins for Claude Code and GitHub Copilot · ${catalog.name}`,
     // Counted rather than authored: the catalog is the description, and one that
     // is written by hand goes stale the first time a plugin ships a skill. Front
     // sentence carries the pitch, so a search engine clipping the tail only ever
@@ -210,6 +216,7 @@ export function build() {
     repo,
     repoUrl: `https://github.com/${repo}`,
     addCommand: `/plugin marketplace add ${repo}`,
+    copilotAddCommand: `copilot plugin marketplace add ${repo}`,
     categories,
     plugins,
     example,
@@ -252,6 +259,8 @@ const section = (plugin) =>
 
 const REGIONS = {
   install: (site) => fence(site.plugins.map((p) => p.installCommand)),
+  copilot: (site) =>
+    fence([site.copilotAddCommand, ...site.plugins.flatMap((p) => p.copilotInstallCommand ?? [])]),
   plugins: (site) => site.plugins.map(section).join('\n\n'),
 };
 

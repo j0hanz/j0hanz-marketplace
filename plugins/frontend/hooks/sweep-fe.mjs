@@ -3,6 +3,7 @@ import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { text } from 'node:stream/consumers';
+import { notice } from './client.mjs';
 
 const FE_EXT = new Set([
   '.tsx',
@@ -116,8 +117,8 @@ const main = async () => {
     ledger,
     files.slice(0, MAX_SHOWN).map((f) => ledgerKey(root, f)),
   );
-  const systemMessage = `frontend: ${files.length} changed FE file${files.length === 1 ? '' : 's'} — run frontend:guidelines\n${listing(files)}`;
-  process.stdout.write(JSON.stringify({ systemMessage }));
+  const message = `frontend: ${files.length} changed FE file${files.length === 1 ? '' : 's'} — run frontend:guidelines\n${listing(files)}`;
+  notice('Stop', message);
 };
 
 try {
@@ -125,4 +126,5 @@ try {
 } catch {
   // fail open — never block a turn on a reflective hook
 }
-process.exit(0);
+// Bare exit keeps the 2 a Copilot notice sets; otherwise it is 0.
+process.exit();

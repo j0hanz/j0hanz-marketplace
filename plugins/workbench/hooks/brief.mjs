@@ -10,6 +10,7 @@ import {
   liveEffort,
   projectRoot,
 } from './effort.mjs';
+import { context, notice, onCopilot, toolInput } from './client.mjs';
 
 const PREFIX = 'workbench:';
 const CHAIN = ['spec', 'plan', 'run', 'verify'];
@@ -21,17 +22,13 @@ let event = '';
 // event carries it as context.
 const emit = (message) =>
   process.stdout.write(
-    event === 'UserPromptExpansion' || !event
-      ? message
-      : JSON.stringify({
-          hookSpecificOutput: { hookEventName: event, additionalContext: message },
-        }),
+    event === 'UserPromptExpansion' || !event ? message : context(event, message),
   );
 
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
   event = String(payload.hook_event_name ?? '');
-  const invoked = String(payload.tool_input?.skill ?? payload.command_name ?? '')
+  const invoked = String(toolInput(payload).skill ?? payload.command_name ?? '')
     .trim()
     .replace(/^\//, '');
   // On every prompt the brief lands before the skill choice, not after it — but only when
@@ -40,7 +37,9 @@ try {
     event === 'SessionStart' ||
     event === 'UserPromptSubmit' ||
     invoked.startsWith(PREFIX) ||
-    (event === 'UserPromptExpansion' &&
+    // Copilot names plugin skills bare (`tdd`, not `workbench:tdd`), like an expansion does.
+    ((event === 'UserPromptExpansion' || onCopilot()) &&
+      /^[\w-]+$/.test(invoked) &&
       existsSync(new URL(`../skills/${invoked}/SKILL.md`, import.meta.url)));
   if (!mine) process.exit(0);
   const root = effortRoot(projectRoot(payload));
@@ -116,6 +115,5 @@ try {
   }
   emit(lines.join('\n'));
 } catch (e) {
-  const note = `workbench brief hook: ${e?.message ?? e}`;
-  process.stdout.write(JSON.stringify({ systemMessage: note }));
+  notice(event, `workbench brief hook: ${e?.message ?? e}`);
 }

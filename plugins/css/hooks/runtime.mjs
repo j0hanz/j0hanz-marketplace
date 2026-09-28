@@ -4,14 +4,16 @@ import { text } from 'node:stream/consumers';
 import { AUDITABLE, cap, MAX_BYTES, stateFile, STYLESHEET } from './changed.mjs';
 import { prepare } from './strip.mjs';
 import { ADVISE, BLOCK, DECLARATION, runRules, STYLE_MARKERS } from './rules.mjs';
+import { context, deny, notice, toolInput, toolName } from './client.mjs';
 
 const MODE = process.argv[2];
 const ADVISORY_CAP = 3;
 const DEGRADED = '\0degraded';
 
-function addedText({ tool_name, tool_input = {} }) {
-  if (tool_name === 'Write') return tool_input.content ?? '';
-  if (tool_name === 'Edit') return tool_input.new_string ?? '';
+function addedText(payload) {
+  const tool = toolName(payload);
+  if (tool === 'Write') return toolInput(payload).written ?? '';
+  if (tool === 'Edit') return toolInput(payload).replacement ?? '';
   return '';
 }
 
@@ -46,7 +48,7 @@ const firedMessages = (rules, text, path, readFile) =>
 let payload = {};
 try {
   payload = JSON.parse((await text(process.stdin)) || '{}');
-  const path = payload.tool_input?.file_path;
+  const path = toolInput(payload).filePath;
   if (!path || !AUDITABLE.test(path)) process.exit(0);
 
   const isSheet = STYLESHEET.test(path);
@@ -89,17 +91,12 @@ try {
     const blocks = firedMessages(BLOCK, added, path, () => null);
     if (blocks.length) {
       process.stdout.write(
-        JSON.stringify({
-          hookSpecificOutput: {
-            hookEventName: 'PreToolUse',
-            permissionDecision: 'deny',
-            permissionDecisionReason:
-              `css-pro refused this write to ${path}:\n` +
-              blocks.map((m) => `- ${m}`).join('\n') +
-              '\nFix these and write again. css-craft covers the mechanics, ' +
-              'motion-craft the duration and easing values.',
-          },
-        }),
+        deny(
+          `css-pro refused this write to ${path}:\n` +
+            blocks.map((m) => `- ${m}`).join('\n') +
+            '\nFix these and write again. css-craft covers the mechanics, ' +
+            'motion-craft the duration and easing values.',
+        ),
       );
     }
   } else if (MODE === 'post') {
@@ -111,23 +108,19 @@ try {
       const { shown, note } = cap(advisories, ADVISORY_CAP, 'finding(s)');
       remember(ledger, advisories.map(key));
       process.stdout.write(
-        JSON.stringify({
-          hookSpecificOutput: {
-            hookEventName: 'PostToolUse',
-            additionalContext:
-              `css-pro on ${path}:\n` + shown.map((m) => `- ${m}`).join('\n') + note,
-          },
-        }),
+        context(
+          'PostToolUse',
+          `css-pro on ${path}:\n` + shown.map((m) => `- ${m}`).join('\n') + note,
+        ),
       );
     }
   }
 } catch (e) {
   const why = String(e?.message ?? e).split('\n')[0];
   const say = () =>
-    process.stdout.write(
-      JSON.stringify({
-        systemMessage: `css-pro: check skipped (${why}). Writes are not being blocked.`,
-      }),
+    notice(
+      MODE === 'pre' ? 'PreToolUse' : 'PostToolUse',
+      `css-pro: check skipped (${why}). Writes are not being blocked.`,
     );
   if (payload.session_id) {
     const ledger = stateFile('said', payload);

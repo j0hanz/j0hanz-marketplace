@@ -8,6 +8,9 @@ argument-hint: '[concise | tldr | diagram-first | schematic | default]'
 The `UserPromptExpansion` hook normally handles `/set-style` and blocks this expansion.
 Reaching here means it could not run — usually no `node` on PATH.
 
+Output styles are a Claude Code feature. Under any other client (GitHub Copilot CLI), say so and
+stop — there is no setting to change.
+
 1. If no style was named, use AskUserQuestion:
    - Header: "Output style"
    - Question: "Which output style do you want to enable globally?"

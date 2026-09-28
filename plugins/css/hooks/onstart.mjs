@@ -27,6 +27,8 @@ function baseline(cwd) {
 
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
+  // A resumed session keeps its mark. Claude's matcher never sends one; Copilot may.
+  if (payload.source === 'resume') process.exit(0);
   const cwd = payload.cwd || process.cwd();
 
   try {

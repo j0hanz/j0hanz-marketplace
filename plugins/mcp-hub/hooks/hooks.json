@@ -2,11 +2,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|clear|compact",
+        "matcher": "startup|clear|compact|new",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/session-start.cjs\"",
             "timeout": 5
           }
         ]
@@ -14,11 +15,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "^(Write|Edit)$",
+        "matcher": "Write|Edit|create|edit",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.cjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/post-tool-use.cjs\"",
             "timeout": 5
           }
         ]

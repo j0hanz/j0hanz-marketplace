@@ -3,9 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { projectRoot } from './effort.mjs';
+import { notice } from './client.mjs';
 
 const SKIP = new Set(['node_modules', '.git', '.venv', '__pycache__']);
-const CACHED = /[\\/]plugins[\\/]cache[\\/]/;
+// Claude Code caches under plugins/cache/, Copilot CLI under installed-plugins/.
+const CACHED = /[\\/](?:plugins[\\/]cache|installed-plugins)[\\/]/;
 const MAX_DEPTH = 8;
 
 const slug = (v) => String(v ?? 'main').replace(/[^\w-]/g, '_');
@@ -64,12 +66,15 @@ if (import.meta.filename === process.argv[1]) {
     if (payload.stop_hook_active) process.exit(0);
     const marker = join(tmpdir(), `workbench-stale-${slug(payload.session_id)}.txt`);
     if (existsSync(marker)) process.exit(0);
-    const note = stalenessNote(process.env.CLAUDE_PLUGIN_ROOT, projectRoot(payload));
+    const note = stalenessNote(
+      process.env.COPILOT_PLUGIN_ROOT ?? process.env.CLAUDE_PLUGIN_ROOT,
+      projectRoot(payload),
+    );
     if (!note) process.exit(0);
     try {
       writeFileSync(marker, 'warned\n');
     } catch {}
-    process.stdout.write(JSON.stringify({ systemMessage: note }));
+    notice('Stop', note);
   } catch {
     process.exit(0);
   }

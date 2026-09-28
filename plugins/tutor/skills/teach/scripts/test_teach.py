@@ -13,6 +13,7 @@ its own.
 
 import contextlib
 import io
+import json
 import os
 import shutil
 import sys
@@ -207,6 +208,29 @@ def test_stop_gate(base):
     assert stop() == (0, "") and stop(other) == (0, "")  # both stay quiet
 
 
+def test_session_start(base):
+    """Claude reads plain stdout; Copilot (COPILOT_PLUGIN_ROOT set) reads JSON only."""
+
+    def start():
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = teach_hook.event_session_start(base)
+        return rc, buf.getvalue()
+
+    old = os.environ.pop("COPILOT_PLUGIN_ROOT", None)
+    try:
+        rc, out = start()
+        assert rc == 0 and out.startswith("teach: workspace live\n"), out
+        os.environ["COPILOT_PLUGIN_ROOT"] = base
+        rc, out = start()
+        assert rc == 0, rc
+        assert json.loads(out)["additionalContext"].startswith("teach: workspace live\n"), out
+    finally:
+        os.environ.pop("COPILOT_PLUGIN_ROOT", None)
+        if old is not None:
+            os.environ["COPILOT_PLUGIN_ROOT"] = old
+
+
 def main():
     base = tempfile.mkdtemp(prefix="teach-test-")
     old_pd = os.environ.get("CLAUDE_PLUGIN_DATA")
@@ -218,6 +242,7 @@ def main():
         test_scoring(base)
         test_result_line_refusals(base)
         test_stop_gate(base)
+        test_session_start(base)
     finally:
         teach.TODAY = None
         shutil.rmtree(base, ignore_errors=True)

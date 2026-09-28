@@ -19,6 +19,8 @@ The report has one job — trustworthy enough to act on **without re-reading the
 node "${CLAUDE_PLUGIN_ROOT}/skills/bug-hunt/hunt.mjs"
 ```
 
+`${CLAUDE_PLUGIN_ROOT}` is this plugin's root. A client that leaves it literal: use the directory two levels up from the folder holding this `SKILL.md`.
+
 It resolves scope, sizes the read, greps every exported symbol for callers outside the changed set, and tags mechanical **tells**. Pass paths or `--since <ref>` to override; exit 2 means scope could not be resolved without asking — the message names which (clean tree, bad ref, conflicting flags) — ask or correct, then re-run.
 
 Scope is **changed code plus blast radius**. A whole-repo pass re-reads untouched code and burns context before reaching what matters; a diff-only pass misses the commonest agent failure, where the changed file is fine and an unchanged caller three files away is now broken.

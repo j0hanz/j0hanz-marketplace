@@ -63,11 +63,12 @@ const payload = (filePath, sessionId = 's1', toolName = 'Write') => ({
   session_id: sessionId,
 });
 
-const run = (hookRoot, cwd, pl) => {
+const run = (hookRoot, cwd, pl, env = {}) => {
   const r = spawnSync(process.execPath, [join(hookRoot, 'hooks', 'post-tool-use.cjs')], {
     cwd,
     encoding: 'utf8',
     input: pl == null ? '' : typeof pl === 'string' ? pl : JSON.stringify(pl),
+    env: { ...process.env, COPILOT_PLUGIN_ROOT: '', ...env },
   });
   return { stdout: r.stdout ?? '', stderr: r.stderr ?? '', status: r.status };
 };
@@ -686,3 +687,35 @@ test('R11: a 20k-line source file matching no rule scans within 2000 ms', () => 
     clean(hook, cwd, sid);
   }
 });
+
+// --- Copilot CLI ----------------------------------------------------------
+
+for (const [tool, input] of [
+  ['edit', { old_str: 'x', new_str: 'y' }],
+  ['create', { file_text: 'y' }],
+]) {
+  test(`Copilot: a ${tool} payload ({path}) emits flat additionalContext`, () => {
+    const hook = makeHook();
+    const cwd = makeProj(
+      MCP_PKG,
+      { 'src/a.ts': "import { Server } from '@modelcontextprotocol/sdk';\n" },
+      { decisions: true },
+    );
+    const sid = `copilot-${tool}`;
+    try {
+      const pl = {
+        hook_event_name: 'PostToolUse',
+        tool_name: tool,
+        tool_input: { path: join(cwd, 'src', 'a.ts'), ...input },
+        session_id: sid,
+      };
+      const { stdout, status } = run(hook, cwd, pl, { COPILOT_PLUGIN_ROOT: hook });
+      assert.equal(status, 0);
+      const out = JSON.parse(stdout);
+      assert.equal(out.hookSpecificOutput, undefined);
+      assert.match(out.additionalContext, /<mcp-hub-drift>[\s\S]*mcp-hub:mcp-migration/);
+    } finally {
+      clean(hook, cwd, sid);
+    }
+  });
+}

@@ -14,6 +14,8 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/css-audit/audit.mjs" <file|dir|glob>... [--st
 node "${CLAUDE_PLUGIN_ROOT}/skills/css-audit/audit.mjs" --help
 ```
 
+`${CLAUDE_PLUGIN_ROOT}` is this plugin's root. A client that leaves it literal: use the directory two levels up from the folder holding this `SKILL.md`.
+
 Pass every file that holds CSS in one run — a directory recurses, a glob expands inside the script, so any enumeration of the project's files works in any shell. `--help` prints the file types it reads, the flags and the exit codes. Two things the run itself does not explain:
 
 - **Scope decides the custom-property findings.** They resolve only across the files passed in one run, so a single sheet reports every token it exports as dead and every token it imports as undefined. The script says so when it happens — that note means the scope was too narrow, not that the sheet is dirty.

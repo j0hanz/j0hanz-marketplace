@@ -25,6 +25,8 @@ export interface Plugin {
   summary: string;
   homepage: string;
   installCommand: string;
+  /** Null for a plugin tagged `claude-code-only`. */
+  copilotInstallCommand: string | null;
   hookEvents: string[];
   skills: Skill[];
   agents: Agent[];
@@ -40,6 +42,7 @@ export interface Site {
   repo: string;
   repoUrl: string;
   addCommand: string;
+  copilotAddCommand: string;
   categories: string[];
   plugins: Plugin[];
   example: { install: string; run: string } | null;

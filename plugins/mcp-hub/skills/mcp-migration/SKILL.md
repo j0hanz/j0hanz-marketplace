@@ -1,6 +1,6 @@
 ---
 name: mcp-migration
-description: Migration: MCP SDK v1 to v2 through the codemod, split packages, API rewrites, and behavior verification.
+description: 'Migration: MCP SDK v1 to v2 through the codemod, split packages, API rewrites, and behavior verification.'
 user-invocable: false
 metadata:
   category: technique

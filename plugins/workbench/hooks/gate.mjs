@@ -1,6 +1,7 @@
 import { text } from 'node:stream/consumers';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { ARTIFACT, CONVENTION, EFFORT_DIR, effortRoot, projectRoot, stemHome } from './effort.mjs';
+import { deny, notice, toolInput, toolName } from './client.mjs';
 
 const segmentsInside = (from, to) => {
   const rel = relative(from, to);
@@ -41,24 +42,12 @@ const misplacement = (filePath, project) => {
 if (import.meta.filename === process.argv[1]) {
   try {
     const payload = JSON.parse((await text(process.stdin)) || '{}');
-    if (payload.tool_name !== 'Write') process.exit(0);
-    const verdict = misplacement(payload.tool_input?.file_path, projectRoot(payload));
+    if (toolName(payload) !== 'Write') process.exit(0);
+    const verdict = misplacement(toolInput(payload).filePath, projectRoot(payload));
     if (!verdict) process.exit(0);
-    process.stdout.write(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'PreToolUse',
-          permissionDecision: 'deny',
-          permissionDecisionReason: verdict.reason,
-        },
-      }),
-    );
+    process.stdout.write(deny(verdict.reason));
   } catch (e) {
     const why = String(e?.message ?? e).split('\n')[0];
-    process.stdout.write(
-      JSON.stringify({
-        systemMessage: `workbench gate: check skipped (${why}). Writes are not being gated.`,
-      }),
-    );
+    notice('PreToolUse', `workbench gate: check skipped (${why}). Writes are not being gated.`);
   }
 }

@@ -15,7 +15,7 @@ Write each question as markdown:
 ➡️ <your recommended answer>
 ```
 
-Where every question in the round is a closed choice of four or fewer short options, ask the round through the **AskUserQuestion** tool instead.
+Where every question in the round is a closed choice of four or fewer short options, ask the round through the **AskUserQuestion** tool (Copilot: `ask_user`) instead.
 
 Finding _facts_ is your job — dispatch [research](../research/SKILL.md); put only the _decisions_ to the user. Every question in a round has been checked against the material first. A running dispatch is an unsettled prerequisite, so only the questions downstream of it wait; ask the rest of the settled set now.
 

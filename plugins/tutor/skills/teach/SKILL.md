@@ -5,7 +5,7 @@ disable-model-invocation: true
 argument-hint: '<topic to learn>'
 ---
 
-Stateful — current directory hold state across session. Deterministic half — schedule, ledger, scoring math, invariant — live in `skills/teach/scripts/teach.py`; this file hold judgement that depend on learner. `${CLAUDE_PLUGIN_ROOT}` substitute direct in this skill content.
+Stateful — current directory hold state across session. Deterministic half — schedule, ledger, scoring math, invariant — live in `skills/teach/scripts/teach.py`; this file hold judgement that depend on learner. `${CLAUDE_PLUGIN_ROOT}` substitute direct in this skill content. Client leave it literal? It mean plugin root — two directory up from folder holding this file.
 
 Returning learner not retype slash command — they say "carry on". SessionStart hook name this skill for that reason; session that teach without it ship lesson with no retrieval gate, no validator run, no ledger — course quietly stop being one. Command below say `python` and `python` not on PATH? Use `python3` — same for every command in this file.
 
