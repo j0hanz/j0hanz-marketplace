@@ -72,7 +72,8 @@ if (onPath('copilot')) {
     if (run('copilot', ['plugin', 'marketplace', 'add', `"${resolve('.')}"`], env).status !== 0) {
       fail('copilot plugin marketplace add');
     } else {
-      for (const { name } of catalog.plugins) {
+      for (const { name, tags } of catalog.plugins) {
+        if (Array.isArray(tags) && tags.includes('claude-code-only')) continue;
         const spec = `${name}@${catalog.name}`;
         if (run('copilot', ['plugin', 'install', spec], env).status !== 0) {
           fail(`copilot plugin install ${spec}`);

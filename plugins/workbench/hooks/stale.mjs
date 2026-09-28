@@ -66,7 +66,10 @@ if (import.meta.filename === process.argv[1]) {
     if (payload.stop_hook_active) process.exit(0);
     const marker = join(tmpdir(), `workbench-stale-${slug(payload.session_id)}.txt`);
     if (existsSync(marker)) process.exit(0);
-    const note = stalenessNote(process.env.CLAUDE_PLUGIN_ROOT, projectRoot(payload));
+    const note = stalenessNote(
+      process.env.COPILOT_PLUGIN_ROOT ?? process.env.CLAUDE_PLUGIN_ROOT,
+      projectRoot(payload),
+    );
     if (!note) process.exit(0);
     try {
       writeFileSync(marker, 'warned\n');
