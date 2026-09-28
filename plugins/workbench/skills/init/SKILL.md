@@ -20,6 +20,8 @@ be read.
 node "${CLAUDE_PLUGIN_ROOT}/skills/init/probe.mjs"
 ```
 
+`${CLAUDE_PLUGIN_ROOT}` is this plugin's root. A client that leaves it literal: use the directory two levels up from the folder holding this `SKILL.md`.
+
 Bare, it reports the whole repo from its git root, wherever you invoke it. Append the
 directory the invocation carried, when it carried one, and the brief covers that directory
 alone — which is what a monorepo package needs before its own `CLAUDE.md`. Every cap it hit is disclosed, at the point a reader
@@ -52,7 +54,7 @@ confirm there is dropped.
 
 The highest-value lines are the ones no probe reaches: what broke last, what a newcomer
 gets wrong, which rule is worth enforcing. Put every lead and every question step 1 left
-open into **one** round of **AskUserQuestion** — [grilling](../grilling/SKILL.md) owns it
+open into **one** round of **AskUserQuestion** (Copilot: `ask_user`) — [grilling](../grilling/SKILL.md) owns it
 instead where the decisions have prerequisites and need a map.
 
 Four classes earn a question:

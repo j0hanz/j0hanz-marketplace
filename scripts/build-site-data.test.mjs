@@ -8,7 +8,7 @@ import test from 'node:test';
 
 const script = fileURLToPath(new URL('./build-site-data.mjs', import.meta.url));
 
-function generate(context, mcp, { skill = true, manifest = {} } = {}) {
+function generate(context, mcp, { skill = true, manifest = {}, entry = {} } = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'marketplace-data-'));
   context.after(() => rmSync(cwd, { recursive: true, force: true }));
   const write = (path, value) => {
@@ -18,14 +18,15 @@ function generate(context, mcp, { skill = true, manifest = {} } = {}) {
   };
   write('.claude-plugin/marketplace.json', {
     name: 'example',
-    plugins: [{ name: 'sample', source: './plugins/sample', category: 'development' }],
+    plugins: [{ name: 'sample', source: './plugins/sample', category: 'development', ...entry }],
   });
   write('plugins/sample/.claude-plugin/plugin.json', { name: 'sample', ...manifest });
   if (skill) write('plugins/sample/skills/guide/SKILL.md', '---\nname: guide\n---\nGuide.\n');
   if (mcp !== undefined) write('plugins/sample/.mcp.json', mcp);
   write(
     'README.md',
-    '<!-- install:start -->\n<!-- install:end -->\n<!-- plugins:start -->\n<!-- plugins:end -->\n',
+    '<!-- install:start -->\n<!-- install:end -->\n<!-- copilot:start -->\n<!-- copilot:end -->\n' +
+      '<!-- plugins:start -->\n<!-- plugins:end -->\n',
   );
   const result = spawnSync(process.execPath, [script], {
     cwd,
@@ -111,5 +112,20 @@ test('an MCP-only catalog offers installation and connection verification', (con
     run: '/mcp',
   });
   assert.match(result.data().tagline, /1 MCP server/);
-  assert.equal(result.data().pageTitle, 'Plugins for Claude Code · example');
+  assert.equal(result.data().pageTitle, 'Plugins for Claude Code and GitHub Copilot · example');
+});
+
+test('every plugin gets a Copilot CLI install line unless tagged claude-code-only', (context) => {
+  const result = generate(context);
+  assert.equal(result.status, 0, result.stderr);
+  const data = result.data();
+  assert.equal(data.copilotAddCommand, 'copilot plugin marketplace add example/marketplace');
+  assert.equal(data.plugins[0].copilotInstallCommand, 'copilot plugin install sample@example');
+  assert.match(result.readme(), /copilot plugin install sample@example/);
+
+  const only = generate(context, undefined, { entry: { tags: ['claude-code-only'] } });
+  assert.equal(only.status, 0, only.stderr);
+  assert.equal(only.data().plugins[0].copilotInstallCommand, null);
+  assert.match(only.readme(), /\/plugin install sample@example/);
+  assert.doesNotMatch(only.readme(), /copilot plugin install/);
 });

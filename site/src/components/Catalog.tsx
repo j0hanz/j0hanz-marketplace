@@ -98,8 +98,9 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         </Stack>
       </CardContent>
 
-      <CardActions sx={{ position: 'relative' }}>
+      <CardActions disableSpacing sx={{ position: 'relative', flexDirection: 'column', gap: 1 }}>
         <Command value={plugin.installCommand} />
+        {plugin.copilotInstallCommand && <Command value={plugin.copilotInstallCommand} />}
       </CardActions>
     </Card>
   );

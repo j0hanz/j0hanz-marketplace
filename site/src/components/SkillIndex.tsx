@@ -16,7 +16,7 @@ import { CountChips } from './CountChips';
 import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
 
-const MODEL_LOADED = 'Claude auto-loads this skill. It is not a user-facing slash command.';
+const MODEL_LOADED = 'The agent auto-loads this skill. It is not a user-facing slash command.';
 
 const sum = (plugins: Plugin[], of: (plugin: Plugin) => number) =>
   plugins.reduce((n, plugin) => n + of(plugin), 0);

@@ -22,9 +22,7 @@ let event = '';
 // event carries it as context.
 const emit = (message) =>
   process.stdout.write(
-    event === 'UserPromptExpansion' || !event
-      ? message
-      : context(event, message),
+    event === 'UserPromptExpansion' || !event ? message : context(event, message),
   );
 
 try {

@@ -1,11 +1,12 @@
 # j0hanz-marketplace
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin%20marketplace-D97757)](https://code.claude.com/docs/en/plugin-marketplaces)
+[![GitHub Copilot CLI](https://img.shields.io/badge/GitHub%20Copilot%20CLI-plugin%20marketplace-8957E5)](https://docs.github.com/en/copilot/concepts/agents/copilot-cli/about-cli-plugins)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Claude Code plugins: skills, agents, and MCP servers you can install into any project.
+Plugins for Claude Code and GitHub Copilot CLI: skills, agents, and MCP servers you can install into any project. One catalog serves both clients.
 
-## Install
+## Install in Claude Code
 
 **1. Add the marketplace** (once, from inside Claude Code):
 
@@ -46,6 +47,47 @@ Or browse everything installed with `/plugin`. To remove one:
 ```text
 /plugin uninstall tutor@j0hanz-marketplace
 ```
+
+## Install in GitHub Copilot CLI
+
+Copilot CLI reads the same catalog (`.claude-plugin/marketplace.json`). From a shell, add the marketplace once, then install what you need:
+
+<!-- copilot:start -->
+
+```text
+copilot plugin marketplace add j0hanz/j0hanz-marketplace
+copilot plugin install tutor@j0hanz-marketplace
+copilot plugin install css@j0hanz-marketplace
+copilot plugin install frontend@j0hanz-marketplace
+copilot plugin install mcp-hub@j0hanz-marketplace
+copilot plugin install filesystem-mcp@j0hanz-marketplace
+copilot plugin install review@j0hanz-marketplace
+copilot plugin install prompt@j0hanz-marketplace
+copilot plugin install workbench@j0hanz-marketplace
+copilot plugin install nodejs@j0hanz-marketplace
+copilot plugin install typescript-pro@j0hanz-marketplace
+```
+
+<!-- copilot:end -->
+
+Check with `copilot plugin list`, or `/skills` and `/agent` inside a session. Copilot lists plugin skills by bare name (`css-audit`, not `css:css-audit`). Remove one with `copilot plugin uninstall <name>`.
+
+**Copilot cloud agent.** It installs no plugins by default. A repository opts in through `.github/copilot/settings.json`, which Copilot CLI also reads (same entry shape as Claude Code's `extraKnownMarketplaces`):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "j0hanz-marketplace": { "source": { "source": "github", "repo": "j0hanz/j0hanz-marketplace" } }
+  },
+  "enabledPlugins": { "css@j0hanz-marketplace": true }
+}
+```
+
+**What differs under Copilot**
+
+- `output-styles` is Claude Code only: Copilot has no output styles.
+- Hooks detect the client and answer in its shape. Stop-time notes that Claude shows as a system message surface as a hook warning in Copilot.
+- The Claude `UserPromptExpansion` event does not exist in Copilot, so typed-slash-command briefs fire through `PreToolUse` on the skill tool instead.
 
 ## Plugins
 
@@ -108,7 +150,7 @@ Every tool for the job on one bench: decide, spec, plan, build test-first, revie
 
 ### output-styles
 
-Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — with `/set-style <style>`
+Set a global output style — Concise, TL;DR, Diagram-first, or Schematic — with `/set-style <style>` (Claude Code only)
 
 - Commands: `/output-styles:set-style`
 - Hooks: `UserPromptExpansion`

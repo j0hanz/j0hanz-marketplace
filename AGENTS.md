@@ -1,17 +1,25 @@
 # j0hanz-marketplace
 
-Claude Code plugin marketplace. Plugins live in `plugins/<name>/`; each holds its own `.claude-plugin/plugin.json`, skills, agents, and hooks. The catalog at `.claude-plugin/marketplace.json` lists them.
+Plugin marketplace for Claude Code and GitHub Copilot CLI. Plugins live in `plugins/<name>/`; each holds its own `.claude-plugin/plugin.json`, skills, agents, and hooks. The catalog at `.claude-plugin/marketplace.json` lists them; Copilot CLI reads the same file, so there is only one.
 
 ## Commands
 
 ```bash
 npm run check        # lint + format:check + validate + typecheck + test — the pre-merge gate
 npm test             # node --test
-npm run validate     # claude plugin validate --strict per plugin, from the catalog
+npm run validate     # claude plugin validate --strict per plugin, Copilot structural checks, Copilot install smoke test when `copilot` is on PATH
 npm run site:data     # rebuilds site/src/data/marketplace.json and rewrites README's generated regions
 ```
 
-`typecheck`, `site:dev`, and `site:build` chain `site:data`, so any of them rewrites README's `<!-- install:start -->` and `<!-- plugins:start -->` regions in place — never hand-edit those regions.
+`typecheck`, `site:dev`, and `site:build` chain `site:data`, so any of them rewrites README's `<!-- install:start -->`, `<!-- copilot:start -->`, and `<!-- plugins:start -->` regions in place — never hand-edit those regions.
+
+## Two clients
+
+- Hooks read their payload and write their answer through the plugin's `hooks/client.mjs` (`client.cjs` in mcp-hub): Copilot sends its own tool names (`create`, `edit`) and argument names (`path`, `file_text`, `new_str`), and takes flat `additionalContext` / `permissionDecision` fields, not `hookSpecificOutput`. `COPILOT_PLUGIN_ROOT` is set only under Copilot. Claude Code output must stay unchanged.
+- Hook stdout is one JSON document under Copilot; plain text is dropped. A `PreToolUse` hook that crashes or exits non-zero denies the tool in Copilot.
+- Tool matchers name both spellings (`Write|Edit|create|edit`, `Skill|skill`); `SessionStart` matchers include Copilot's `new`. Every `node` hook `command` has a `powershell` twin using `$env:CLAUDE_PLUGIN_ROOT`.
+- `SKILL.md` and agent frontmatter must be strict YAML — quote a `description` that contains `: `.
+- A plugin with nothing to do under Copilot carries the `claude-code-only` catalog tag.
 
 ## Gate
 

@@ -11,7 +11,9 @@ const line = (text) => out.push(`${text}\n`);
 
 function emitRouter() {
   line('<mcp-hub-router>');
-  line('Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.');
+  line(
+    'Scope: MCP (Model Context Protocol) TypeScript SDK work ONLY — ignore for everything else.',
+  );
   line(
     onCopilot()
       ? 'Skill names below invoke via the skill tool by their bare name (e.g. /mcp-test -> mcp-test).\n'
