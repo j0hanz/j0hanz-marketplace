@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "filesystem-mcp",
   "displayName": "Filesystem MCP",
-  "version": "2.6.3",
-  "description": "Project-scoped filesystem MCP tools for batched reads, RE2 search, diffs, and edits. Requires Node.js 24+.",
+  "version": "2.7.0",
+  "description": "Secure filesystem MCP server for reading, writing, searching, diffing, and patching files.",
   "author": {
     "name": "j0hanz",
     "email": "l.johansson93@outlook.com"
