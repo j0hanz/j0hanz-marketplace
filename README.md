@@ -30,6 +30,7 @@ Plugins for Claude Code and GitHub Copilot CLI: skills, agents, and MCP servers 
 /plugin install output-styles@j0hanz-marketplace
 /plugin install nodejs@j0hanz-marketplace
 /plugin install typescript-pro@j0hanz-marketplace
+/plugin install writeup@j0hanz-marketplace
 ```
 
 <!-- install:end -->
@@ -66,6 +67,7 @@ copilot plugin install prompt@j0hanz-marketplace
 copilot plugin install workbench@j0hanz-marketplace
 copilot plugin install nodejs@j0hanz-marketplace
 copilot plugin install typescript-pro@j0hanz-marketplace
+copilot plugin install writeup@j0hanz-marketplace
 ```
 
 <!-- copilot:end -->
@@ -166,6 +168,12 @@ Node.js backend conventions and implementation patterns: framework selection, la
 TypeScript type system skills: type-level utilities and type tests, .d.ts declaration contracts for packages and untyped APIs, JSDoc type-checking for plain .js files, and tsconfig selection by runtime
 
 - Commands: `/typescript-pro:advanced-types`, `/typescript-pro:declaration-contracts`, `/typescript-pro:jsdoc-types`, `/typescript-pro:tsconfig`
+
+### writeup
+
+PR descriptions, commit messages, READMEs and changelogs written for people: plain prose, structural diagrams, slop flagged on write.
+
+- Commands: `/writeup:show-me`, `/writeup:unslop`
 
 <!-- plugins:end -->
 
