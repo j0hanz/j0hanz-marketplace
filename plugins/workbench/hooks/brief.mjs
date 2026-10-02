@@ -13,9 +13,18 @@ import {
 import { context, notice, onCopilot, toolInput } from './client.mjs';
 
 const PREFIX = 'workbench:';
-const CHAIN = ['spec', 'plan', 'run', 'verify'];
+const CHAIN = ['spec', 'spec-hunt', 'plan', 'plan-hunt', 'run', 'verify'];
+// A hunt reviews the stage before it, so it is pending only until the next stage lands.
+const HUNT = new Set(['spec-hunt', 'plan-hunt']);
 // The stage a stem is missing names the skill that produces it, so state reads as a route.
-const NEXT = { spec: 'write-specs', plan: 'write-plan', run: 'run-plan', verify: 'verify-specs' };
+const NEXT = {
+  spec: 'write-specs',
+  'spec-hunt': 'spec-hunt',
+  plan: 'write-plan',
+  'plan-hunt': 'plan-hunt',
+  run: 'run-plan',
+  verify: 'verify-specs',
+};
 
 let event = '';
 // UserPromptExpansion replaces the prompt text, so it takes the message raw; every other
@@ -77,10 +86,18 @@ try {
       // purpose — diagnose bypasses spec — is behind, and routing back to it is wrong.
       const reached = CHAIN.reduce((best, stage, index) => (kinds.has(stage) ? index : best), -1);
       const missing =
-        reached < 0 ? (kinds.has('diagnose') ? CHAIN.slice(1) : []) : CHAIN.slice(reached + 1);
+        reached < 0
+          ? kinds.has('diagnose')
+            ? CHAIN.slice(CHAIN.indexOf('plan'))
+            : []
+          : CHAIN.slice(reached + 1);
       if (missing.length > 0) incomplete = true;
+      // Hunts are reviews, not deliverables: the route names them, the "no …" list does not.
+      const owed = missing.filter((stage) => !HUNT.has(stage));
       lines.push(
-        `  stem \`${stem}\`: ${has.join(', ')}${missing.length > 0 ? ` — no ${missing.join(', ')}; the ${NEXT[missing[0]]} skill produces the next one` : ''}`,
+        `  stem \`${stem}\`: ${has.join(', ')}${
+          missing.length > 0 ? ` — no ${owed.join(', ')}; next: the ${NEXT[missing[0]]} skill` : ''
+        }`,
       );
     }
     const other = files.filter((file) => !ARTIFACT.test(file));

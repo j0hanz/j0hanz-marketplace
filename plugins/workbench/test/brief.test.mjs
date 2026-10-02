@@ -28,7 +28,7 @@ const brief = (stages, payload = { hook_event_name: 'UserPromptSubmit' }) => {
 
 test('an unfinished chain names the skill that produces the next stage', () => {
   const context = JSON.parse(brief(['spec', 'plan'])).hookSpecificOutput.additionalContext;
-  assert.match(context, /no run, verify; the run-plan skill produces the next one/);
+  assert.match(context, /no run, verify; next: the plan-hunt skill/);
 });
 
 test('an unprompted brief stays silent once the chain is complete', () => {
@@ -41,7 +41,7 @@ test('an unprompted brief stays silent once the chain is complete', () => {
 test('a stage the route skipped is behind the frontier, not pending', () => {
   const context = JSON.parse(brief(['diagnose', 'plan', 'run'])).hookSpecificOutput
     .additionalContext;
-  assert.match(context, /no verify; the verify-specs skill produces the next one/);
+  assert.match(context, /no verify; next: the verify-specs skill/);
 });
 
 test('a stem that never entered the chain is not routed into it', () => {
@@ -52,7 +52,29 @@ test('a stem that never entered the chain is not routed into it', () => {
 // which can find nothing and would then bill the brief forever.
 test('a lone diagnose stem is routed to the plan it owes', () => {
   const context = JSON.parse(brief(['diagnose'])).hookSpecificOutput.additionalContext;
-  assert.match(context, /the write-plan skill produces the next one/);
+  assert.match(context, /no plan, run, verify; next: the write-plan skill/);
+});
+
+// The authoring skills hand a finished spec to spec-hunt and a finished plan to plan-hunt;
+// the brief names the same route, or it names the one that skips review.
+test('an unreviewed spec routes to spec-hunt, and the hunt is not listed as owed', () => {
+  const context = JSON.parse(brief(['spec'])).hookSpecificOutput.additionalContext;
+  assert.match(context, /spec — no plan, run, verify; next: the spec-hunt skill/);
+});
+
+test('a reviewed spec with no plan routes to write-plan', () => {
+  const context = JSON.parse(brief(['spec', 'spec-hunt'])).hookSpecificOutput.additionalContext;
+  assert.match(context, /no plan, run, verify; next: the write-plan skill/);
+});
+
+test('a reviewed plan with no run routes to run-plan', () => {
+  const context = JSON.parse(brief(['spec', 'plan', 'plan-hunt'])).hookSpecificOutput
+    .additionalContext;
+  assert.match(context, /no run, verify; next: the run-plan skill/);
+});
+
+test('a chain that skipped its hunts is still complete once verify lands', () => {
+  assert.equal(brief(['spec', 'plan', 'run', 'verify']), '');
 });
 
 test('an explicit invocation gets the state even with the chain complete', () => {
