@@ -16,7 +16,7 @@ Done when every rule has been run against every sentence, heading, caption, diag
 
 ## Patterns to detect and fix
 
-Rule numbers are stable ids that other skills cite. A removed rule leaves a gap.
+Rule numbers are stable ids that the writeup scan hook cites. A removed rule leaves a gap.
 
 ### Content
 
@@ -34,7 +34,7 @@ Rule numbers are stable ids that other skills cite. A removed rule leaves a gap.
 
 ### Style
 
-13. **Em dashes.** None. Use periods or commas only (no parentheses, no en dashes, no hyphen-as-dash substitutes). If a thought needs separation, end the sentence or use a comma.
+13. **Em dashes.** None, and no parentheses, en dashes or hyphens in their place. If a thought needs separation, end the sentence or use a comma.
 14. **Colon overuse.** Colons are fine before a list or example. Not as mid-sentence connectors. "If you're coming from traditional automation: instead of registering event handlers, you describe conditions" adds nothing with the colon. Rewrite so the point stands on its own: "Describe when the scheduler should fire in plain English."
 15. **Boldface overuse.** Bold only a term the reader scans the page for. Proper nouns and acronyms stay plain.
 16. **Inline-header lists.** The tell is a bold label and colon that restates the line: "**Performance:** Performance improved...". Convert those to prose. A bold lead-in that ends in a period, names the item, and is followed by genuinely new detail ("**Schema in TypeScript.** Tables live in one file.") is fine, not a tell.

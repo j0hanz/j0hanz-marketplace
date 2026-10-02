@@ -14,25 +14,18 @@ Read the staged diff (`git diff --cached`) first. A commit message has these par
 3. **Body.** One paragraph of at most 3 lines, wrapped at 72 characters, that states the problem the change solves. It does not repeat the subject and names no file, function or constant. The reader has the diff for those. When the subject already states the problem, as for a typo fix, there is no body.
 4. **Footer.** After a blank line: issue references such as `Closes #42` or `Refs #17`, a `BREAKING CHANGE:` line that says what a caller must change, then trailers such as `Co-Authored-By:`.
 
+A breaking change, a security fix, a data migration or a revert always has a body. That body says what breaks, what was exposed, what moves, or why the earlier change went back.
+
 ## What to leave out
 
 - "This commit", "I", "we", "now", "currently". The diff says what changed; the body says why.
 - A list of the test cases.
 - Conventions every change in the repo already follows, such as rules from the repo's instructions file.
 - Attribution to the model or tool that wrote the change, except as a trailer the repo's own rules ask for.
-- Emoji, unless the repo's log uses them.
-
-## Always a body
-
-A breaking change, a security fix, a data migration or a revert has a body even when the subject seems clear. The body says what breaks, what was exposed, what moves, or why the earlier change went back.
 
 ## Examples
 
-A subject that restates the diff, then one that names the behavior and a body that names the problem:
-
-```text
-feat: add a new endpoint to get user profile information from the database
-```
+A subject that names the behavior, and a body that names the problem:
 
 ```text
 feat(api): add GET /users/:id/profile
@@ -57,6 +50,9 @@ A breaking change:
 ```text
 feat(api)!: rename /v1/orders to /v1/checkout
 
+The orders route also took cart edits, so a client could not tell a
+placed order from an open cart.
+
 BREAKING CHANGE: callers of /v1/orders must move to /v1/checkout
 before 2026-06-01. The old route returns 410 after that date.
 ```
@@ -65,4 +61,4 @@ before 2026-06-01. The old route returns 410 after that date.
 
 Write the message. Stage, amend or push only when the user asked for it. When the user asked for the message and not the commit, hand it back in a code block ready to paste.
 
-Done when the subject fits in 72 characters and a reader who has not seen the diff knows from the body what was wrong before.
+Done when the subject fits in 72 characters and a reader who has not seen the diff knows what was wrong before, from the body or, when there is none, from the subject.

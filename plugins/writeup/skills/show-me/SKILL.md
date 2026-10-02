@@ -89,13 +89,13 @@ function expandSkill(command: string): string {
 }
 ```
 
-- For a visual UI, layout, state comparison, or concept too dense for Mermaid, write one focused HTML file: a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Then open it for the user: `start <file>` on Windows, `open <file>` on macOS, `xdg-open <file>` on Linux.
+- For a visual UI, layout, state comparison, or concept too dense for Mermaid, write one focused HTML file in the session's scratch directory, or the system temp directory when there is none: a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Then open it for the user: `start <file>` on Windows, `open <file>` on macOS, `xdg-open <file>` on Linux.
 
 Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries the current question needs. Done when every visual answers the current question and every element in it is one that answer needs.
 
 ## In a pull request
 
-A reviewer sees files one at a time; the PR description shows how they fit. Read the branch diff (`git diff <base>...HEAD`), then add a visual under the summary line for each structural change the file list hides: a new call path, a moved module boundary, a new component, a new message between services. Build each visual from names that exist in the diff. A `diff` of the before shape is usually the smallest view.
+A reviewer sees files one at a time; the PR description shows how they fit. Read the branch diff (`git diff <base>...HEAD`), then add a visual under the summary line for each structural change the file list hides: a new call path, a moved module boundary, a new component, a new message between services. Label each node with the name of a component, module or step that exists in the diff. Leave out string literals, regexes, flags and numbers from the code. A `diff` of the before shape is usually the smallest view.
 
 GitHub renders `mermaid` and `diff` fences in the PR body. An HTML file cannot live there, so use the Markdown views only.
 
