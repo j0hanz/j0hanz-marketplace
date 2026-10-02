@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -239,4 +239,85 @@ test('git commit-tree is silent; git commit still flags', () => {
     claude({ tool_name: 'Bash', tool_input: { command: 'git commit -m "Delve"' } }),
     '',
   );
+});
+test('a fence opens only at line start and closes on a run at least as long', () => {
+  const inline = 'Wrap code in ``` fences.\nwe delve';
+  assert.deepEqual(findSlop(inline), [{ id: 7, match: 'delve', line: 2 }]);
+  const nested = '````markdown\n```text\nwe delve — here\n```\n\n> utilize\n````\nwe delve';
+  assert.equal(stripCode(nested).split('\n').length, nested.split('\n').length);
+  assert.deepEqual(findSlop(nested), [{ id: 7, match: 'delve', line: 8 }]);
+  assert.deepEqual(findSlop('  ```\ndelve\n  ```\nok'), []);
+  assert.deepEqual(findSlop('```js\ndelve\n```\r\nok'), []);
+});
+test('typographic pictographs are not emoji', () => {
+  assert.deepEqual(findSlop('- © 2026 Acme ® and Foo™\n## ℹ Note'), []);
+  assert.deepEqual(
+    findSlop('- ✔ done').map((h) => h.id),
+    [18],
+  );
+});
+test('a --file inside the -m text is prose, not a flag', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'README.md'), 'We delve.\n');
+    const command = 'git commit -m "docs: describe --file README.md handling, utilize it"';
+    const ctx = JSON.parse(claude({ tool_name: 'Bash', tool_input: { command }, cwd: dir }))
+      .hookSpecificOutput.additionalContext;
+    assert.match(ctx, /^writeup:unslop flagged 1 pattern in commit message:\n- rule 31 "utilize"/);
+    assert.doesNotMatch(ctx, /README\.md\)|delve/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('a commit chained with gh pr yields one block each, with its own label and ending', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'body.md'), 'I hope this helps.\n');
+    const command =
+      'git commit -m "fix: delve" && git push && gh pr create -t t --body-file body.md';
+    const ctx = JSON.parse(claude({ tool_name: 'Bash', tool_input: { command }, cwd: dir }))
+      .hookSpecificOutput.additionalContext;
+    const [commit, pr] = ctx.split('\n\n');
+    assert.match(commit, /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "delve"/);
+    assert.match(commit, /git commit --amend/);
+    assert.match(pr, /^writeup:unslop flagged 1 pattern in PR body \(body\.md\):\n- rule 20/);
+    assert.match(pr, /gh pr edit --body-file/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('a heredoc message keeps its quotes and lines; a quoted git commit is not a command', () => {
+  const command = `git add -A && git commit -m "$(cat <<'EOF'\nfix: x\n\nWe delve here.\nEOF\n)"`;
+  const ctx = JSON.parse(claude({ tool_name: 'Bash', tool_input: { command } })).hookSpecificOutput
+    .additionalContext;
+  assert.match(
+    ctx,
+    /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "delve" \(line 4\)/,
+  );
+  assert.equal(
+    claude({ tool_name: 'Bash', tool_input: { command: 'echo "then git commit; we delve"' } }),
+    '',
+  );
+});
+test('the hook runs when invoked through a symlink or junction', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    const link = join(dir, 'hooks');
+    try {
+      symlinkSync(fileURLToPath(new URL('../hooks', import.meta.url)), link, 'junction');
+    } catch {
+      return; // no symlink privilege here; the guard is exercised by every other test
+    }
+    const out = execFileSync('node', [join(link, 'scan.mjs')], {
+      input: JSON.stringify({
+        tool_name: 'Write',
+        tool_input: { file_path: 'a.md', content: 'We delve.' },
+      }),
+      encoding: 'utf8',
+      env: { ...process.env, COPILOT_PLUGIN_ROOT: '' },
+    });
+    assert.match(out, /rule 7/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

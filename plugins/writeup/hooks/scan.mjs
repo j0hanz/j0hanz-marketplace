@@ -1,12 +1,13 @@
-// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell). Any Bash
-//         command that is not `git commit` or `gh pr create|edit|comment|review` exits silent.
-// reads:  tool_input.{file_path,content,new_string} or .command; a -F/--body-file it names
+// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell). A Bash
+//         command is split at unquoted && || ; | and newlines; each `git commit` or
+//         `gh pr create|edit|comment|review` segment is scanned on its own. Nothing else fires.
+// reads:  tool_input.{file_path,content,new_string} or .command; a -F/--file/--body-file a
+//         segment names, resolved against payload.cwd (a `cd` earlier in the session is unseen)
 // emits:  hookSpecificOutput.additionalContext (flat additionalContext on Copilot), or nothing
 // fails:  any parse or read error -> exit 0, no output; never blocks
 // verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
-import { pathToFileURL } from 'node:url';
+import { basename, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { text as readText } from 'node:stream/consumers';
 import { context, toolInput, toolName } from './client.mjs';
 
@@ -25,7 +26,12 @@ export const RULES = [
   // Title case heading: the heading text when it holds 3+ capitalized words. Case-sensitive.
   { id: 17, pattern: /(?<=^#{1,6} )(?=(?:.*?\b[A-Z][a-z]{3,}){3}).+$/g },
   // Emoji on headings and list items only; the PR attribution footer is prose and stays quiet.
-  { id: 18, pattern: /\p{Extended_Pictographic}/gu, line: (l) => LIST_OR_HEADING.test(l) },
+  // © ® ™ ℹ ‼ ⁉ are pictographic to Unicode but typography here.
+  {
+    id: 18,
+    pattern: /(?![©®™ℹ‼⁉])\p{Extended_Pictographic}/gu,
+    line: (l) => LIST_OR_HEADING.test(l),
+  },
   { id: 19, pattern: /[“‘][^“”‘’\n]*[”’]|[“”‘’]/g },
   { id: 20, pattern: /I hope this helps|let me know if|\bof course!|\bcertainly!|smoking gun/gi },
   { id: 23, pattern: /\bin order to\b|\bdue to the fact that\b|\bit is important to note\b/gi },
@@ -34,9 +40,12 @@ export const RULES = [
 
 const blank = (s) => s.replace(/[^\r\n]/g, ' ');
 
-// Fenced blocks (unclosed runs to the end) and inline spans become spaces; newlines stay.
-export const stripCode = (text) =>
-  text.replace(/(```|~~~)[\s\S]*?(?:\1|$)/g, blank).replace(/(`+)[^\r\n]*?\1/g, blank);
+// Fenced blocks and inline spans become spaces; newlines stay. A fence opens only at line
+// start (up to 3 spaces in) and closes on a run of the same character at least as long, so
+// ``` in prose and ```` around a ``` block both read as CommonMark does. Unclosed runs to
+// the end.
+const FENCE = /^ {0,3}((`|~)\2{2,})[^\r\n]*[\s\S]*?(?:^ {0,3}\1\2*[ \t]*\r?$|(?![\s\S]))/gm;
+export const stripCode = (text) => text.replace(FENCE, blank).replace(/(`+)[^\r\n]*?\1/g, blank);
 
 export const findSlop = (text) =>
   stripCode(text)
@@ -61,27 +70,51 @@ const ENDING = {
   review: 'A follow-up `gh pr comment` carries the correction.',
 };
 
-// `git commit -F msg.txt` and `gh pr create --body-file body.md` carry the prose in a file the
-// command only names. Read it; `-` is stdin and stays unread.
-const MESSAGE_FILE = /(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)("[^"]*"|'[^']*'|[^\s'"]+)/;
-const messageFile = (command, cwd) => {
-  const m = command.match(MESSAGE_FILE);
-  if (!m) return null;
-  const file = m[1].replace(/^(["'])(.*)\1$/, '$2');
-  if (file === '-') return null;
-  try {
-    return { file, text: readFileSync(cwd ? resolve(cwd, file) : file, 'utf8') };
-  } catch {
-    return null;
+// Shell words and segments, quote-aware: a quoted string is one word, so a `--file` inside an
+// -m message is text, not a flag. Segments split at unquoted && || ; | and newlines, so a
+// `gh pr create` chained after `git commit` is its own target.
+const TOKEN = /"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|[^\s"'|;&]+/g;
+const parse = (command) => {
+  const segments = [{ start: 0, words: [] }];
+  for (const m of command.matchAll(TOKEN)) {
+    if (/^(?:&&|\|\||[|;\n])$/.test(m[0])) {
+      segments.at(-1).end = m.index;
+      segments.push({ start: m.index + m[0].length, words: [] });
+    } else segments.at(-1).words.push(m[0].replace(/^(["'])([\s\S]*)\1$/, '$2'));
   }
+  return segments.map((s) => ({ ...s, text: command.slice(s.start, s.end) }));
 };
 
-const GH_PR = /\bgh\s+pr\s+(create|edit|comment|review)\b/;
+// `git commit -F msg.txt` and `gh pr create --body-file body.md` carry the prose in a file the
+// command only names. Read it; `-` is stdin and stays unread.
+const MESSAGE_FLAG = /^(?:-F|--file|--body-file)(?:=([\s\S]*))?$/;
+const messageFile = (words, cwd) => {
+  for (const [i, w] of words.entries()) {
+    const m = w.match(MESSAGE_FLAG);
+    if (!m) continue;
+    const file = m[1] || words[i + 1];
+    if (!file || file === '-') return null;
+    try {
+      return { file, text: readFileSync(resolve(cwd ?? '', file), 'utf8') };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const GH = {
   create: ['pr', 'PR body'],
   edit: ['pr', 'PR body'],
   comment: ['comment', 'PR comment'],
   review: ['review', 'review body'],
+};
+const commandKind = (words) => {
+  for (let i = 0; i < words.length - 1; i++) {
+    if (words[i] === 'git' && words[i + 1] === 'commit') return ['commit', 'commit message'];
+    if (words[i] === 'gh' && words[i + 1] === 'pr' && GH[words[i + 2]]) return GH[words[i + 2]];
+  }
+  return null;
 };
 
 // Files an agent reads rather than a person: memory, plans and instruction files. Their
@@ -89,7 +122,9 @@ const GH = {
 const AGENT_FACING =
   /(?:^|[\\/])\.(?:claude|copilot)[\\/]|(?:^|[\\/])(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
 
-export const target = (payload) => {
+// One target per thing scanned; a shell command yields one per commit or gh segment, with
+// lines counted inside that segment.
+export const targets = (payload) => {
   const tool = toolName(payload);
   const { filePath, written, replacement, command } = toolInput(payload);
   if (tool === 'Write' || tool === 'Edit') {
@@ -101,20 +136,19 @@ export const target = (payload) => {
       AGENT_FACING.test(path) ||
       typeof text !== 'string'
     )
-      return null;
-    return { kind: 'file', name: path, text, edit: tool === 'Edit' };
+      return [];
+    return [{ kind: 'file', name: path, text, edit: tool === 'Edit' }];
   }
   if (tool === 'Bash' && typeof command === 'string') {
-    const isCommit = /\bgit\s+commit(?![-\w])/.test(command);
-    const gh = isCommit ? null : command.match(GH_PR);
-    if (!isCommit && !gh) return null;
-    const [kind, name] = isCommit ? ['commit', 'commit message'] : GH[gh[1]];
-    const msg = messageFile(command, payload.cwd);
-    return msg
-      ? { kind, name: `${name} (${msg.file})`, text: msg.text }
-      : { kind, name, text: command };
+    return parse(command).flatMap(({ text, words }) => {
+      const found = commandKind(words);
+      if (!found) return [];
+      const [kind, name] = found;
+      const msg = messageFile(words, payload.cwd);
+      return [msg ? { kind, name: `${name} (${msg.file})`, text: msg.text } : { kind, name, text }];
+    });
   }
-  return null;
+  return [];
 };
 
 export const message = (t, hits) =>
@@ -127,12 +161,15 @@ export const message = (t, hits) =>
     ENDING[t.kind],
   ].join('\n');
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Imported by the test, run by the hook; a name check survives symlinked and junctioned roots.
+if (basename(process.argv[1] ?? '') === 'scan.mjs') {
   try {
     const payload = JSON.parse((await readText(process.stdin)) || '{}');
-    const t = target(payload);
-    const hits = t ? findSlop(t.text) : [];
-    if (hits.length) process.stdout.write(context('PostToolUse', message(t, hits)));
+    const blocks = targets(payload).flatMap((t) => {
+      const hits = findSlop(t.text);
+      return hits.length ? [message(t, hits)] : [];
+    });
+    if (blocks.length) process.stdout.write(context('PostToolUse', blocks.join('\n\n')));
   } catch {
     // fail open: never block a tool on a reflective hook
   }

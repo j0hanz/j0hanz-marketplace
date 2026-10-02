@@ -2,18 +2,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|create|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/scan.mjs\"",
-            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/scan.mjs\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|bash|powershell",
+        "matcher": "Write|Edit|Bash|create|edit|bash|powershell",
         "hooks": [
           {
             "type": "command",
