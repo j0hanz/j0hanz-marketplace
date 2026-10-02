@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "filesystem-mcp",
   "displayName": "Filesystem MCP",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Secure filesystem MCP server for reading, writing, searching, diffing, and patching files.",
   "author": {
     "name": "j0hanz",
