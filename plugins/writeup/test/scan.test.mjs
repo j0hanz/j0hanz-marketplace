@@ -36,8 +36,13 @@ test('clean prose has no hits', () => {
   );
 });
 test('inflections hit, lookalikes do not', () => {
-  assert.equal(findSlop('It underscores and is leveraging.').length, 2);
+  assert.equal(findSlop('It underscores the point and is leveraging.').length, 2);
   assert.deepEqual(findSlop('We deliver numeric results.'), []);
+  assert.deepEqual(findSlop('Prefix it with an underscore; file an enhancement.'), []);
+  assert.deepEqual(
+    findSlop('This enhances and underscored it.').map((h) => h.match),
+    ['enhances', 'underscored'],
+  );
 });
 test('code is ignored and newlines survive', () => {
   const text = 'a\n```\ndelve — 🎉\n```\nuse `utilize()` here\nwe delve';
@@ -104,8 +109,39 @@ test('silent cases', () => {
       },
     },
     { tool_name: 'Write', tool_input: { file_path: 'README.md', content: 'Plain text.' } },
+    {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: 'C:\\Users\\me\\.claude\\projects\\x\\memory\\MEMORY.md',
+        content: '- [note](a.md) — delve',
+      },
+    },
+    { tool_name: 'Edit', tool_input: { file_path: 'CLAUDE.md', new_string: 'We delve — now.' } },
+    {
+      tool_name: 'Write',
+      tool_input: { file_path: '.github/copilot-instructions.md', content: 'delve' },
+    },
   ])
     assert.equal(claude(p), '', JSON.stringify(p));
+});
+test('Copilot shell and edit tools are scanned', () => {
+  const copilot = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: 'x' });
+  for (const toolName of ['bash', 'powershell'])
+    assert.match(
+      JSON.parse(copilot({ toolName, toolArgs: { command: 'git commit -m "Delve in"' } }))
+        .additionalContext,
+      /rule 7 "Delve".*\nAmend the commit/s,
+      toolName,
+    );
+  assert.match(
+    JSON.parse(
+      copilot({
+        toolName: 'edit',
+        toolArgs: JSON.stringify({ path: 'docs/a.md', old_str: 'x', new_str: 'We delve.' }),
+      }),
+    ).additionalContext,
+    /^writeup:unslop flagged 1 pattern in an edit to docs\/a\.md:/,
+  );
 });
 test('uppercase .MD is scanned', () => {
   assert.notEqual(

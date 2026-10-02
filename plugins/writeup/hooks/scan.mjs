@@ -6,10 +6,12 @@ const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
 const rule = (id, label, pattern) => ({ id, label, pattern });
 
 export const RULES = [
+  // Verb forms only for enhance/underscore: "enhancement" is a tracker label and "an
+  // underscore" is a character, both common in code docs.
   rule(
     7,
     'AI vocabulary',
-    /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc\w*|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas\w*|tapestr\w*|testament\w*|underscor\w*|vibrant\w*)\b/gi,
+    /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas\w*|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
   ),
   rule(13, 'em dash', /—/g),
   // Case-sensitive; findSlop also requires 3+ capitalized words in the heading text.
@@ -61,6 +63,11 @@ const ENDING = {
   pr: 'Update the PR body with `gh pr edit`.',
 };
 
+// Files an agent reads rather than a person: memory, plans and instruction files. Their
+// house style (an em dash per index line, for one) is not slop.
+const AGENT_FACING =
+  /(?:^|\/)\.(?:claude|copilot)\/|(?:^|\/)(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
+
 export const target = (payload) => {
   const tool = toolName(payload);
   const { filePath, written, replacement, command } = toolInput(payload);
@@ -71,6 +78,7 @@ export const target = (payload) => {
     if (
       !/\.mdx?$/i.test(path) ||
       /node_modules\/|skills\/unslop\//.test(norm) ||
+      AGENT_FACING.test(norm) ||
       typeof text !== 'string'
     )
       return null;

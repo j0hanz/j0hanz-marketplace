@@ -12,6 +12,8 @@ Edit text to remove AI patterns.
 1. Scan for the patterns below.
 2. Rewrite. Preserve meaning, match intended tone.
 
+Done when every rule has been run against every sentence, heading, caption, diagram label and frontmatter line, and none fires.
+
 ## Patterns to detect and fix
 
 Rule numbers are stable ids that other skills cite. A removed rule leaves a gap.
@@ -32,9 +34,9 @@ Rule numbers are stable ids that other skills cite. A removed rule leaves a gap.
 
 ### Style
 
-13. **Em dash overuse.** Avoid em dashes entirely. Use periods or commas only (no parentheses, no en dashes, no hyphen-as-dash substitutes). If a thought needs separation, end the sentence or use a comma.
-14. **Colon overuse.** Colons are fine before a list or example. Not as mid-sentence connectors. "If you're coming from traditional automation: instead of registering event handlers, you describe conditions" adds nothing with the colon. Rewrite to let the point stand on its own without comparison framing. "Describing when the scheduler should fire works best as plain English." Same meaning, no crutch punctuation.
-15. **Boldface overuse.** Don't bold every proper noun or acronym.
+13. **Em dashes.** None. Use periods or commas only (no parentheses, no en dashes, no hyphen-as-dash substitutes). If a thought needs separation, end the sentence or use a comma.
+14. **Colon overuse.** Colons are fine before a list or example. Not as mid-sentence connectors. "If you're coming from traditional automation: instead of registering event handlers, you describe conditions" adds nothing with the colon. Rewrite so the point stands on its own: "Describe when the scheduler should fire in plain English."
+15. **Boldface overuse.** Bold only a term the reader scans the page for. Proper nouns and acronyms stay plain.
 16. **Inline-header lists.** The tell is a bold label and colon that restates the line: "**Performance:** Performance improved...". Convert those to prose. A bold lead-in that ends in a period, names the item, and is followed by genuinely new detail ("**Schema in TypeScript.** Tables live in one file.") is fine, not a tell.
 17. **Title case headings.** Use sentence case.
 18. **Decorative emojis.** Remove from headings and bullets.

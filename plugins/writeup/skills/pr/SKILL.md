@@ -21,7 +21,9 @@ If the repo has `.github/pull_request_template.md`, use its sections in order an
 
 The reviewer has the diff. Leave out, in prose and in visuals:
 
-- Code: matcher strings, regexes, rule ids, flags and any number from the code.
+- Code: identifiers, string literals, regexes, flags and any number from the code.
 - Edits that follow from the change, such as a catalog entry, a generated region or a file list.
 - Conventions the repo's instructions file requires, even when this change first implements one: no review item, diagram note or feature line. Only a gap in how this change tests one, such as a path tested only by simulation, is a review item.
 - Claims the diff does not support, such as parts from other branches.
+
+Done when the parts above appear in order, every number in the description is a test result or a fact about the problem, and every unrelated change on the branch has its line.
