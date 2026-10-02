@@ -1,11 +1,9 @@
-// fires:  PostToolUse. Claude Code: Write|Edit, and Bash under `if` Bash(git commit *) /
-//         Bash(gh pr *). Copilot: create|edit|bash|powershell (Copilot has no `if`).
+// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell). Any Bash
+//         command that is not `git commit` or `gh pr create|edit|comment|review` exits silent.
 // reads:  tool_input.{file_path,content,new_string} or .command; a -F/--body-file it names
 // emits:  hookSpecificOutput.additionalContext (flat additionalContext on Copilot), or nothing
 // fails:  any parse or read error -> exit 0, no output; never blocks
 // verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
-// A trailing argv (`commit`, `pr`) is ignored: it only keeps the two Bash handlers' command
-// strings distinct so the host does not deduplicate them into one.
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,33 +11,25 @@ import { text as readText } from 'node:stream/consumers';
 import { context, toolInput, toolName } from './client.mjs';
 
 const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
-const rule = (id, label, pattern) => ({ id, label, pattern });
 
+// Ids match the numbered rules in skills/unslop/SKILL.md.
 export const RULES = [
-  // Verb forms only for enhance/underscore: "enhancement" is a tracker label and "an
-  // underscore" is a character, both common in code docs.
-  rule(
-    7,
-    'AI vocabulary',
-    /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
-  ),
-  rule(13, 'em dash', /—/g),
-  // Case-sensitive; findSlop also requires 3+ capitalized words in the heading text.
-  rule(17, 'title case heading', /^#{1,6} (.+)$/),
-  // Headings and list items only; the PR attribution footer is prose and stays quiet.
-  { ...rule(18, 'emoji', /\p{Extended_Pictographic}/gu), line: (l) => LIST_OR_HEADING.test(l) },
-  rule(19, 'curly quotes', /[“‘][^“”‘’\n]*[”’]|[“”‘’]/g),
-  rule(
-    20,
-    'chatbot phrase',
-    /I hope this helps|let me know if|\bof course!|\bcertainly!|smoking gun/gi,
-  ),
-  rule(
-    23,
-    'filler phrase',
-    /\bin order to\b|\bdue to the fact that\b|\bit is important to note\b/gi,
-  ),
-  rule(31, 'fancy word', /\b(?:utiliz\w*|leverag\w*|facilitat\w*|numerous|in the event that)\b/gi),
+  // AI vocabulary. Verb forms only for enhance/underscore: "enhancement" is a tracker label
+  // and "an underscore" is a character, both common in code docs.
+  {
+    id: 7,
+    pattern:
+      /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
+  },
+  { id: 13, pattern: /—/g },
+  // Title case heading: the heading text when it holds 3+ capitalized words. Case-sensitive.
+  { id: 17, pattern: /(?<=^#{1,6} )(?=(?:.*?\b[A-Z][a-z]{3,}){3}).+$/g },
+  // Emoji on headings and list items only; the PR attribution footer is prose and stays quiet.
+  { id: 18, pattern: /\p{Extended_Pictographic}/gu, line: (l) => LIST_OR_HEADING.test(l) },
+  { id: 19, pattern: /[“‘][^“”‘’\n]*[”’]|[“”‘’]/g },
+  { id: 20, pattern: /I hope this helps|let me know if|\bof course!|\bcertainly!|smoking gun/gi },
+  { id: 23, pattern: /\bin order to\b|\bdue to the fact that\b|\bit is important to note\b/gi },
+  { id: 31, pattern: /\b(?:utiliz\w*|leverag\w*|facilitat\w*|numerous|in the event that)\b/gi },
 ];
 
 const blank = (s) => s.replace(/[^\r\n]/g, ' ');
@@ -48,21 +38,15 @@ const blank = (s) => s.replace(/[^\r\n]/g, ' ');
 export const stripCode = (text) =>
   text.replace(/(```|~~~)[\s\S]*?(?:\1|$)/g, blank).replace(/(`+)[^\r\n]*?\1/g, blank);
 
-const isTitleCase = (heading) =>
-  heading.split(/\s+/).filter((w) => /^[A-Z][a-z]{3,}/.test(w)).length >= 3;
-
 export const findSlop = (text) =>
   stripCode(text)
     .split(/\r?\n/)
     .flatMap((line, i) =>
-      RULES.flatMap(({ id, pattern, line: applies }) => {
-        if (applies && !applies(line)) return [];
-        if (id === 17) {
-          const m = line.match(pattern);
-          return m && isTitleCase(m[1]) ? [{ id, match: m[1], line: i + 1 }] : [];
-        }
-        return [...line.matchAll(pattern)].map((m) => ({ id, match: m[0], line: i + 1 }));
-      }),
+      RULES.flatMap(({ id, pattern, line: applies }) =>
+        applies && !applies(line)
+          ? []
+          : [...line.matchAll(pattern)].map((m) => ({ id, match: m[0], line: i + 1 })),
+      ),
     )
     .sort((a, b) => a.line - b.line || a.id - b.id);
 
@@ -93,30 +77,28 @@ const messageFile = (command, cwd) => {
 };
 
 const GH_PR = /\bgh\s+pr\s+(create|edit|comment|review)\b/;
-const GH_NAME = {
-  create: 'PR body',
-  edit: 'PR body',
-  comment: 'PR comment',
-  review: 'review body',
+const GH = {
+  create: ['pr', 'PR body'],
+  edit: ['pr', 'PR body'],
+  comment: ['comment', 'PR comment'],
+  review: ['review', 'review body'],
 };
-const GH_KIND = { create: 'pr', edit: 'pr', comment: 'comment', review: 'review' };
 
 // Files an agent reads rather than a person: memory, plans and instruction files. Their
 // house style (an em dash per index line, for one) is not slop.
 const AGENT_FACING =
-  /(?:^|\/)\.(?:claude|copilot)\/|(?:^|\/)(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
+  /(?:^|[\\/])\.(?:claude|copilot)[\\/]|(?:^|[\\/])(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
 
 export const target = (payload) => {
   const tool = toolName(payload);
   const { filePath, written, replacement, command } = toolInput(payload);
   if (tool === 'Write' || tool === 'Edit') {
     const path = String(filePath ?? '');
-    const norm = path.replace(/\\/g, '/');
     const text = written ?? replacement;
     if (
       !/\.mdx?$/i.test(path) ||
-      /node_modules\/|skills\/unslop\//.test(norm) ||
-      AGENT_FACING.test(norm) ||
+      /node_modules[\\/]|skills[\\/]unslop[\\/]/.test(path) ||
+      AGENT_FACING.test(path) ||
       typeof text !== 'string'
     )
       return null;
@@ -126,8 +108,7 @@ export const target = (payload) => {
     const isCommit = /\bgit\s+commit(?![-\w])/.test(command);
     const gh = isCommit ? null : command.match(GH_PR);
     if (!isCommit && !gh) return null;
-    const kind = isCommit ? 'commit' : GH_KIND[gh[1]];
-    const name = isCommit ? 'commit message' : GH_NAME[gh[1]];
+    const [kind, name] = isCommit ? ['commit', 'commit message'] : GH[gh[1]];
     const msg = messageFile(command, payload.cwd);
     return msg
       ? { kind, name: `${name} (${msg.file})`, text: msg.text }
