@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { findSlop, stripCode, RULES } from '../hooks/scan.mjs';
 
 test('each rule flags its sample', () => {
@@ -49,4 +51,75 @@ test('every rule id still exists in unslop', () => {
   const skill = readFileSync(new URL('../skills/unslop/SKILL.md', import.meta.url), 'utf8');
   for (const { id } of RULES)
     assert.match(skill, new RegExp(`^${id}\\. \\*\\*`, 'm'), `rule ${id}`);
+});
+
+const HOOK = fileURLToPath(new URL('../hooks/scan.mjs', import.meta.url));
+const run = (payload, env) =>
+  execFileSync('node', [HOOK], { input: JSON.stringify(payload), encoding: 'utf8', env });
+const claude = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: '' });
+test('markdown write with slop returns hookSpecificOutput', () => {
+  const out = JSON.parse(
+    claude({ tool_name: 'Write', tool_input: { file_path: 'README.md', content: 'We delve.' } }),
+  );
+  assert.equal(out.hookSpecificOutput.hookEventName, 'PostToolUse');
+  assert.match(
+    out.hookSpecificOutput.additionalContext,
+    /^writeup:unslop flagged 1 pattern in README\.md:\n- rule 7 "delve" \(line 1\)\nRewrite these lines\.$/,
+  );
+});
+test('Copilot create gets flat additionalContext', () => {
+  const out = JSON.parse(
+    run(
+      { toolName: 'create', toolArgs: { path: 'docs/a.md', file_text: 'We delve.' } },
+      { ...process.env, COPILOT_PLUGIN_ROOT: 'x' },
+    ),
+  );
+  assert.match(out.additionalContext, /rule 7/);
+});
+test('chained git commit is scanned', () => {
+  const out = claude({
+    tool_name: 'Bash',
+    tool_input: { command: 'git add -A && git commit -m "Delve into it"' },
+  });
+  assert.match(out, /Amend the commit if it is not pushed\./);
+});
+test('gh pr create is scanned', () => {
+  assert.match(
+    claude({
+      tool_name: 'Bash',
+      tool_input: { command: 'gh pr create --body "I hope this helps"' },
+    }),
+    /gh pr edit/,
+  );
+});
+test('silent cases', () => {
+  for (const p of [
+    { tool_name: 'Bash', tool_input: { command: 'ls' } },
+    { tool_name: 'Write', tool_input: { file_path: 'a.ts', content: 'delve' } },
+    {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: 'C:\\r\\plugins\\writeup\\skills\\unslop\\SKILL.md',
+        content: 'delve',
+      },
+    },
+    { tool_name: 'Write', tool_input: { file_path: 'README.md', content: 'Plain text.' } },
+  ])
+    assert.equal(claude(p), '', JSON.stringify(p));
+});
+test('uppercase .MD is scanned', () => {
+  assert.notEqual(
+    claude({ tool_name: 'Write', tool_input: { file_path: 'README.MD', content: 'delve' } }),
+    '',
+  );
+});
+test('malformed stdin exits 0 silently', () => {
+  assert.equal(execFileSync('node', [HOOK], { input: '{nope', encoding: 'utf8' }), '');
+});
+test('more than 20 hits are capped', () => {
+  const out = claude({
+    tool_name: 'Write',
+    tool_input: { file_path: 'a.md', content: 'delve\n'.repeat(25) },
+  });
+  assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /- and 5 more\n/);
 });

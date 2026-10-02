@@ -1,3 +1,7 @@
+import { pathToFileURL } from 'node:url';
+import { text as readText } from 'node:stream/consumers';
+import { context, toolInput, toolName } from './client.mjs';
+
 const rule = (id, label, pattern) => ({ id, label, pattern });
 
 export const RULES = [
@@ -46,3 +50,53 @@ export const findSlop = (text) =>
       }),
     )
     .sort((a, b) => a.line - b.line || a.id - b.id);
+
+const MAX_SHOWN = 20;
+const ENDING = {
+  file: 'Rewrite these lines.',
+  commit: 'Amend the commit if it is not pushed.',
+  pr: 'Update the PR body with `gh pr edit`.',
+};
+
+export const target = (payload) => {
+  const tool = toolName(payload);
+  const { filePath, written, replacement, command } = toolInput(payload);
+  if (tool === 'Write' || tool === 'Edit') {
+    const path = String(filePath ?? '');
+    const norm = path.replace(/\\/g, '/');
+    const text = written ?? replacement;
+    if (
+      !/\.mdx?$/i.test(path) ||
+      /node_modules\/|skills\/unslop\//.test(norm) ||
+      typeof text !== 'string'
+    )
+      return null;
+    return { kind: 'file', name: path, text };
+  }
+  if (tool === 'Bash' && typeof command === 'string') {
+    if (/\bgit\s+commit\b/.test(command))
+      return { kind: 'commit', name: 'commit message', text: command };
+    if (/\bgh\s+pr\s+(?:create|edit)\b/.test(command))
+      return { kind: 'pr', name: 'PR body', text: command };
+  }
+  return null;
+};
+
+export const message = (t, hits) =>
+  [
+    `writeup:unslop flagged ${hits.length} pattern${hits.length === 1 ? '' : 's'} in ${t.name}:`,
+    ...hits.slice(0, MAX_SHOWN).map((h) => `- rule ${h.id} "${h.match}" (line ${h.line})`),
+    ...(hits.length > MAX_SHOWN ? [`- and ${hits.length - MAX_SHOWN} more`] : []),
+    ENDING[t.kind],
+  ].join('\n');
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    const payload = JSON.parse((await readText(process.stdin)) || '{}');
+    const t = target(payload);
+    const hits = t ? findSlop(t.text) : [];
+    if (hits.length) process.stdout.write(context('PostToolUse', message(t, hits)));
+  } catch {
+    // fail open: never block a tool on a reflective hook
+  }
+}
