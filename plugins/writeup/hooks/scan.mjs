@@ -72,15 +72,41 @@ const ENDING = {
 
 // Shell words and segments, quote-aware: a quoted string is one word, so a `--file` inside an
 // -m message is text, not a flag. Segments split at unquoted && || ; | and newlines, so a
-// `gh pr create` chained after `git commit` is its own target.
+// `gh pr create` chained after `git commit` is its own target. A bare heredoc body (`-F - <<EOF`)
+// stays in its segment untokenized, up to the delimiter line; a body whose opener sits in an
+// earlier segment is skipped. ponytail: one heredoc per line; a second `<<` on the same line
+// replaces the first.
 const TOKEN = /"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|[^\s"'|;&]+/g;
+const HEREDOC = /^<<-?([\w.-]*)$/;
 const parse = (command) => {
   const segments = [{ start: 0, words: [] }];
-  for (const m of command.matchAll(TOKEN)) {
+  const token = new RegExp(TOKEN.source, 'g');
+  let heredoc = null; // '' while the delimiter is still the next word
+  let owner = 0; // index of the segment that opened the heredoc
+  for (let m; (m = token.exec(command));) {
+    if (m[0] === '\n' && heredoc) {
+      const close = new RegExp(`^\\t*${heredoc.replace(/[.-]/g, '\\$&')}[ \\t]*\\r?$`, 'm');
+      const found = close.exec(command.slice(token.lastIndex));
+      token.lastIndex = found ? token.lastIndex + found.index + found[0].length : command.length;
+      if (owner !== segments.length - 1) {
+        segments.at(-1).end = m.index;
+        segments.push({ start: token.lastIndex, words: [] });
+      }
+      heredoc = null;
+      continue;
+    }
     if (/^(?:&&|\|\||[|;\n])$/.test(m[0])) {
       segments.at(-1).end = m.index;
       segments.push({ start: m.index + m[0].length, words: [] });
-    } else segments.at(-1).words.push(m[0].replace(/^(["'])([\s\S]*)\1$/, '$2'));
+      continue;
+    }
+    const word = m[0].replace(/^(["'])([\s\S]*)\1$/, '$2');
+    if (heredoc === '') heredoc = word;
+    else if (HEREDOC.test(m[0])) {
+      heredoc = m[0].match(HEREDOC)[1];
+      owner = segments.length - 1;
+    }
+    segments.at(-1).words.push(word);
   }
   return segments.map((s) => ({ ...s, text: command.slice(s.start, s.end) }));
 };
@@ -117,8 +143,9 @@ const commandKind = (words) => {
   return null;
 };
 
-// Files an agent reads rather than a person: memory, plans and instruction files. Their
-// house style (an em dash per index line, for one) is not slop.
+// Files an agent reads rather than a person: anything under .claude/ or .copilot/ (memory,
+// plans) and instruction files. Their house style (an em dash per index line, for one) is
+// not slop.
 const AGENT_FACING =
   /(?:^|[\\/])\.(?:claude|copilot)[\\/]|(?:^|[\\/])(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
 

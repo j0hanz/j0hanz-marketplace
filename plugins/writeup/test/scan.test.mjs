@@ -299,6 +299,23 @@ test('a heredoc message keeps its quotes and lines; a quoted git commit is not a
     '',
   );
 });
+test('a bare heredoc on stdin is part of its segment, not new commands', () => {
+  for (const open of [`<<'EOF'`, '<<EOF', '<<-"EOF"', '<< EOF']) {
+    const command = `git commit -F - ${open}\nfix: x\n\nIt's crucial; gh pr create is quoted here.\nEOF\necho done`;
+    const ctx = JSON.parse(claude({ tool_name: 'Bash', tool_input: { command } }))
+      .hookSpecificOutput.additionalContext;
+    assert.equal(ctx.split('\n\n').length, 1, open);
+    assert.match(
+      ctx,
+      /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "crucial" \(line 4\)/,
+      open,
+    );
+  }
+});
+test('a heredoc opened before a commit belongs to its opener, not the commit', () => {
+  const command = `cat <<'EOF' > notes.md && git commit -m "ok"\nIt's crucial.\nEOF\necho done`;
+  assert.equal(claude({ tool_name: 'Bash', tool_input: { command } }), '');
+});
 test('the hook runs when invoked through a symlink or junction', () => {
   const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
   try {
