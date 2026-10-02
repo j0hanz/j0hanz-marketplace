@@ -1,3 +1,11 @@
+// fires:  PostToolUse. Claude Code: Write|Edit, and Bash under `if` Bash(git commit *) /
+//         Bash(gh pr *). Copilot: create|edit|bash|powershell (Copilot has no `if`).
+// reads:  tool_input.{file_path,content,new_string} or .command; a -F/--body-file it names
+// emits:  hookSpecificOutput.additionalContext (flat additionalContext on Copilot), or nothing
+// fails:  any parse or read error -> exit 0, no output; never blocks
+// verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
+// A trailing argv (`commit`, `pr`) is ignored: it only keeps the two Bash handlers' command
+// strings distinct so the host does not deduplicate them into one.
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -59,12 +67,14 @@ export const findSlop = (text) =>
     .sort((a, b) => a.line - b.line || a.id - b.id);
 
 const MAX_SHOWN = 20;
+// Facts, not orders: imperative context reads as an injected instruction and gets shown to
+// the user instead of used. Each line still names where the repair lives.
 const ENDING = {
-  file: 'Rewrite these lines.',
-  commit: 'Amend the commit if it is not pushed.',
-  pr: 'Update the PR body with `gh pr edit`.',
-  comment: 'Edit the comment with `gh pr comment --edit-last`.',
-  review: 'Post the correction with `gh pr comment`.',
+  file: 'A rewrite without these patterns passes the scan.',
+  commit: 'An unpushed commit takes a new message with `git commit --amend`.',
+  pr: '`gh pr edit --body-file` replaces the PR body.',
+  comment: '`gh pr comment --edit-last` replaces the comment.',
+  review: 'A follow-up `gh pr comment` carries the correction.',
 };
 
 // `git commit -F msg.txt` and `gh pr create --body-file body.md` carry the prose in a file the

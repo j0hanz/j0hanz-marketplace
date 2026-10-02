@@ -72,7 +72,7 @@ test('markdown write with slop returns hookSpecificOutput', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'PostToolUse');
   assert.match(
     out.hookSpecificOutput.additionalContext,
-    /^writeup:unslop flagged 1 pattern in README\.md:\n- rule 7 "delve" \(line 1\)\nRewrite these lines\.$/,
+    /^writeup:unslop flagged 1 pattern in README\.md:\n- rule 7 "delve" \(line 1\)\nA rewrite without these patterns passes the scan\.$/,
   );
 });
 test('Copilot create gets flat additionalContext', () => {
@@ -89,7 +89,7 @@ test('chained git commit is scanned', () => {
     tool_name: 'Bash',
     tool_input: { command: 'git add -A && git commit -m "Delve into it"' },
   });
-  assert.match(out, /Amend the commit if it is not pushed\./);
+  assert.match(out, /An unpushed commit takes a new message with `git commit --amend`\./);
 });
 test('gh pr create is scanned', () => {
   assert.match(
@@ -133,7 +133,7 @@ test('Copilot shell and edit tools are scanned', () => {
     assert.match(
       JSON.parse(copilot({ toolName, toolArgs: { command: 'git commit -m "Delve in"' } }))
         .additionalContext,
-      /rule 7 "Delve".*\nAmend the commit/s,
+      /rule 7 "Delve".*\nAn unpushed commit/s,
       toolName,
     );
   assert.match(
@@ -192,7 +192,7 @@ test('gh pr comment and review are scanned with their own endings', () => {
       tool_name: 'Bash',
       tool_input: { command: 'gh pr review 7 --approve --body "Delve"' },
     }),
-    /review body:.*Post the correction with `gh pr comment`/s,
+    /review body:.*A follow-up `gh pr comment` carries the correction/s,
   );
   assert.equal(claude({ tool_name: 'Bash', tool_input: { command: 'gh pr view 7' } }), '');
 });
