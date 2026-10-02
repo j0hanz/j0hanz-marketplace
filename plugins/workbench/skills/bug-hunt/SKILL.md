@@ -43,7 +43,7 @@ Diff too large for one pass: split by directory, dispatch one reader per group w
 
 ### 3. Refute
 
-Every candidate goes to **one blind refuter** — a subagent (Agent tool, `subagent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the code. Suspected findings skip the wave: the label already carries its own uncertainty.
+Every candidate goes to **one blind refuter** — a subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`; Copilot: `task`, `agent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the code. Suspected findings skip the wave: the label already carries its own uncertainty.
 
 Fill in and send exactly this, one dispatch per candidate:
 
