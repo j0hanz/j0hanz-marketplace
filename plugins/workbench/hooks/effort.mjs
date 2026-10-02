@@ -3,8 +3,9 @@ import { join } from 'node:path';
 
 export const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
 
+// handoff is absent on purpose: that file lives in the OS temp dir and is never committed.
 export const ARTIFACT =
-  /^(.+)\.(test-plan|plan-hunt|spec-hunt|regression|diagnose|refactor|handoff|verify|cases|hunt|spec|plan|run|map)\.md$/;
+  /^(.+)\.(test-plan|plan-hunt|spec-hunt|regression|diagnose|refactor|verify|cases|hunt|spec|plan|run|map)\.md$/;
 
 export const CONVENTION =
   'docs/plan/YYYY-MM-DD-<name>/ holds <name>.spec.md, <name>.plan.md, <name>.run.md, ' +

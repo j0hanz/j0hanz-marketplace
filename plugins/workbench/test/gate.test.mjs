@@ -60,3 +60,14 @@ test('a write under an effort tickets subdirectory is allowed', () => {
     rmSync(project, { recursive: true, force: true });
   }
 });
+
+// The handoff skill keeps its file in the OS temp dir, never in the repo. A gate that
+// redirected it into docs/plan/ would be enforcing the opposite of the skill it polices.
+test('a handoff file is not an artifact the gate places', () => {
+  const project = mkdtempSync(join(tmpdir(), 'workbench-gate-'));
+  try {
+    assert.equal(gate(join(project, 'auth.handoff.md'), project), '');
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+});
