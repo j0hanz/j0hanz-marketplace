@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { text as readText } from 'node:stream/consumers';
 import { context, toolInput, toolName } from './client.mjs';
 
+const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
 const rule = (id, label, pattern) => ({ id, label, pattern });
 
 export const RULES = [
@@ -13,7 +14,8 @@ export const RULES = [
   rule(13, 'em dash', /—/g),
   // Case-sensitive; findSlop also requires 3+ capitalized words in the heading text.
   rule(17, 'title case heading', /^#{1,6} (.+)$/),
-  rule(18, 'emoji', /\p{Extended_Pictographic}/gu),
+  // Headings and list items only; the PR attribution footer is prose and stays quiet.
+  { ...rule(18, 'emoji', /\p{Extended_Pictographic}/gu), line: (l) => LIST_OR_HEADING.test(l) },
   rule(19, 'curly quotes', /[“‘][^“”‘’\n]*[”’]|[“”‘’]/g),
   rule(
     20,
@@ -32,7 +34,7 @@ const blank = (s) => s.replace(/[^\r\n]/g, ' ');
 
 // Fenced blocks (unclosed runs to the end) and inline spans become spaces; newlines stay.
 export const stripCode = (text) =>
-  text.replace(/```[\s\S]*?(?:```|$)/g, blank).replace(/`[^`\r\n]*`/g, blank);
+  text.replace(/(```|~~~)[\s\S]*?(?:\1|$)/g, blank).replace(/(`+)[^\r\n]*?\1/g, blank);
 
 const isTitleCase = (heading) =>
   heading.split(/\s+/).filter((w) => /^[A-Z][a-z]{3,}/.test(w)).length >= 3;
@@ -41,7 +43,8 @@ export const findSlop = (text) =>
   stripCode(text)
     .split(/\r?\n/)
     .flatMap((line, i) =>
-      RULES.flatMap(({ id, pattern }) => {
+      RULES.flatMap(({ id, pattern, line: applies }) => {
+        if (applies && !applies(line)) return [];
         if (id === 17) {
           const m = line.match(pattern);
           return m && isTitleCase(m[1]) ? [{ id, match: m[1], line: i + 1 }] : [];
@@ -71,10 +74,10 @@ export const target = (payload) => {
       typeof text !== 'string'
     )
       return null;
-    return { kind: 'file', name: path, text };
+    return { kind: 'file', name: path, text, edit: tool === 'Edit' };
   }
   if (tool === 'Bash' && typeof command === 'string') {
-    if (/\bgit\s+commit\b/.test(command))
+    if (/\bgit\s+commit(?![-\w])/.test(command))
       return { kind: 'commit', name: 'commit message', text: command };
     if (/\bgh\s+pr\s+(?:create|edit)\b/.test(command))
       return { kind: 'pr', name: 'PR body', text: command };
@@ -84,7 +87,7 @@ export const target = (payload) => {
 
 export const message = (t, hits) =>
   [
-    `writeup:unslop flagged ${hits.length} pattern${hits.length === 1 ? '' : 's'} in ${t.name}:`,
+    `writeup:unslop flagged ${hits.length} pattern${hits.length === 1 ? '' : 's'} in ${t.edit ? 'an edit to ' : ''}${t.name}:`,
     ...hits.slice(0, MAX_SHOWN).map((h) => `- rule ${h.id} "${h.match}" (line ${h.line})`),
     ...(hits.length > MAX_SHOWN ? [`- and ${hits.length - MAX_SHOWN} more`] : []),
     ENDING[t.kind],

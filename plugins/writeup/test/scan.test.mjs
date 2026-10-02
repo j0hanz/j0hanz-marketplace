@@ -10,7 +10,7 @@ test('each rule flags its sample', () => {
     7: 'We delve into it.',
     13: 'Fast — and small.',
     17: '## Getting Started With Docker',
-    18: 'Done 🎉',
+    18: '- Done 🎉',
     19: 'He said “hi”.',
     20: 'I hope this helps.',
     23: 'In order to run it.',
@@ -122,4 +122,39 @@ test('more than 20 hits are capped', () => {
     tool_input: { file_path: 'a.md', content: 'delve\n'.repeat(25) },
   });
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /- and 5 more\n/);
+});
+test('emoji counts only on heading and list lines', () => {
+  assert.deepEqual(findSlop('🤖 Generated with [Claude Code](https://claude.com/claude-code)'), []);
+  assert.deepEqual(findSlop('Shipped it 🎉 today'), []);
+  assert.deepEqual(
+    findSlop('# Done 🎉\n1. Ok 🎉').map((h) => h.id),
+    [18, 18],
+  );
+});
+test('Edit header says edit; Write header does not', () => {
+  const ctx = (tool_name, tool_input) =>
+    JSON.parse(claude({ tool_name, tool_input })).hookSpecificOutput.additionalContext;
+  assert.match(
+    ctx('Edit', { file_path: 'README.md', old_string: 'x', new_string: 'We delve.' }),
+    /^writeup:unslop flagged 1 pattern in an edit to README\.md:\n/,
+  );
+  assert.match(
+    ctx('Write', { file_path: 'README.md', content: 'We delve.' }),
+    /^writeup:unslop flagged 1 pattern in README\.md:\n/,
+  );
+});
+test('~~~ fences and double-backtick spans are stripped', () => {
+  const text = '~~~\ndelve\n~~~\nuse ``a `delve` b`` ok\nwe delve';
+  assert.equal(stripCode(text).split('\n').length, text.split('\n').length);
+  assert.deepEqual(findSlop(text), [{ id: 7, match: 'delve', line: 5 }]);
+});
+test('git commit-tree is silent; git commit still flags', () => {
+  assert.equal(
+    claude({ tool_name: 'Bash', tool_input: { command: 'git commit-tree -m "Delve"' } }),
+    '',
+  );
+  assert.notEqual(
+    claude({ tool_name: 'Bash', tool_input: { command: 'git commit -m "Delve"' } }),
+    '',
+  );
 });
