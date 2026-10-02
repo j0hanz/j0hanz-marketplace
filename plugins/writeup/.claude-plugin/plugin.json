@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "writeup",
   "displayName": "Writeup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
   "author": {
     "name": "j0hanz",
