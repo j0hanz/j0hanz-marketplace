@@ -3,7 +3,7 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@j0hanz/filesystem-mcp@2.6.1", "--allow-cwd", "--root-boundary", "."],
+      "args": ["-y", "@j0hanz/filesystem-mcp@2.7.0", "--allow-cwd", "--root-boundary", "."],
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",
