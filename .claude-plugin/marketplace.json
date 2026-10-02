@@ -76,7 +76,7 @@
     {
       "name": "writeup",
       "source": "./plugins/writeup",
-      "description": "PR descriptions, commit messages, READMEs and changelogs written for people: plain prose, structural diagrams, slop flagged on write.",
+      "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
       "category": "productivity"
     }
   ]

@@ -171,9 +171,10 @@ TypeScript type system skills: type-level utilities and type tests, .d.ts declar
 
 ### writeup
 
-PR descriptions, commit messages, READMEs and changelogs written for people: plain prose, structural diagrams, slop flagged on write.
+PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.
 
-- Commands: `/writeup:show-me`, `/writeup:unslop`
+- Commands: `/writeup:commit`, `/writeup:pr`, `/writeup:show-me`, `/writeup:unslop`
+- Hooks: `PostToolUse`
 
 <!-- plugins:end -->
 
