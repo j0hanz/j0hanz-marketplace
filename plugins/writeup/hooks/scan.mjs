@@ -1,4 +1,6 @@
 import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { text as readText } from 'node:stream/consumers';
 import { context, toolInput, toolName } from './client.mjs';
 
@@ -11,7 +13,7 @@ export const RULES = [
   rule(
     7,
     'AI vocabulary',
-    /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas\w*|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
+    /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
   ),
   rule(13, 'em dash', /—/g),
   // Case-sensitive; findSlop also requires 3+ capitalized words in the heading text.
@@ -61,7 +63,33 @@ const ENDING = {
   file: 'Rewrite these lines.',
   commit: 'Amend the commit if it is not pushed.',
   pr: 'Update the PR body with `gh pr edit`.',
+  comment: 'Edit the comment with `gh pr comment --edit-last`.',
+  review: 'Post the correction with `gh pr comment`.',
 };
+
+// `git commit -F msg.txt` and `gh pr create --body-file body.md` carry the prose in a file the
+// command only names. Read it; `-` is stdin and stays unread.
+const MESSAGE_FILE = /(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)("[^"]*"|'[^']*'|[^\s'"]+)/;
+const messageFile = (command, cwd) => {
+  const m = command.match(MESSAGE_FILE);
+  if (!m) return null;
+  const file = m[1].replace(/^(["'])(.*)\1$/, '$2');
+  if (file === '-') return null;
+  try {
+    return { file, text: readFileSync(cwd ? resolve(cwd, file) : file, 'utf8') };
+  } catch {
+    return null;
+  }
+};
+
+const GH_PR = /\bgh\s+pr\s+(create|edit|comment|review)\b/;
+const GH_NAME = {
+  create: 'PR body',
+  edit: 'PR body',
+  comment: 'PR comment',
+  review: 'review body',
+};
+const GH_KIND = { create: 'pr', edit: 'pr', comment: 'comment', review: 'review' };
 
 // Files an agent reads rather than a person: memory, plans and instruction files. Their
 // house style (an em dash per index line, for one) is not slop.
@@ -85,10 +113,15 @@ export const target = (payload) => {
     return { kind: 'file', name: path, text, edit: tool === 'Edit' };
   }
   if (tool === 'Bash' && typeof command === 'string') {
-    if (/\bgit\s+commit(?![-\w])/.test(command))
-      return { kind: 'commit', name: 'commit message', text: command };
-    if (/\bgh\s+pr\s+(?:create|edit)\b/.test(command))
-      return { kind: 'pr', name: 'PR body', text: command };
+    const isCommit = /\bgit\s+commit(?![-\w])/.test(command);
+    const gh = isCommit ? null : command.match(GH_PR);
+    if (!isCommit && !gh) return null;
+    const kind = isCommit ? 'commit' : GH_KIND[gh[1]];
+    const name = isCommit ? 'commit message' : GH_NAME[gh[1]];
+    const msg = messageFile(command, payload.cwd);
+    return msg
+      ? { kind, name: `${name} (${msg.file})`, text: msg.text }
+      : { kind, name, text: command };
   }
   return null;
 };
@@ -96,7 +129,9 @@ export const target = (payload) => {
 export const message = (t, hits) =>
   [
     `writeup:unslop flagged ${hits.length} pattern${hits.length === 1 ? '' : 's'} in ${t.edit ? 'an edit to ' : ''}${t.name}:`,
-    ...hits.slice(0, MAX_SHOWN).map((h) => `- rule ${h.id} "${h.match}" (line ${h.line})`),
+    ...hits
+      .slice(0, MAX_SHOWN)
+      .map((h) => `- rule ${h.id} "${h.match}" (line ${h.line}${t.edit ? ' of the edit' : ''})`),
     ...(hits.length > MAX_SHOWN ? [`- and ${hits.length - MAX_SHOWN} more`] : []),
     ENDING[t.kind],
   ].join('\n');

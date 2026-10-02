@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { findSlop, stripCode, RULES } from '../hooks/scan.mjs';
@@ -39,9 +41,10 @@ test('inflections hit, lookalikes do not', () => {
   assert.equal(findSlop('It underscores the point and is leveraging.').length, 2);
   assert.deepEqual(findSlop('We deliver numeric results.'), []);
   assert.deepEqual(findSlop('Prefix it with an underscore; file an enhancement.'), []);
+  assert.deepEqual(findSlop('Open the component showcase.'), []);
   assert.deepEqual(
-    findSlop('This enhances and underscored it.').map((h) => h.match),
-    ['enhances', 'underscored'],
+    findSlop('This enhances, showcases and underscored it.').map((h) => h.match),
+    ['enhances', 'showcases', 'underscored'],
   );
 });
 test('code is ignored and newlines survive', () => {
@@ -172,12 +175,55 @@ test('Edit header says edit; Write header does not', () => {
     JSON.parse(claude({ tool_name, tool_input })).hookSpecificOutput.additionalContext;
   assert.match(
     ctx('Edit', { file_path: 'README.md', old_string: 'x', new_string: 'We delve.' }),
-    /^writeup:unslop flagged 1 pattern in an edit to README\.md:\n/,
+    /^writeup:unslop flagged 1 pattern in an edit to README\.md:\n- rule 7 "delve" \(line 1 of the edit\)\n/,
   );
   assert.match(
     ctx('Write', { file_path: 'README.md', content: 'We delve.' }),
-    /^writeup:unslop flagged 1 pattern in README\.md:\n/,
+    /^writeup:unslop flagged 1 pattern in README\.md:\n- rule 7 "delve" \(line 1\)\n/,
   );
+});
+test('gh pr comment and review are scanned with their own endings', () => {
+  assert.match(
+    claude({ tool_name: 'Bash', tool_input: { command: 'gh pr comment 7 --body "Delve"' } }),
+    /PR comment:.*gh pr comment --edit-last/s,
+  );
+  assert.match(
+    claude({
+      tool_name: 'Bash',
+      tool_input: { command: 'gh pr review 7 --approve --body "Delve"' },
+    }),
+    /review body:.*Post the correction with `gh pr comment`/s,
+  );
+  assert.equal(claude({ tool_name: 'Bash', tool_input: { command: 'gh pr view 7' } }), '');
+});
+test('message files named by -F and --body-file are read', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'msg.txt'), 'fix: x\n\nWe delve here.\n');
+    writeFileSync(join(dir, 'body.md'), 'ok\nI hope this helps.\n');
+    const out = (command) =>
+      JSON.parse(claude({ tool_name: 'Bash', tool_input: { command }, cwd: dir }))
+        .hookSpecificOutput.additionalContext;
+    assert.match(
+      out('git commit -F msg.txt'),
+      /commit message \(msg\.txt\):\n- rule 7 "delve" \(line 3\)/,
+    );
+    assert.match(
+      out(`gh pr create --body-file "${join(dir, 'body.md')}"`),
+      /PR body \(.*body\.md\):\n- rule 20/,
+    );
+    assert.match(out('git commit --file=msg.txt'), /\(line 3\)/);
+    assert.equal(
+      claude({ tool_name: 'Bash', tool_input: { command: 'git commit -F missing.txt' }, cwd: dir }),
+      '',
+    );
+    assert.equal(
+      claude({ tool_name: 'Bash', tool_input: { command: 'echo ok | git commit -F -' }, cwd: dir }),
+      '',
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 test('~~~ fences and double-backtick spans are stripped', () => {
   const text = '~~~\ndelve\n~~~\nuse ``a `delve` b`` ok\nwe delve';
