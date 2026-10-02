@@ -26,8 +26,8 @@ The reader has the diff. Write only what the diff cannot show, and leave out:
 ## Example
 
 ```text
-feat(writeup): flag slop as prose is written
+fix(auth): retry the token refresh once on a 401
 
-The unslop skill only helps when a model loads it. A hook catches
-slop in files, commits and PR bodies that skipped the skill.
+The auth server rotates its signing key every hour, so a token
+issued just before the rotation fails once. Users were logged out.
 ```
