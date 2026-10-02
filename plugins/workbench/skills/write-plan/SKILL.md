@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Plan a change as an implementation file a cold executor can follow — another agent, or a future session. Use when the behavior is settled and the question is how to build it — "how should I build this", "write a plan", "what's the approach" — or when acting on a pinned cause, a settled spec, a hunt finding, or a review comment. Hand the finished plan to plan-hunt before run-plan executes it. Not for deciding what the behavior should be (write-specs), executing the plan (run-plan), writing the tests inside a step (tdd), or work too big for one session (frontier).
+description: Plan a change as an implementation file a cold executor can follow. Use when the behavior is settled and the question is how to build it, or when acting on a pinned cause, a settled spec, a hunt finding, or a review comment. Not for deciding the behavior (write-specs), executing the plan (run-plan), the tests inside a step (tdd), or work too big for one session (frontier).
 ---
 
 # Write Plan

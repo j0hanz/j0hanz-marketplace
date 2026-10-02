@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: Prototype the open question — fire a **spike**, a cheap rough artifact built to react to. Use when "how should it look or behave" has stalled in abstract talk. Not for decisions a question alone settles (grilling).
+description: Prototype the open question — fire a spike, a cheap rough artifact built to react to. Use when "how should it look or behave" has stalled in abstract talk. Not for decisions a question alone settles (grilling).
 ---
 
 # Prototype
