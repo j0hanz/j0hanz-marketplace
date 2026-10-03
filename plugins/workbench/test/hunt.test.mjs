@@ -149,3 +149,25 @@ test('a caller in another language family is a coincidence, not a caller', () =>
     const r = hunt(repo, 'src/orders.ts');
     assert.doesNotMatch(r.stdout, /tools\/fetchOrders\.py/);
   }));
+
+// The fixture value is a placeholder, never a real-looking key. Line 3 is reached only by
+// MARKER, and its value belongs to the SECRET match that starts on line 2.
+const SECRET_MJS = [
+  'export const cfg = {',
+  '  password:',
+  '    "FAKE_FAKE_FAKE_5678", // TODO',
+  '};',
+  'export const password = "FAKE_FAKE_FAKE_1234"; // TODO rotate',
+  '',
+].join('\n');
+
+test('a credential value never reaches the brief, on any tell that shows its line', () =>
+  inRepo({ 'src/config.mjs': SECRET_MJS }, (repo) => {
+    const r = hunt(repo, 'src/config.mjs');
+    assert.equal(r.status, 0);
+    assert.doesNotMatch(r.stdout, /FAKE_FAKE_FAKE/);
+    assert.match(r.stdout, /src\/config\.mjs:2\s+SECRET\s+password:/);
+    assert.match(r.stdout, /src\/config\.mjs:3\s+MARKER\s+"<redacted>", \/\/ TODO/);
+    assert.match(r.stdout, /src\/config\.mjs:5\s+SECRET\s+export const password = "<redacted>";/);
+    assert.match(r.stdout, /src\/config\.mjs:5\s+MARKER\s+export const password = "<redacted>";/);
+  }));

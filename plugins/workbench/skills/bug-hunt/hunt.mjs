@@ -41,6 +41,17 @@ const FAMILY = {
 const family = (p) => FAMILY[extname(p)] ?? 'other';
 const CODE = new Set(Object.keys(FAMILY));
 
+// The key and its opening quote are group 1, the closing quote group 2, so `redact` can
+// blank the value between them. A brief that prints the credential it flagged is the leak.
+const SECRET =
+  /((?:api[_-]?key|secret|passwd|password|token|private[_-]?key)\s*[:=]\s*["'])[^"'\s]{8,}(["'])/i;
+
+// Runs on the whole file, not the line a hit sits on: a value can sit a line below its
+// key, and another tag (MARKER, LOOSE) can show that line too. The value matches no
+// whitespace, so blanking it never moves a newline and every line number stays true.
+const redact = (text) =>
+  text.replace(new RegExp(SECRET.source, `${SECRET.flags}g`), '$1<redacted>$2');
+
 // Each tell names a place to look, never a finding. `only` scopes it to the
 // families where it means something. Every tell runs against the whole file
 // rather than line by line — a tag that fires on healthy code trains the reader
@@ -57,10 +68,7 @@ const TELLS = [
     re: /\bas\s+any\b|@ts-ignore|@ts-expect-error|#\s*type:\s*ignore|\.unwrap\(\)|\bpanic!\(/,
   },
   { tag: 'UNAWAITED', re: /\.then\((?![\s\S]{0,300}?\.catch)/, only: ['js'] },
-  {
-    tag: 'SECRET',
-    re: /(api[_-]?key|secret|passwd|password|token|private[_-]?key)\s*[:=]\s*["'][^"'\s]{8,}["']/i,
-  },
+  { tag: 'SECRET', re: SECRET },
   {
     tag: 'SQL',
     re: /(execute|query|exec|raw|prepare)\s*\(\s*(["'`][^"'`]*["'`]\s*\+|f["']|`[^`]*\$\{)/i,
@@ -227,6 +235,7 @@ function tells(source) {
   for (const [file, text] of source) {
     const fam = family(file);
     const lines = text.split('\n');
+    const shown = redact(text).split('\n');
     // Offsets once per file. Slicing the prefix per match to count newlines is
     // quadratic, and a marker on every line of a 20k-line file is 20k matches.
     const starts = [];
@@ -243,7 +252,7 @@ function tells(source) {
       for (const m of text.matchAll(new RegExp(re.source, `${re.flags}g`))) {
         while (cursor + 1 < starts.length && starts[cursor + 1] <= m.index) cursor += 1;
         const line = cursor + 1;
-        found.set(`${file}:${line}:${tag}`, { file, line, text: lines[line - 1] ?? '', tag });
+        found.set(`${file}:${line}:${tag}`, { file, line, text: shown[line - 1] ?? '', tag });
       }
     }
   }
