@@ -70,6 +70,7 @@ title: <human-facing ticket title>
 map: M-01
 status: initializing # initializing | open | in-progress | closed
 type: grilling # grilling | research | prototype | task
+mode: hitl # hitl | afk; required for task (missing counts as hitl); grilling and prototype are hitl, research afk
 priority: 100
 blocked_by: []
 claimed: # UTC ISO 8601 while in-progress, else empty
@@ -127,6 +128,7 @@ Claim = resume marker, not lease. On map load, before frontier query:
 
 - in-progress **decision** ticket = this effort's live ticket — resume it. Release only if user name different one: set `open`, clear `claimed`.
 - in-progress **research** ticket returns to `open`, `claimed` cleared, so the ticket re-dispatches on the next fan-out.
+- in-progress **AFK `task`** ticket = resume it, as with a decision ticket: its claim marks work already started. The one-per-session cap does not count it.
 
 ## Resolve and redraw
 
@@ -147,7 +149,7 @@ Finalize one resolution in this order, so a crash leaves the map behind the tick
 
 1. Record resolution, close ticket.
 2. Add its linked gist to section its classification require, creating section if absent.
-3. **Redraw**: create the round's new tickets through the barrier above, clear graduated fog from **Not yet specified**, rule newly out-of-scope work out, and read **every open ticket on the map** against this resolution — recording each as unaffected, updated, re-blocked, or superseded. **Update** edits a ticket's Question body only. **Re-block** changes `blocked_by` edges on a published ticket.
+3. **Redraw**: create the round's new tickets through the barrier above, clear graduated fog from **Not yet specified**, rule newly out-of-scope work out, and read **every open ticket on the map** against this resolution — recording each as unaffected, updated, re-blocked, or superseded. **Re-block** changes `blocked_by` edges on a published ticket.
 4. Evaluate closure gate.
 
 Before finalizing anything, reconcile from a fresh map read: every published closed ticket has exactly one gist, and every gist a closed ticket. Repair map before recording new work.
