@@ -77,11 +77,10 @@ Four classes earn a question:
 - **Skill** — the procedure with judgement in it. Which one gets explained to a human more
   than once a month? Options are **skill** (hand off to [write-skills](../write-skills/SKILL.md)),
   **floor-line** (a line in `CLAUDE.md` is the procedure), or **neither** — never bundle line
-  and skill into one option. The choice is settled here, not reopened at step 4.
+  and skill into one option. The choice is settled here, not reopened at step 4. Ask even
+  with no candidate; a repo that wants none says so in one click.
 
-The last three ask even when the brief surfaced no candidate — gotcha, hook, and skill
-all have no other source, and a repo that wants none says so in one click. Ask only what
-the probe can't reach — the round-trip is the point.
+Ask only what the probe can't reach — the round-trip is the point.
 
 | Hook lead shows                                                       | Event        |
 | :-------------------------------------------------------------------- | :----------- |
@@ -154,25 +153,6 @@ directory up. Hooks land in `.claude/hooks/` with the registration block in
 `.claude/settings.json`; skills in `.claude/skills/<name>/SKILL.md`. This skill picks
 **whether and where**; [write-hooks](../write-hooks/SKILL.md) and
 [write-skills](../write-skills/SKILL.md) pick **how** and own the authoring in full.
-
-The registration block is event → array of matcher-groups, each `{ matcher?, hooks: [...] }`
-— the inner `hooks` array is required, not the command object directly. A flat
-`"Stop": [{ "type": ..., "command": ... }]` fails the schema with `Missing property "hooks"`.
-A `Stop` hook (matcher ignored) registers as:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": "bash \"<repo>/.claude/hooks/<name>.sh\"", "timeout": 10 }
-        ]
-      }
-    ]
-  }
-}
-```
 
 This skill points write-hooks at the lead; it does not author the handler.
 
