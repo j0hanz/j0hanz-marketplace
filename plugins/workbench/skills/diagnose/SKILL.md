@@ -16,16 +16,17 @@ Triggers: a flaky test, a crash only in production, a wrong result on one input.
 Before any hypothesis, make the symptom happen. A reproduction is a command, a script, or an input that produces the reported wrong behavior **on demand** — not "I saw it once", but "run this, it fails."
 
 - The symptom reproduces → you have the falsifying observation the fix must drive green. Proceed to step 2.
+- The symptom shows on some runs only → the reproduction is a loop: run the command 20 times and report the failure rate, e.g. `3/20 failed`. In step 2 every run means the whole loop, and a change counts only when it moves the rate; narrow until the rate is 20/20 or 0/20. If the first 20 runs all pass, run 80 more; no failure in all 100 runs → treat it as the non-reproduction below.
 - The symptom will not reproduce → do not name a cause. Report the non-reproduction, with what you tried, and route to [research](../research/SKILL.md) for the conditions you have not matched, or to the user for the environment difference you cannot see. A cause for a symptom you cannot reproduce is a guess about a ghost.
 - The system cannot be run at all — no runner, no build, a dependency that will not install → state the inability and route to [bug-hunt](../bug-hunt/SKILL.md) for a static pass, or to the user. diagnose runs the code; with no runnable system, it has nothing to run.
 
-**Done when** the symptom reproduces on demand, or the non-reproduction or unrunnable system is reported and routed away.
+**Done when** the symptom reproduces on demand, on every run or at a failure rate measured over 20 runs, or the non-reproduction or unrunnable system is reported and routed away.
 
 ### 2. Narrow by running
 
-With a reproduction, narrow to the root cause by **running the code**, not by reading it alone. Two levers:
+With a reproduction, narrow to the root cause by **running the code**, not by reading it alone. Default to **bisect commits** when the repro passes on a commit you can name (a release tag, the last deploy, the commit before the suspect change); run the repro there to check. With no such commit, **narrow inputs**.
 
-- **Bisect commits** — `git bisect` between the last known-good and the failing commit. The run is the oracle; the commit that flips is where the cause entered.
+- **Bisect commits** — `git bisect` between that known-good commit and the failing one. The run is the oracle; the commit that flips is where the cause entered. When that commit's diff is too large to pin a line, narrow inputs on it next.
 - **Narrow inputs** — shrink the reproduction to the minimal input that still fails. Remove everything that does not change the outcome; the smallest failing case is the cause's shadow at its sharpest.
 
 Static reading guides the run — it tells you where to bisect and what to strip — but a cause reached by reading alone, with no run to confirm, is a hypothesis, not a pin. Run to confirm.
