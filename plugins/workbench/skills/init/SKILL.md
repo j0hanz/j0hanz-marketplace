@@ -33,9 +33,12 @@ in `CLAUDE.md`.
 
 A `## Hook leads` section closes the one gap a repo walk has: it cannot see what
 you already do by hand. The probe samples recent session transcripts under
-`~/.claude` and reads memory, surfacing commands repeated across sessions and
-imperatives left in memory as hook candidates — each citing its fact. These are
-step 2's Hook question; no extra reading, the probe already parsed them.
+`~/.claude` (or `$CLAUDE_CONFIG_DIR`) and reads memory, surfacing commands repeated
+across sessions and imperatives left in memory as hook candidates — each citing its
+fact. Its `Sessions:` and `Memory:` lines say what it read; `Not sampled` means no
+history exists for this path (Copilot CLI keeps none there), so hook leads are unknown,
+not absent. These are step 2's Hook question; no extra reading, the probe already
+parsed them.
 
 Then read. Not the repo — the four places a floor line actually comes from:
 
@@ -67,11 +70,10 @@ Four classes earn a question:
 - **Contradiction** — two lines of an existing `CLAUDE.md` disagree, or a second doctrine
   file says otherwise. Quote both, ask which stands.
 - **Hook** — the mistake made twice. Which rule has to hold every time, whoever is typing?
-  The brief's `## Hook leads` are the candidates: a command repeated across recent
-  sessions, an imperative in memory, or a configured tool no gate runs (the
-  Surprises/Gates already flagged that one). Present each viable lead as an option
-  carrying the hook event the probe proposed — `SessionStart`, `PreToolUse`, or
-  `Stop`. Ask even with no leads; a hook worth one may be invisible to the probe.
+  The candidates are the brief's `## Hook leads` — a command repeated across recent
+  sessions, an imperative in memory — plus any `## Leads` line naming a configured tool
+  no CI runs. Present each viable lead as an option carrying its event from the table
+  below. Ask even with no leads; a hook worth one may be invisible to the probe.
 - **Skill** — the procedure with judgement in it. Which one gets explained to a human more
   than once a month? Options are **skill** (hand off to [write-skills](../write-skills/SKILL.md)),
   **floor-line** (a line in `CLAUDE.md` is the procedure), or **neither** — never bundle line
@@ -80,6 +82,14 @@ Four classes earn a question:
 The last three ask even when the brief surfaced no candidate — gotcha, hook, and skill
 all have no other source, and a repo that wants none says so in one click. Ask only what
 the probe can't reach — the round-trip is the point.
+
+| Hook lead shows                                                       | Event        |
+| :-------------------------------------------------------------------- | :----------- |
+| `git status` / `diff` / `log` / `branch` repeated across sessions     | SessionStart |
+| Format or lint command repeated, or a configured linter no CI runs    | Stop         |
+| Test command repeated — the rule is "tests pass before commit"        | PreToolUse   |
+| Memory imperative about a tool call — "never run X", "always Y first" | PreToolUse   |
+| Memory imperative about finishing — "always run X when done"          | Stop         |
 
 **Done when** every lead is settled or dropped with the user's reason on it, and the
 gotcha, hook, and skill questions each carry an answer — the user's "none" counts.
@@ -136,13 +146,8 @@ deleted, moved behind a link, or resolved by the user's answer.
 An enforcer the brief names (`husky`, `pre-commit`) already handles the rule — a parallel
 hook is redundant. The hook candidate is the ungated-tooling lead, not the enforcer.
 A `## Hook leads` candidate cites its own fact — a session repeat or a memory
-imperative — which is as much a fact as a repo file, and earns the same path.
-
-| Hook lead shows                                        | Event        |
-| :----------------------------------------------------- | :----------- |
-| `git status` / `git diff` run every session start      | SessionStart |
-| Format/lint command run repeatedly before stop         | Stop         |
-| Test command run before commit, enforced only by habit | PreToolUse   |
+imperative — which is as much a fact as a repo file, and earns the same path. Its event
+is the one step 2's table gave it.
 
 Ship only what a repo fact demands — a scaffolded `.claude/` is a filled-in template one
 directory up. Hooks land in `.claude/hooks/` with the registration block in
