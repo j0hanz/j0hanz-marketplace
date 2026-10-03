@@ -13,7 +13,7 @@ Ideation makes the options and stops. Putting a fork to the user is [grilling](.
 
 ### 1. Widen past the default
 
-The first approaches out are the **default** — what the problem's own vocabulary suggests, and what any agent produces cold. They are the bar the field has to beat, not entries in it.
+The first approaches out are the **default** — what the problem's own vocabulary suggests, and what any agent produces cold. Write them into the field first, as candidates like any other: they go through the same cull in step 2 and can survive to be recommended. The generators exist to put rivals beside them.
 
 Run all four generators; each cuts on an axis the others cannot reach:
 
@@ -40,9 +40,9 @@ Two candidates one killer takes out are **twins** — one bet written twice. Kee
 
 ### 3. Hand the live set over
 
-The live set is written under the decision it answers — the map node in [grilling](../grilling/SKILL.md), or the ticket that raised it under [frontier](../frontier/SKILL.md). With neither open, it becomes the first node of the map grilling opens next. Say which survivor you would take and why. Each survivor goes on the page with its killer and its cost — what taking it would give up.
+The live set is written under the decision it answers — the map node in [grilling](../grilling/SKILL.md), or the ticket that raised it under [frontier](../frontier/SKILL.md). With neither open, open the grilling map at `<name>.map.md` in the per-change directory [write-specs](../write-specs/SKILL.md#referencing) defines, and write the live set as its first node. Say which survivor you would take and why. Each survivor goes on the page with its killer and its cost — what taking it would give up.
 
-- **One survivor** — nothing left to decide; its behavior goes to [write-specs](../write-specs/SKILL.md).
+- **One survivor** — nothing left to decide. One that changes observable behavior goes to [write-specs](../write-specs/SKILL.md); one that only moves structure and keeps behavior goes to [refactor](../refactor/SKILL.md).
 - **Two or more** — [grilling](../grilling/SKILL.md) puts them to the user as one round.
 - **Survivors differing only in how they look or feel** — [prototype](../prototype/SKILL.md); no argument settles that.
 - **None** — widen once more, against the constraint that killed them all. Still none, and the problem as stated has no way through: report that constraint and stop.
