@@ -90,6 +90,49 @@ test('a handoff file is not an artifact the gate places', () => {
   }
 });
 
+test('an artifact whose stem already has an effort is redirected into that effort', () =>
+  inProject((project) => {
+    const effort = join(project, 'docs', 'plan', '2026-01-01-auth');
+    mkdirSync(effort, { recursive: true });
+    writeFileSync(join(effort, 'auth.spec.md'), '');
+    const out = denial(gate(join(project, 'auth.plan.md'), project));
+    assert.equal(out.permissionDecision, 'deny');
+    assert.match(out.permissionDecisionReason, /docs\/plan\/2026-01-01-auth\/auth\.plan\.md/);
+  }));
+
+test('a loose artifact directly under docs/plan/ is denied', () =>
+  inProject((project) => {
+    const out = denial(gate(join(project, 'docs', 'plan', 'x.plan.md'), project));
+    assert.equal(out.permissionDecision, 'deny');
+  }));
+
+test('an artifact nested below an effort directory, outside tickets/, is denied', () =>
+  inProject((project) => {
+    const filePath = join(project, 'docs', 'plan', '2026-08-01-alpha', 'sub', 'alpha.plan.md');
+    const out = denial(gate(filePath, project));
+    assert.equal(out.permissionDecision, 'deny');
+  }));
+
+test('a write outside the project is not gated', () =>
+  inProject((project) => {
+    const elsewhere = mkdtempSync(join(tmpdir(), 'workbench-gate-elsewhere-'));
+    try {
+      assert.equal(gate(join(elsewhere, 'x.plan.md'), project), '');
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
+  }));
+
+// Under Copilot a PreToolUse hook that exits non-zero or prints non-JSON denies the tool.
+test('unreadable stdin under Copilot exits 0 with one JSON notice', () =>
+  inProject((project) => {
+    const r = spawnGate('{not json', project, { copilot: true });
+    assert.equal(r.status, 0);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.permissionDecision, undefined);
+    assert.match(out.additionalContext, /^workbench gate: check skipped/);
+  }));
+
 // A symlinked or junctioned plugin root makes process.argv[1] differ from the module's
 // realpath. The gate must still run.
 test('the gate runs when its path goes through a symlink or junction', () =>
