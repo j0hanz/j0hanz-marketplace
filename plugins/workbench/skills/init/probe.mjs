@@ -4,6 +4,7 @@
 // fails:  exit 1 when the path will not open
 
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { BARE_CI, NOISE, RUNNER, runSteps, scriptSteps, SETUP } from '../../lib/ci.mjs';
 import { git, plural, walk } from '../../lib/repo.mjs';
@@ -26,7 +27,6 @@ const LOG_COUNT = 30;
 const SESSION_LIMIT = 8;
 const SESSION_BYTES = 1 << 20;
 const CMD_THRESHOLD = 3;
-const MEM_LEADS = 5;
 const HOOK_LEADS_SHOWN = 12;
 
 const LANG = {
@@ -525,35 +525,40 @@ if (scanned >= HEAD_SCANS) {
 // all there is", the one thing a probe must never say.
 brief.push('\n## Hook leads\n');
 const hookLeads = [];
-const HOME = process.env.HOME || process.env.USERPROFILE;
-const encoded = HOME && resolve(process.cwd()).replace(/[:\\/]/g, '-');
-const sessionDir = encoded && join(HOME, '.claude', 'projects', encoded);
+// Claude Code names a project's history directory after its absolute path with
+// every character outside [A-Za-z0-9] turned into '-' — '.', '_' and spaces too —
+// under CLAUDE_CONFIG_DIR when that is set. Copilot CLI keeps nothing here, so a
+// miss is normal, and the section says it sampled nothing rather than found nothing.
+const claudeDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
+const sessionDir = join(
+  claudeDir,
+  'projects',
+  resolve(process.cwd()).replace(/[^A-Za-z0-9]/g, '-'),
+);
 
 let sessionFiles = [];
-if (sessionDir) {
-  try {
-    sessionFiles = readdirSync(sessionDir)
-      .filter((f) => f.endsWith('.jsonl'))
-      .map((f) => ({ f, t: statSync(join(sessionDir, f)).mtimeMs }))
-      .sort((a, b) => b.t - a.t)
-      .slice(0, SESSION_LIMIT);
-  } catch {
-    sessionFiles = [];
-  }
+try {
+  sessionFiles = readdirSync(sessionDir)
+    .filter((f) => f.endsWith('.jsonl'))
+    .map((f) => ({ f, t: statSync(join(sessionDir, f)).mtimeMs }))
+    .sort((a, b) => b.t - a.t)
+    .slice(0, SESSION_LIMIT);
+} catch {
+  sessionFiles = [];
 }
 
 // First token of a shell command is noise (cd, env assignments, chained &&);
 // the hook-worthy verb lives anywhere in the line, so these match unanchored.
-// A word boundary keeps `git` out of `gitman`. Each pair is [matcher, event]
-// — the event is the hook moment that would run it automatically.
+// A word boundary keeps `git` out of `gitman`. No event rides on a match: which
+// hook moment a lead earns is init SKILL.md's call, made in one table there.
 const HOOK_CMDS = [
-  [/\bgit\s+(status|diff|log|branch)\b/, 'SessionStart'],
-  [/\bnpx\s+(prettier|eslint|biome)\b/, 'Stop'],
-  [/\bpnpm\s+(test|lint|format|build)\b/, 'Stop'],
-  [/\byarn\s+(test|lint|format)\b/, 'Stop'],
-  [/\bnpm\s+run\s+(test|lint|format|build)\b/, 'Stop'],
-  [/\bnpm\s+test\b/, 'PreToolUse'],
-  [/\b(pytest|ruff|black)\b/, 'Stop'],
+  /\bgit\s+(status|diff|log|branch)\b/,
+  /\bnpx\s+(prettier|eslint|biome)\b/,
+  /\bpnpm\s+(test|lint|format|build)\b/,
+  /\byarn\s+(test|lint|format)\b/,
+  /\bnpm\s+run\s+(test|lint|format|build)\b/,
+  /\bnpm\s+test\b/,
+  /\b(pytest|ruff|black)\b/,
 ];
 const cmdCount = new Map();
 for (const { f } of sessionFiles) {
@@ -570,20 +575,20 @@ for (const { f } of sessionFiles) {
     for (const c of o.message.content) {
       if (c.type !== 'tool_use' || (c.name !== 'Bash' && c.name !== 'PowerShell')) continue;
       const cmd = String(c.input?.command ?? '');
-      for (const [re, event] of HOOK_CMDS) {
+      for (const re of HOOK_CMDS) {
         const m = re.exec(cmd);
         if (m) {
           const key = m[0].replace(/\s+/g, ' ').trim();
-          cmdCount.set(key, { n: (cmdCount.get(key)?.n ?? 0) + 1, event });
+          cmdCount.set(key, (cmdCount.get(key) ?? 0) + 1);
           break;
         }
       }
     }
   }
 }
-for (const [cmd, { n, event }] of [...cmdCount].sort((a, b) => b[1].n - a[1].n)) {
+for (const [cmd, n] of [...cmdCount].sort((a, b) => b[1] - a[1])) {
   if (n < CMD_THRESHOLD) continue;
-  hookLeads.push(`\`${cmd}\` ${n}× — ${event}.`);
+  hookLeads.push(`\`${cmd}\` ${n}×`);
 }
 
 // Memory: a feedback or project file that says "always run X" is a rule the
@@ -591,42 +596,58 @@ for (const [cmd, { n, event }] of [...cmdCount].sort((a, b) => b[1].n - a[1].n))
 // sentences only; a memory with no imperative is a fact, not a rule. Read
 // directly, not via `read`, so a path outside the repo never lands in the
 // unreadable-repo-file list.
-const memoryDir = sessionDir && join(sessionDir, 'memory');
+const memoryDir = join(sessionDir, 'memory');
 let memFiles = [];
 try {
   memFiles = readdirSync(memoryDir).filter((f) => /\.md$/.test(f));
 } catch {
   memFiles = [];
 }
-let memLeads = 0;
 for (const f of memFiles) {
-  if (memLeads >= MEM_LEADS) break;
   let text = '';
   try {
     text = readFileSync(join(memoryDir, f), 'utf8');
   } catch {
     continue;
   }
-  const fm = /^---\n([\s\S]*?)\n---/.exec(text);
-  const type = fm ? /type:\s*(\w+)/.exec(fm[1])?.[1] : undefined;
+  // Anchored to a line: memory files nest `node_type: memory` above `type: feedback`
+  // under `metadata:`, and an unanchored match reads the type out of node_type.
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  const type = fm ? /^\s*type:\s*(\w+)/m.exec(fm[1])?.[1] : undefined;
   if (type !== 'feedback' && type !== 'project') continue;
   const body = text.slice(fm ? fm[0].length : 0);
   const imperatives =
     body.match(/[^.\n]*\b(?:always|never|must|do not|don't)\b[^.\n]*[.\n]/gi) ?? [];
   for (const s of imperatives) {
-    if (memLeads >= MEM_LEADS) break;
     let clean = s.trim().replace(/\s+/g, ' ');
     if (clean.length > 110) clean = clean.slice(0, 110).replace(/\s\S*$/, '');
-    if (clean.length > 14) {
-      hookLeads.push(`memory (${type}): "${clean}"`);
-      memLeads += 1;
-    }
+    if (clean.length > 14) hookLeads.push(`memory (${type}): "${clean}"`);
   }
 }
 
-brief.push(hookLeads.length > 0 ? hookLeads.slice(0, HOOK_LEADS_SHOWN).join('\n') : 'None.');
-if (sessionFiles.length > 0)
-  brief.push(`\nSampled ${sessionFiles.length} sessions, ${SESSION_BYTES >> 10}KB each.`);
+const sampled = sessionFiles.length + memFiles.length > 0;
+if (hookLeads.length === 0) {
+  brief.push(
+    sampled
+      ? 'None.'
+      : 'Not sampled — no session history or memory for this path; hook leads unknown, not absent.',
+  );
+} else {
+  brief.push(hookLeads.slice(0, HOOK_LEADS_SHOWN).join('\n'));
+  if (hookLeads.length > HOOK_LEADS_SHOWN) {
+    brief.push(`…and ${hookLeads.length - HOOK_LEADS_SHOWN} more`);
+  }
+}
+brief.push(
+  sessionFiles.length > 0
+    ? `\nSessions: ${sessionFiles.length} sampled, ${SESSION_BYTES >> 10}KB each`
+    : `\nSessions: none at ${sessionDir}`,
+);
+brief.push(
+  memFiles.length > 0
+    ? `Memory: ${plural(memFiles.length, 'file')} read`
+    : `Memory: none at ${memoryDir}`,
+);
 
 // ── Context already here ────────────────────────────────────────────────────
 brief.push('\n## Context already here\n');
@@ -634,12 +655,8 @@ const context = [];
 for (const file of files.filter((f) => basename(f) === 'CLAUDE.md')) {
   context.push(`${file}  (${plural((read(file) ?? '').split('\n').length, 'line')})`);
 }
-for (const file of [
-  'AGENTS.md',
-  '.github/copilot-instructions.md',
-  '.windsurfrules',
-  '.cursorrules',
-]) {
+const DOCTRINE = ['AGENTS.md', '.github/copilot-instructions.md', '.windsurfrules', '.cursorrules'];
+for (const file of DOCTRINE) {
   if (at.has(file))
     context.push(`${file}  (${plural((read(file) ?? '').split('\n').length, 'line')})`);
 }
@@ -648,7 +665,11 @@ if (rules.length > 0) context.push(`.cursor/rules/  (${plural(rules.length, 'fil
 
 const claude = files.filter((f) => f.startsWith('.claude/'));
 for (const kind of ['skills', 'agents', 'hooks', 'commands']) {
-  const owned = claude.filter((f) => f.startsWith(`.claude/${kind}/`));
+  // A dotfile (.gitattributes, .DS_Store) is none of these kinds, and stripping its
+  // only extension printed an empty name.
+  const owned = claude.filter(
+    (f) => f.startsWith(`.claude/${kind}/`) && !f.split('/')[2].startsWith('.'),
+  );
   if (owned.length > 0) {
     const names = [...new Set(owned.map((f) => f.split('/')[2].replace(/\.\w+$/, '')))];
     context.push(
@@ -667,7 +688,11 @@ brief.push(context.length > 0 ? context.join('\n') : 'None.');
 if (unreadable.length > 0) {
   brief.push(`\nunreadable: ${unreadable.join(', ')}`);
 }
-if (context.filter((l) => !l.startsWith('.claude/')).length > 1) {
+// Root doctrine only: a nested CLAUDE.md merges with the root one, so it is no
+// rival to adjudicate. `.cursor/rules/` counts as one source.
+const doctrine =
+  ['CLAUDE.md', ...DOCTRINE].filter((f) => at.has(f)).length + (rules.length > 0 ? 1 : 0);
+if (doctrine > 1) {
   leads.push('Multiple doctrine files — which is authoritative, should the rest point at it?');
 }
 
