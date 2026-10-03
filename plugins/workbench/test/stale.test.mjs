@@ -1,8 +1,17 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -28,12 +37,12 @@ const fixture = ({ cached = true } = {}) => {
   return { base, pluginRoot, project };
 };
 
-const run = ({ pluginRoot, project }, payload, copilot = false) => {
+const run = ({ pluginRoot, project }, payload, copilot = false, hook = HOOK) => {
   // Unset, not blank: the hook falls back with `??`, which an empty string would defeat.
   const env = { ...process.env, CLAUDE_PLUGIN_ROOT: pluginRoot, CLAUDE_PROJECT_DIR: project };
   if (copilot) env.COPILOT_PLUGIN_ROOT = pluginRoot;
   else delete env.COPILOT_PLUGIN_ROOT;
-  return spawnSync(process.execPath, [HOOK], {
+  return spawnSync(process.execPath, [hook], {
     input: JSON.stringify({ hook_event_name: 'Stop', ...payload }),
     encoding: 'utf8',
     env,
@@ -95,4 +104,19 @@ test('a loaded copy at least as new as the source stays silent', () =>
     utimesSync(join(f.project, 'plugins', 'wb', 'SKILL.md'), OLD, OLD);
     const r = run(f, { session_id: id });
     assert.equal(r.stdout, '');
+  }));
+
+// A symlinked or junctioned plugin root makes process.argv[1] differ from the module's
+// realpath. The hook must still run.
+test('the hook runs when its path goes through a symlink or junction', () =>
+  withFixture({}, (f, id) => {
+    const link = join(f.base, 'linked-hooks');
+    symlinkSync(dirname(HOOK), link, 'junction');
+    try {
+      const r = run(f, { session_id: id }, false, join(link, 'stale.mjs'));
+      assert.equal(r.status, 0);
+      assert.match(JSON.parse(r.stdout).systemMessage, /newer than the loaded copy/);
+    } finally {
+      unlinkSync(link);
+    }
   }));

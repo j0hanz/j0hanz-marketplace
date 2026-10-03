@@ -39,15 +39,13 @@ const misplacement = (filePath, project) => {
   };
 };
 
-if (import.meta.filename === process.argv[1]) {
-  try {
-    const payload = JSON.parse((await text(process.stdin)) || '{}');
-    if (toolName(payload) !== 'Write') process.exit(0);
-    const verdict = misplacement(toolInput(payload).filePath, projectRoot(payload));
-    if (!verdict) process.exit(0);
-    process.stdout.write(deny(verdict.reason));
-  } catch (e) {
-    const why = String(e?.message ?? e).split('\n')[0];
-    notice('PreToolUse', `workbench gate: check skipped (${why}). Writes are not being gated.`);
-  }
+try {
+  const payload = JSON.parse((await text(process.stdin)) || '{}');
+  if (toolName(payload) !== 'Write') process.exit(0);
+  const verdict = misplacement(toolInput(payload).filePath, projectRoot(payload));
+  if (!verdict) process.exit(0);
+  process.stdout.write(deny(verdict.reason));
+} catch (e) {
+  const why = String(e?.message ?? e).split('\n')[0];
+  notice('PreToolUse', `workbench gate: check skipped (${why}). Writes are not being gated.`);
 }

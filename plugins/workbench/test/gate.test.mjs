@@ -1,23 +1,41 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const HOOK = fileURLToPath(new URL('../hooks/gate.mjs', import.meta.url));
 
-// Spawn the gate hook with a Write tool payload and return stdout.
-const gate = (filePath, project) => {
-  return spawnSync(process.execPath, [HOOK], {
-    input: JSON.stringify({
-      tool_name: 'Write',
-      tool_input: { file_path: filePath },
-    }),
-    env: { ...process.env, CLAUDE_PROJECT_DIR: project },
+// Spawn the gate hook with raw stdin. COPILOT_PLUGIN_ROOT is how the hook tells the hosts
+// apart, so it is cleared unless `copilot` is set.
+const spawnGate = (input, project, { hook = HOOK, copilot = false } = {}) =>
+  spawnSync(process.execPath, [hook], {
+    input,
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: project,
+      COPILOT_PLUGIN_ROOT: copilot ? project : '',
+    },
     encoding: 'utf8',
+  });
+
+// Spawn the gate hook with a Write tool payload and return stdout.
+const gate = (filePath, project, hook) =>
+  spawnGate(JSON.stringify({ tool_name: 'Write', tool_input: { file_path: filePath } }), project, {
+    hook,
   }).stdout;
+
+const denial = (out) => JSON.parse(out).hookSpecificOutput;
+
+const inProject = (fn) => {
+  const project = mkdtempSync(join(tmpdir(), 'workbench-gate-'));
+  try {
+    fn(project);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
 };
 
 test('a write outside docs/plan/ entirely is denied', () => {
@@ -71,3 +89,17 @@ test('a handoff file is not an artifact the gate places', () => {
     rmSync(project, { recursive: true, force: true });
   }
 });
+
+// A symlinked or junctioned plugin root makes process.argv[1] differ from the module's
+// realpath. The gate must still run.
+test('the gate runs when its path goes through a symlink or junction', () =>
+  inProject((project) => {
+    const link = join(project, 'linked-hooks');
+    symlinkSync(dirname(HOOK), link, 'junction');
+    try {
+      const out = denial(gate(join(project, 'x.plan.md'), project, join(link, 'gate.mjs')));
+      assert.equal(out.permissionDecision, 'deny');
+    } finally {
+      unlinkSync(link);
+    }
+  }));

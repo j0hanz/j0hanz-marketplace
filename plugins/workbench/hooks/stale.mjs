@@ -60,22 +60,20 @@ const stalenessNote = (pluginRoot, project) => {
   ].join('\n');
 };
 
-if (import.meta.filename === process.argv[1]) {
+try {
+  const payload = JSON.parse((await text(process.stdin)) || '{}');
+  if (payload.stop_hook_active) process.exit(0);
+  const marker = join(tmpdir(), `workbench-stale-${slug(payload.session_id)}.txt`);
+  if (existsSync(marker)) process.exit(0);
+  const note = stalenessNote(
+    process.env.COPILOT_PLUGIN_ROOT ?? process.env.CLAUDE_PLUGIN_ROOT,
+    projectRoot(payload),
+  );
+  if (!note) process.exit(0);
   try {
-    const payload = JSON.parse((await text(process.stdin)) || '{}');
-    if (payload.stop_hook_active) process.exit(0);
-    const marker = join(tmpdir(), `workbench-stale-${slug(payload.session_id)}.txt`);
-    if (existsSync(marker)) process.exit(0);
-    const note = stalenessNote(
-      process.env.COPILOT_PLUGIN_ROOT ?? process.env.CLAUDE_PLUGIN_ROOT,
-      projectRoot(payload),
-    );
-    if (!note) process.exit(0);
-    try {
-      writeFileSync(marker, 'warned\n');
-    } catch {}
-    notice('Stop', note);
-  } catch {
-    process.exit(0);
-  }
+    writeFileSync(marker, 'warned\n');
+  } catch {}
+  notice('Stop', note);
+} catch {
+  process.exit(0);
 }
