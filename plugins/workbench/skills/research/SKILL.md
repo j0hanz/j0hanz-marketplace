@@ -40,4 +40,6 @@ the answer to the question asked.
 </output>
 ```
 
-Relay the findings when it returns — the agent's report reaches you, not the user.
+Check the report when it returns — the agent's report reaches you, not the user. A report that misses the `<question>` as asked, or carries a fact without a citation, goes back once: re-dispatch with the gap named in `<scope>`. Under [frontier](../frontier/SKILL.md), its operations' reopen rule replaces that re-dispatch.
+
+**Done when** the findings are relayed, every fact in them is cited or — only after the one re-dispatch — marked **unverified**, and the relay says whether the `<question>` as asked is answered.
