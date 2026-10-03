@@ -1,6 +1,6 @@
 ---
 name: write-skills
-description: Author a new skill or audit an existing one — frontmatter, trigger description, and body. Use when asked to write, add, fix, or audit a skill, when a skill never fires, or when it fires at the wrong moment. Not for the hook handler and its registration block (write-hooks), or the plugin manifest and marketplace catalog around them.
+description: Write, fix, or audit a skill's frontmatter, trigger description, and body. Use when a skill is asked for, never fires, or fires at the wrong moment. Not for a hook (write-hooks) or the plugin manifest and catalog.
 ---
 
 Every lever in this skill serves one goal: **predictability**.

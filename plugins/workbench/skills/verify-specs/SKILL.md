@@ -1,6 +1,6 @@
 ---
 name: verify-specs
-description: Verify a built system against its spec — run each requirement's falsifying observation and report the verdict per ID. Use when a change lands against a spec, or before signing one off. Not for writing requirements (write-specs).
+description: Verify a built system against its spec, with a verdict per requirement ID. Use when a change lands against a spec, or before signing one off. Not for writing requirements (write-specs).
 ---
 
 # Verify Specs

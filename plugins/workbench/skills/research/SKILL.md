@@ -1,6 +1,6 @@
 ---
 name: research
-description: Research a question against primary sources and report back cited findings — web sources or this working directory. Use when a question needs sources answered rather than the user — how a library behaves, what a spec requires, where something lives in this repo. Not for decisions the user must make (grilling), or a failure whose cause has to be reproduced by running the code (diagnose).
+description: Research a question in primary sources. Use when it needs sources, not the user — how a library behaves, what a spec requires, where something lives in this repo. Not for user decisions (grilling) or failures to reproduce (diagnose).
 ---
 
 Dispatch a background agent (Claude Code: Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`; Copilot: `task`, `agent_type: "general-purpose"`, `mode: "background"`). Two source modes share one template: **web** (fetch and search outside the repo) or **directory** (read this working directory). A question spanning both is two dispatches, not one agent handed both source blocks.

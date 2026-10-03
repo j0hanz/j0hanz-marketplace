@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: Readability pass over code that already works — behavior-preserving, every function in scope carrying a verdict. Use when asked to tidy code, for a readability review of a diff, or when code smells are named. Not for correctness or security defects (bug-hunt) or structural and maintainability review of a branch (qc).
+description: Readability pass over code that already works. Use when asked to tidy code or review a diff for readability, or when code smells are named. Not for correctness defects (bug-hunt) or branch-wide structure (qc).
 ---
 
 # Clean Code

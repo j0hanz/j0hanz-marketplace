@@ -1,6 +1,6 @@
 ---
 name: write-specs
-description: Spec the observable behavior a change must deliver. Use when asked to spec a feature or write requirements, when a request names what the system should do but not how, or to capture what a built system already guarantees. Not for the execution route (write-plan), reviewing the spec (spec-hunt), or verifying a built system (verify-specs).
+description: Spec a feature's observable behavior. Use when asked for requirements, when a request says what the system should do but not how, or to capture what a built system already guarantees. Not for how to build it (write-plan).
 ---
 
 # Write Specs

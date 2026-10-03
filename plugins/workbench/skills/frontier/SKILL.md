@@ -1,6 +1,6 @@
 ---
 name: frontier
-description: 'Frontier: chart work too big for one session as a map of tickets. Use when the way from a loose idea to done is not visible yet, or when resuming an existing map. Not for changes that fit one session (write-plan). Not for widening approaches when none exist yet (ideation).'
+description: Break work too big for one session into a ticket map. Use when the path from a loose idea to done is unclear, or to resume a map. Not for one-session changes (write-plan) or approaches not yet generated (ideation).
 ---
 
 Loose idea arrive too big for one agent session, wrapped in **fog**: way from here to **destination** not visible yet. Finding that way is the work. This skill chart way as **map** of tickets — each resolve one decision, or one thing a decision wait on — then work them until route clear. Every session take what sit at **frontier**: edge of known, decisions takeable right now.

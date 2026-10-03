@@ -1,6 +1,6 @@
 ---
 name: plan-hunt
-description: Adversarial review of a written plan — a blind refuter kills dead steps before run-plan runs. Use when a plan looks executable but is suspect. Not for writing the plan (write-plan), executing it (run-plan), or hunting code (bug-hunt).
+description: Hunt a written plan for dead steps. Use once write-plan has written a plan and before run-plan executes it, or when a plan looks executable but is suspect. Not for hunting code (bug-hunt).
 ---
 
 # Plan Hunt

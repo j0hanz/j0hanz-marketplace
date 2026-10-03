@@ -1,6 +1,6 @@
 ---
 name: ideation
-description: Ideate the soft problem — widen to a field of candidate approaches, then cull to the ones nothing kills. Use when no options are on the table yet, or when a lone approach has never faced a rival. Not for picking among options already on the table (grilling), facts a source settles (research), or a look-and-behavior question a spike settles (prototype).
+description: Brainstorm candidate approaches to an open problem. Use when no options are on the table yet, or when a lone approach has never faced a rival. Not for picking among options already on the table (grilling).
 ---
 
 # Ideation

@@ -1,6 +1,6 @@
 ---
 name: grilling
-description: Grill the user relentlessly to settle every decision only they can make. Use on any 'grill' phrasing, or when a task needs the user own judgement to proceed. Not for facts a source can answer (research), a look-and-behavior question a rough artifact settles (prototype), or options still to be generated (ideation).
+description: Grill the user on every decision only they can make. Use when asked to grill, or when a task needs the user's own judgement. Not for facts a source can answer (research) or options not yet generated (ideation).
 ---
 
 Grill the user relentlessly. Write the decisions to a **map** — one node per decision, each naming its prerequisite — at `docs/plan/YYYY-MM-DD-<name>/<name>.map.md`, in the per-change directory [write-specs](../write-specs/SKILL.md#referencing) defines. Where the change already has that directory, the map goes in it.

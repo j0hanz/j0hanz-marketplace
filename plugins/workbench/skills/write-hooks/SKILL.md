@@ -1,6 +1,6 @@
 ---
 name: write-hooks
-description: Author a Claude Code hook that fires on the right event and fails safe. Use when something should happen automatically on an event, when auditing hooks already installed, or when a hook fires at the wrong moment or never fires. Not for the skill or plugin that carries the hook (write-skills); write-hooks owns the handler and its registration block, nothing else in settings.json.
+description: Write or audit a Claude Code or Copilot CLI hook. Use when something should run automatically on an event, or a hook misfires or never fires. Not for the skill carrying it (write-skills) or the plugin manifest and catalog.
 ---
 
 # Writing hooks

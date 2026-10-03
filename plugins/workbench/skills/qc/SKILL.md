@@ -1,6 +1,6 @@
 ---
 name: qc
-description: Review a whole branch diff for maintainability and return blocking comments. Use once a branch's changes have landed and the question is whether the shape holds across them — layering, indirection, duplication. Not for correctness or security defects (bug-hunt), naming and readability inside a function (clean-code), test coverage (tdd, verify-specs), or repo-wide structural debt outside this branch (architecture-audit).
+description: Review a whole branch diff for maintainability. Use once a branch's changes have landed and the question is whether the shape holds — layering, indirection, duplication. Not for correctness or security defects (bug-hunt) or readability inside a function (clean-code).
 ---
 
 Dispatch the review to a background subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`; Copilot: `task`, `agent_type: "general-purpose"`, `mode: "background"`) — you keep working while it reviews.

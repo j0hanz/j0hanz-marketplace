@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Execute a behavior-preserving structural move — characterize the behavior with a green test first, then move structure with tests as the net. Use when restructuring code whose observable behavior must not change. Not for readability (clean-code), adding behavior (write-plan, tdd), or reviewing structure (qc).
+description: Refactor without changing behavior. Use when asked to restructure, extract, move, or split code, or when a review hands over a structural fix. Not for readability (clean-code) or adding behavior (write-plan, tdd).
 ---
 
 # Refactor

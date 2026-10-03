@@ -1,6 +1,6 @@
 ---
 name: write-qa
-description: Create coverage-mapped QA deliverables. Use when asked for a test plan, manual cases, a regression suite, or a bug report. Not for automated tests (tdd), hunting bugs in a diff (bug-hunt), or verifying a landed change against its spec (verify-specs).
+description: Write coverage-mapped QA deliverables. Use when asked for a test plan, manual test cases, a regression suite, or a bug report. Not for automated tests (tdd) or hunting bugs in code (bug-hunt).
 ---
 
 # Write QA

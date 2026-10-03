@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Plan a change as an implementation file a cold executor can follow. Use when the behavior is settled and the question is how to build it, or when acting on a pinned cause, a settled spec, a hunt finding, or a review comment. Not for deciding the behavior (write-specs), executing the plan (run-plan), the tests inside a step (tdd), or work too big for one session (frontier).
+description: Write an implementation plan. Use when the behavior is settled and how to build or fix it is open — a pinned cause, settled spec, hunt finding, or review comment. Not for deciding the behavior (write-specs) or multi-session work (frontier).
 ---
 
 # Write Plan

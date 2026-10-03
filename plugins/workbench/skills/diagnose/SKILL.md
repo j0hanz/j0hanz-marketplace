@@ -1,6 +1,6 @@
 ---
 name: diagnose
-description: Reproduce a reported symptom and narrow to its root cause by running the code — bisect commits or narrow inputs. Use when a bug's cause is unknown and must be reproduced before fixing. Not for static correctness review (bug-hunt), reading sources (research), or writing the fix (write-plan).
+description: Debug a bug whose cause is unknown. Use on a flaky test, a production-only crash, a wrong result on one input, or any symptom that must be reproduced before fixing. Not for static review of written code (bug-hunt).
 ---
 
 # Diagnose

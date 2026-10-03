@@ -1,6 +1,6 @@
 ---
 name: spec-hunt
-description: Adversarial review of a written spec — a blind refuter kills the gaps a cold executor would hit, checked against write-specs' done-when checklist, before write-plan builds on it. Use when a spec looks complete but is suspect. Not for writing the spec (write-specs), hunting plans (plan-hunt), or hunting code (bug-hunt).
+description: Hunt a written spec for gaps a cold executor would hit. Use once a spec is written, before write-plan builds on it, or when a spec looks complete but is suspect. Not for plans (plan-hunt) or code (bug-hunt).
 ---
 
 # Spec Hunt

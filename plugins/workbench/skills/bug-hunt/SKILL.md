@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Adversarial correctness pass over code just written. Use when correctness or security is in doubt before shipping, or after an agent produced work. Not for reproducing a reported symptom (diagnose), readability (clean-code), structure and maintainability (qc), or checking a landed change against its spec (verify-specs).
+description: Hunt bugs in code just written. Use when asked to review code for bugs, when correctness or security is in doubt before shipping, or after an agent produced work. Not for reproducing a reported symptom (diagnose) or maintainability (qc).
 ---
 
 # Bug Hunt
