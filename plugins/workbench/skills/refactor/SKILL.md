@@ -22,7 +22,9 @@ Before any structure changes, establish a **green net** that captures the behavi
 - No runnable check exists at all — no test runner, no script, no REPL command that exercises the target → wire the runner the language ships with or the repo already depends on, then write the characterization test above. Adding a new dependency is the user's call: ask first, and if they decline, state the absence and stop. You do not move structure blind.
 - The target has no observable behavior — nothing calls it, or every call is itself dead → flag it dead and hand to [write-plan](../write-plan/SKILL.md) for deletion. There is nothing to characterize.
 
-**Done when** a green test pins every behavior the move touches, or the target is flagged dead, or the user declined a runner.
+Each pinning test, reused or new, asserts a value rather than a shape, per [Writing the test](../tdd/SKILL.md#writing-the-test). For a characterization test, the known-good literal is today's output, captured by running the code once. Before the first move, prove each pinning test can fail: change its expected literal, run it **red**, restore the literal, run it green. A test that stays green with its literal changed is no net; rewrite its assertion until it goes red.
+
+**Done when** a green test pins every behavior the move touches and each one has gone **red** with its expected literal changed, or the target is flagged dead, or the user declined a runner.
 
 ### 2. Move the structure
 
