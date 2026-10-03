@@ -51,7 +51,7 @@ Structure moved, behavior held, net green: hand the change to [qc](../qc/SKILL.m
 
 ## Referencing
 
-A refactor on a planned change records its net and result beside the plan as `<name>.refactor.md`, under the [referencing convention](../write-specs/SKILL.md#referencing). On a route straight from plan with no effort directory, the result goes to chat and the net is the repo's tests.
+Where an effort directory exists for the change, the refactor records its net and result there as `<name>.refactor.md`, under the [referencing convention](../write-specs/SKILL.md#referencing). Where none exists, the result goes to chat and the net is the repo's tests; refactor bypasses write-specs and write-plan, so it never creates one.
 
 ```markdown
 pinned behavior [`db.test.ts:12`](../../../src/db.test.ts#L12)

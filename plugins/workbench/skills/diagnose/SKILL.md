@@ -55,7 +55,7 @@ A bug that cannot recur once fixed, or whose repro is too slow to keep, can skip
 
 ## Referencing
 
-The diagnosis lives beside the spec as `<name>.diagnose.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — the repro, the bisect log or the minimal input, the pinned cause, and the handoff. Where no effort directory exists, it goes to chat and the repro is the command the fix's tdd run uses as red.
+The diagnosis lives in the effort directory as `<name>.diagnose.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — the repro, the bisect log or the minimal input, the pinned cause, and the handoff. Diagnose usually runs before any other skill on the bug, so where no effort directory exists for it yet, create `docs/plan/YYYY-MM-DD-<name>/` and write the diagnosis there; write-plan's `<name>.plan.md` lands beside it under the same `<name>`.
 
 ```markdown
 repro [`BUG-007`](../../../docs/qa/BUG-007-checkout-total-zero.md)
