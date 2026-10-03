@@ -78,6 +78,13 @@
       "source": "./plugins/writeup",
       "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
       "category": "productivity"
+    },
+    {
+      "name": "telltale",
+      "source": "./plugins/telltale",
+      "description": "See how Claude uses your skills and MCP servers: a receipt under each answer, a pane of every tool call with what Claude read back and did next, context cost per server and skill, per-turn JSONL logs. Observe-only, local files only (Claude Code only)",
+      "category": "development",
+      "tags": ["claude-code-only"]
     }
   ]
 }
