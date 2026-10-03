@@ -40,7 +40,7 @@ Pointer do two job — state what material is, list **branches** should trigger 
 Skill built from two content type — **steps** and **reference** — mix freely: all steps, all reference, or both. Core decision: which use, where each sit on **information hierarchy**, ladder ranked by how immediate agent need material:
 
 1. **Steps**, in-file — primary tier: what agent do, in order.
-2. **Reference**, in-file — consult on demand. Often legit flat peer-set (every rule of review on one rung), fine arrangement, not smell. _This skill all reference._
+2. **Reference**, in-file — consult on demand. _This skill all reference._
 3. **Reference**, disclosed — out of `SKILL.md`, reached by **context pointer**, load only when pointer fire. Span sibling file in skill folder (`GLOSSARY.md` here) through **external reference** living outside skill system.
 
 Push too little down, top bloat; push too much, hide material agent actually need. That tension whole decision.

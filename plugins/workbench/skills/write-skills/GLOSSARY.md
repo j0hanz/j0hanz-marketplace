@@ -142,7 +142,7 @@ _Avoid_: done condition, exit condition, stopping rule
 
 ### Legwork
 
-Work agent do behind scenes within single step — reading files, exploring codebase, making changes, digging up what need rather than offloading to user. Lives below step structure: never written as own step, latent in wording, controlled by agent rather than skill. Within-step counterpart to **post-completion steps**' across-step pull. Raised by **leading word** (_comprehensive_, _thorough_) or **completion criterion** demanding exhaustive work. Go thin either when demand missing or when **premature completion** cut step short.
+Work agent do behind scenes within single step — reading files, exploring codebase, making changes, digging up what need rather than offloading to user. Lives below step structure: never written as own step, latent in wording, controlled by agent rather than skill. Within-step counterpart to **post-completion steps**' across-step pull. Raised by **leading word** (_relentless_, _exhaustive_) or **completion criterion** demanding exhaustive work. Go thin either when demand missing or when **premature completion** cut step short.
 
 _Avoid_: scope, effort, diligence, coverage
 
