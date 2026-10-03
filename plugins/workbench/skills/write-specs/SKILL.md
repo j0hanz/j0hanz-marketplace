@@ -27,7 +27,7 @@ Its own pass over the finished set — contradictions and missing story behavior
 
 Per requirement, name the single observation that proves it false, on the page beside its ID; [verify-specs](../verify-specs/SKILL.md) runs it once the change lands. If you cannot name one, it is prose — rewrite until a black-box observer could fail it. Then read the set once as a whole.
 
-**Done when** every requirement carries its falsifying observation, no two requirements contradict (the same input cannot satisfy two specifying mutually exclusive responses), every story in Users and stories names the requirement IDs that deliver it, and every marker appears in the open-questions list.
+**Done when** every requirement carries its falsifying observation, no two requirements contradict (no input or state triggers two requirements whose responses cannot both hold), every story in Users and stories names the requirement IDs that deliver it, and every marker appears in the open-questions list.
 
 ## Requirement syntax
 
@@ -55,7 +55,7 @@ Scenarios use Given/When/Then, one per branch:
 
 ## Referencing
 
-A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.plan.md`, `<name>.run.md`, `<name>.verify.md`, `<name>.hunt.md` ([bug-hunt](../bug-hunt/SKILL.md)), and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)).
+A change keeps one directory: `docs/plan/YYYY-MM-DD-<name>/`, dated the day it is created — by whichever skill creates it first. Every artifact scoped to that change sits in it: `<name>.spec.md`, `<name>.delta.md` ([spec delta](#spec-delta)), `<name>.spec-hunt.md` ([spec-hunt](../spec-hunt/SKILL.md)), `<name>.plan.md`, `<name>.plan-hunt.md` ([plan-hunt](../plan-hunt/SKILL.md)), `<name>.run.md`, `<name>.verify.md`, `<name>.hunt.md` ([bug-hunt](../bug-hunt/SKILL.md)), `<name>.diagnose.md` ([diagnose](../diagnose/SKILL.md)), `<name>.refactor.md` ([refactor](../refactor/SKILL.md)), `<name>.map.md` ([frontier](../frontier/SKILL.md)), and the QA set `<name>.test-plan.md`, `<name>.cases.md`, `<name>.regression.md` ([write-qa](../write-qa/SKILL.md)).
 
 A record that outlives the change that made it sits outside those directories: decisions at `docs/adr/` ([write-adr](../write-adr/SKILL.md)), QA standing records at `docs/qa/` ([write-qa](../write-qa/SKILL.md)). Where such a record is numbered, the number is `NNN-<slug>`, zero-padded, the next one found by scanning its directory.
 
@@ -133,9 +133,11 @@ requirement it blocks, with who can answer it.
 
 ## Spec delta
 
-Amending a spec that already exists is a **delta** against its current IDs, never an edit in place, so a reader sees exactly what moved. It lives beside the spec it amends, under the [referencing convention](#referencing), headed by a link to that spec: "amends [`auth spec`](auth.md)". [verify-specs](../verify-specs/SKILL.md) folds it into the canonical spec once the change ships, IDs intact.
+Amending a spec that already exists is a **delta** against its current IDs, never an edit in place, so a reader sees exactly what moved. Write it as `<name>.delta.md` in the directory of the change that makes it — `<name>` is that change's name, under the [referencing convention](#referencing) — with a first line linking the spec it amends: "amends [`auth spec`](auth.spec.md)" when that spec sits in the same directory, "amends [`auth spec`](../2026-08-13-auth/auth.spec.md)" when an earlier change owns it. One delta per change: a later amendment in the same change adds to it. ADDED and MODIFIED entries each carry their own falsifying observation. [verify-specs](../verify-specs/SKILL.md) scores the amended spec with the delta applied, then folds the delta into it once every ID is met, IDs intact.
 
 ```markdown
+amends [`auth spec`](auth.spec.md)
+
 ## ADDED
 
 - **R9** When … the system shall …
@@ -145,6 +147,8 @@ Amending a spec that already exists is a **delta** against its current IDs, neve
 ## MODIFIED
 
 - **R3** was: <old text> — now: <new text>. Reason: <one line>.
+  - Falsified by: <the observation that proves the new text false>
+  - Given …, When …, Then …
 
 ## REMOVED
 
@@ -153,6 +157,7 @@ Amending a spec that already exists is a **delta** against its current IDs, neve
 
 When the behavior is settled, hand the spec to
 [spec-hunt](../spec-hunt/SKILL.md) — it kills the gaps a cold executor would
-hit, checked against the done-when checklist above. A zero-finding hunt
-forwards to [write-plan](../write-plan/SKILL.md); confirmed gaps come back here
-as a [delta](#spec-delta) first.
+hit, checked against the **Done when** lines of the three steps above. A hunt
+with no Confirmed gap forwards to [write-plan](../write-plan/SKILL.md), naming
+each Suspected finding's **Settles it** check. Confirmed gaps come back here:
+fix each as a [delta](#spec-delta), then hand the spec back to spec-hunt.
