@@ -35,9 +35,8 @@ bash path/to/hook.sh < payload.json; echo "exit=$?"
 Fix in this order, cuz earlier defect sits, more it silently costs.
 
 1. **Guards that don't guard** — exit 1 instead of 2; `set -e` with unguarded `grep`; any
-   decision other than `allow` carrying `updatedInput` (`ask`, `escalate` and `deny` all
-   drop rewrite silently, so hook reports success and original stands); `allow` mistaken
-   for security grant.
+   decision other than `allow` carrying `updatedInput` (rewrite dropped silently, SKILL.md
+   step 5); `allow` mistaken for security grant.
 2. **Hooks that never fire** — `if` on non-tool event; `mcp__server` with no `__.*`;
    unanchored regex matcher; matcher compared against something other than what author
    assumed; `Stop` hook in agent frontmatter still written for `Stop` (SKILL.md step 6).
@@ -46,10 +45,16 @@ Fix in this order, cuz earlier defect sits, more it silently costs.
 4. **Hot-path cost** — empty matcher on tool event = process per tool call; blocking
    hooks doing non-decisive work should be `async`; no `timeout` on tests or network calls.
 5. **Portability** — undeclared `jq`; unquoted `${CLAUDE_PLUGIN_ROOT}`; bare `$VAR` in
-   PowerShell hook; state written under plugin root.
+   PowerShell hook; state written under plugin root; script run by bare path instead of
+   through its interpreter; in a plugin Copilot CLI also installs, any break of SKILL.md
+   step 6's Copilot bullet.
 
-Report each finding as `source → event → handler` plus one-line fix. Don't rewrite hooks
-was asked to review until user picks which findings to apply.
+Report each finding as `source → event → handler` plus one-line fix, in the rank order
+above. Hand the list back and apply only the findings the user picks.
+
+**Done when:** every handler from all six sources — each enabled plugin's `hooks/hooks.json`
+and every skill or agent frontmatter hook included — has been replayed against a captured
+payload and carries either a ranked finding or `clean`.
 
 ## Not firing
 
@@ -58,7 +63,8 @@ In order — stop at first that explains it.
 1. `/hooks` — listed under event, from source expected? Absent means invalid JSON
    (trailing comma usual cause) or wrong settings file.
 2. Matcher: case-sensitive; exact-match vs regex depends on chars in it; may not
-   be compared against what assumed — check the matcher table in SKILL.md step 3.
+   be compared against what assumed — check the matcher table in SKILL.md step 3. Under
+   Copilot CLI tools are `create`, `edit`, `skill`, so `Write|Edit` never matches there.
 3. `if` set on non-tool event removes handler entirely.
 4. Wrong event for path. `PreToolUse` doesn't fire for files pulled in with `@` in prompt
    — those inlined with no tool call. Typing `/skillname` skips Skill tool.

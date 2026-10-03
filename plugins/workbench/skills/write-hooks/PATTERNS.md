@@ -11,6 +11,9 @@ Registration blocks go in plugin's `hooks/hooks.json`, top-level `description` d
 }
 ```
 
+These skeletons speak Claude Code's contract. For a plugin GitHub Copilot CLI also installs,
+start from pattern 11.
+
 Every script below opens same four lines, elided after first as `# --- preamble ---`:
 
 ```bash
@@ -34,7 +37,7 @@ Refusal agent can't act on gets retried verbatim. Name replacement.
   "hooks": [{
     "type": "command",
     "if": "Bash(git push *)",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/guard-push.sh",
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-push.sh\"",
     "timeout": 5,
     "statusMessage": "Checking push safety..."
   }]
@@ -84,7 +87,7 @@ exit 0
 ```json
 "Stop": [{
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/stop-evidence.sh", "timeout": 120 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-evidence.sh\"", "timeout": 120 }]
 }]
 ```
 
@@ -128,7 +131,7 @@ Design against condition Claude cannot clear from inside turn. "Tests pass" clea
 ```json
 "TaskCompleted": [{
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/gate-task.sh", "timeout": 60 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gate-task.sh\"", "timeout": 60 }]
 }]
 ```
 
@@ -166,12 +169,12 @@ If predicate reads transcript, two more traps: file lags live turn, so what you 
 
 ## 4. Brief — reason over the whole batch
 
-`PostToolUse` fires once per tool, runs concurrently across parallel batch — never sees set. This event fires exactly once, with all of it.
+Why this event and not `PostToolUse`: SKILL.md step 2.
 
 ```json
 "PostToolBatch": [{
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/batch-brief.sh", "timeout": 10 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/batch-brief.sh\"", "timeout": 10 }]
 }]
 ```
 
@@ -195,7 +198,7 @@ jq -nc --arg a "$areas" '{hookSpecificOutput: {hookEventName: "PostToolBatch",
     ([ $a | split(" ")[] | "npm run test:" + . ] | join(", ")) + ".")}}'
 ```
 
-`tool_response` here serialized result model saw, not structured object `PostToolUse` gets; parse only what needed, these get large.
+`tool_response` gets large (its shape: SKILL.md step 2); parse only what you need.
 
 ---
 
@@ -205,7 +208,7 @@ jq -nc --arg a "$areas" '{hookSpecificOutput: {hookEventName: "PostToolBatch",
 "SessionStart": [{
   "matcher": "startup|resume|fork",
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-brief.sh", "timeout": 5 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-brief.sh\"", "timeout": 5 }]
 }]
 ```
 
@@ -245,7 +248,7 @@ Non-decisive work belongs off critical path. Async hook cannot block anything: b
   "matcher": "Edit|Write",
   "hooks": [{
     "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/async-test.sh",
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/async-test.sh\"",
     "async": true,
     "asyncRewake": true,
     "timeout": 300
@@ -291,7 +294,7 @@ Without `asyncRewake`, output waits for next user turn. `.ts` filter lives in sc
   "hooks": [{
     "type": "command",
     "if": "Bash(npm install *)",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/pin-installs.sh",
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/pin-installs.sh\"",
     "timeout": 5
   }]
 }]
@@ -332,7 +335,11 @@ reissue.
 
 ## 8. Gate — judgment instead of rules
 
-When decision needs reading rather than matching, hand to model. No script: `prompt` hooks answer `{"ok": bool, "reason": str}`, nothing else.
+When decision needs reading rather than matching, hand to model. Reach past `type: "command"`
+only for a reason: `prompt` when decision needs judgment input alone supports, `agent` when
+needs to read files or run suite first, `http` to hand decision to a service, `mcp_tool` to
+call tool on already-connected server. `prompt` and `agent` answer `{"ok": bool, "reason": str}`
+and nothing else, no script, inert on `PermissionRequest` and `PermissionDenied`.
 
 ```json
 "PreToolUse": [{
@@ -363,7 +370,7 @@ When decision needs reading rather than matching, hand to model. No script: `pro
 "Notification": [{
   "matcher": "permission_prompt|idle_prompt",
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/notify.sh", "timeout": 5 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.sh\"", "timeout": 5 }]
 }]
 ```
 
@@ -383,7 +390,9 @@ seq=$(printf '\033]777;notify;%s;%s\007' "Claude Code" "$body")
 jq -nc --arg s "$seq" '{terminalSequence: $s}'
 ```
 
-Sequence outside allowlist not sanitised — whole field dropped.
+Hooks run with no controlling terminal, so `/dev/tty` fails; `terminalSequence` is the path.
+Allowlist: OSC `0`/`1`/`2`/`9`/`99`/`777` and BEL. Sequence outside it not sanitised —
+whole field dropped.
 
 ---
 
@@ -395,7 +404,7 @@ Sequence outside allowlist not sanitised — whole field dropped.
 "UserPromptExpansion": [{
   "matcher": "deploy",
   "hooks": [{ "type": "command",
-    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/gate-deploy.sh", "timeout": 5 }]
+    "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gate-deploy.sh\"", "timeout": 5 }]
 }]
 ```
 
@@ -424,3 +433,60 @@ exit 0
 ```
 
 Top-level `decision` / `reason` universal JSON shape — on exit 0 only JSON blocking channel on events with no `hookSpecificOutput` variant of own (`TaskCompleted`, `TeammateIdle`, `PreCompact`, `SessionEnd`, `ConfigChange`). Exit 2 + stderr blocks on any event (SKILL.md step 5). Per-event fields like `permissionDecision` live under `hookSpecificOutput`, only mean something on event that defines them.
+
+---
+
+## 11. Both clients — one handler for Claude Code and Copilot CLI
+
+A plugin Copilot CLI also installs runs every hook under both contracts. Node, not bash: the
+I/O shim is JavaScript. Copy this plugin's [client.mjs](../../hooks/client.mjs) beside your
+hooks and read and write only through it — it accepts either payload and writes the shape the
+running client reads.
+
+```json
+"PreToolUse": [{
+  "matcher": "Write|Edit|create|edit",
+  "hooks": [{
+    "type": "command",
+    "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-dist.mjs\"",
+    "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/guard-dist.mjs\"",
+    "timeout": 5
+  }]
+}]
+```
+
+```js
+// fires:  PreToolUse · matcher Write|Edit|create|edit
+// reads:  the file path, either client's spelling (client.mjs toolInput)
+// emits:  deny + the repair, else nothing
+// fails:  any error -> exit 0, silent; under Copilot a throw would deny the tool
+// verify: node hooks/guard-dist.mjs < last-payload.json; echo $?
+import { readFileSync } from 'node:fs';
+import { deny, toolInput } from './client.mjs';
+
+try {
+  const { filePath } = toolInput(JSON.parse(readFileSync(0, 'utf8')));
+  if (/(^|[\\/])dist[\\/]/.test(filePath ?? '')) {
+    process.stdout.write(deny('dist/ is build output. Edit the source under src/, then rebuild.'));
+  }
+} catch {
+  // Unparseable input: stay silent and let the call through.
+}
+```
+
+What the shim settles, and a hand-rolled handler must settle too:
+
+| concern                      | Claude Code                                              | Copilot CLI                                                                                |
+| :--------------------------- | :------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| detect                       | `COPILOT_PLUGIN_ROOT` unset                              | `COPILOT_PLUGIN_ROOT` set                                                                  |
+| tool names                   | `Write`, `Edit`, `Bash`, `Skill`                         | `create`, `edit`, `bash` / `powershell`, `skill`                                           |
+| file arguments               | `file_path`, `content`, `new_string`                     | `path`, `file_text`, `new_str` (the arguments object may arrive as a JSON string)          |
+| context                      | `hookSpecificOutput: {hookEventName, additionalContext}` | flat `{additionalContext}`                                                                 |
+| deny                         | `permissionDecision` nested in `hookSpecificOutput`      | flat `{permissionDecision: "deny", permissionDecisionReason}`                              |
+| context at `Stop`            | `additionalContext`                                      | only `decision: "block"` + `reason` read, so context rides a one-turn block; loop-guard it |
+| note to the user             | `systemMessage`                                          | stderr + exit 2; on `PreToolUse`, where exit 2 denies, `additionalContext`                 |
+| `PreToolUse` crash or exit 1 | non-blocking error, call proceeds                        | tool denied                                                                                |
+| plain-text stdout            | accepted as context on some events                       | dropped                                                                                    |
+
+Every `command` carries a sibling `powershell` key running the same script with
+`$env:CLAUDE_PLUGIN_ROOT`, as in the registration above.

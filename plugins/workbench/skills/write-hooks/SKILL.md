@@ -52,7 +52,7 @@ Most bad hooks on adjacent event. Say why neighbour loses.
   finishing. `TaskCompleted` fires when task actually being closed.
 
 `SessionStart` and `Setup` run with no conversation loaded: `command` and `mcp_tool` handlers
-only — no other handler type supported there.
+only.
 
 **Done when:** name the one event, the one rejected, with reason.
 
@@ -105,12 +105,16 @@ command trades narrowing for coverage: spawn on bare `matcher`, parse inside scr
     {
       "type": "command",
       "if": "Bash(git push *)",
-      "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/guard-push.sh",
+      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-push.sh\"",
       "timeout": 5
     }
   ]
 }
 ```
+
+That object is one matcher-group; the event key holds an array of them. The inner `hooks`
+array is required — a command object straight under the event fails with
+`Missing property "hooks"`.
 
 **Done when:** hook process doesn't spawn on calls it couldn't act on.
 
@@ -157,7 +161,8 @@ Claude sees is stderr — JSON not consulted for it.
 - **anything else** — non-blocking error. Action proceeds, transcript shows `hook
 error` notice. **Exit 1 does not block.** Bare `set -e` in guard turns failed `grep` into
   exit 1, guard silently fails open; with `set -Eeuo pipefail`, guard every check
-  allowed to not match. One exception: `WorktreeCreate`, any failure aborts.
+  allowed to not match. Exceptions: `WorktreeCreate`, any failure aborts; under Copilot CLI a
+  `PreToolUse` non-zero exit or crash **denies the tool** (step 6).
 
 JSON on exit 0, routed by who reads it. Sending message down wrong reader's channel lands
 it nowhere useful:
@@ -186,21 +191,16 @@ Rules that fall out of that table:
 - `updatedInput` honored **only** with `permissionDecision: "allow"`. `ask`, `escalate` and
   `deny` all drop rewrite silently — gate that both prompts and corrects path cannot exist.
   Want prompt, put corrected path in `permissionDecisionReason` and let agent reissue.
-- Hooks run with **no controlling terminal**; `/dev/tty` fails. Emit `terminalSequence` instead
-  — OSC `0`/`1`/`2`/`9`/`99`/`777` and BEL only, anything else drops whole field.
 - stdout must be **only** JSON object. Shell profile echoing on startup corrupts it;
   wrap such echoes in `if [[ $- == *i* ]]`. Output not starting with `{` treated as plain
   text, which several events accept as context. Strings cap at 10,000 chars, then spill to file.
 
-Reach past `type: "command"` only for a reason: `prompt` when decision needs judgment
-input alone supports, `agent` when needs to read files or run suite first, `http` to hand
-decision to a service, `mcp_tool` to call tool on already-connected server. `prompt` and
-`agent` answer `{"ok": bool, "reason": str}` and nothing else, inert on
-`PermissionRequest` and `PermissionDenied`.
+Load [PATTERNS.md](PATTERNS.md), adapt closest pattern rather than starting cold (pattern 8
+for a handler type other than `command`).
 
-Load [PATTERNS.md](PATTERNS.md), adapt closest pattern rather than starting cold.
-
-**Done when:** each of five contract lines true of code written.
+**Done when:** each of five contract lines true of code written, and the handler passes every
+rule in **Several hooks, one event** and **Firing over and over** below: one rewriter per call,
+unique script name, `timeout` set, loop-guarded, injected context still true on `--resume`.
 
 ## 6. Shipping in a plugin
 
@@ -210,9 +210,11 @@ Plugin hook runs on machines you don't own. That's the whole difference.
   there and in README, degrade instead of dying: `command -v jq >/dev/null || { echo
 '{"systemMessage":"<name>: jq not found, guard inactive"}'; exit 0; }`. Undeclared `jq` is
   most common way shipped hook breaks for someone else.
-- **Quote every placeholder in shell form**: `"${CLAUDE_PLUGIN_ROOT}"/hooks/x.sh`. Exec form
-  (`"command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"]`) substitutes each element
-  as plain string, no shell parsing at all.
+- **Run the script through its interpreter, placeholder quoted**:
+  `bash "${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"` (`node …` for `.mjs`). A bare path needs the exec
+  bit, which a Windows commit drops; the permission error is non-blocking, so a gate fails
+  open. Exec form (`"command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"]`)
+  substitutes each element as plain string, no shell parsing.
 - **Windows**: shell form runs Git Bash, or PowerShell when Git Bash absent — where bash
   script won't parse. Either ship `.ps1` twin registered with `"shell": "powershell"`, or
   state bash-only in description. Commit hook scripts with LF endings (`*.sh text
@@ -226,13 +228,25 @@ eol=lf` in `.gitattributes`) — CRLF breaks bash under Git Bash, most common Ma
 - **User config**: `${user_config.KEY}` rejected in shell-form command, cuz
   substituted value would be re-parsed by shell. Put in exec-form `args`, or read
   `$CLAUDE_PLUGIN_OPTION_<KEY>` from environment.
+- **Plugin GitHub Copilot CLI also installs**: Copilot runs the same `hooks/hooks.json` by
+  rules that fail silently. `PreToolUse` exiting non-zero or crashing denies the tool.
+  Stdout is one JSON document of flat fields (`additionalContext`, `permissionDecision`), never
+  `hookSpecificOutput`; plain text is dropped. Tools are `create`, `edit`, `skill`, so
+  matchers name both spellings (`Write|Edit|create|edit`, `Skill|skill`); `SessionStart` adds
+  `new`. Argument names, `Stop`, user notes, the `powershell` twin: PATTERNS.md pattern 11.
 
 Outside plugin same shapes apply with `${CLAUDE_PROJECT_DIR}` and `.claude/settings.json`.
 Hooks in skill or agent frontmatter scoped to that component's lifetime; `once: true`
 honored _only_ in skill frontmatter. **`Stop` hook in agent frontmatter silently
 re-registered as `SubagentStop`** — write it expecting that payload.
 
-**Done when** jq named in hooks.json description and README, every ${CLAUDE_PLUGIN_ROOT} placeholder quoted in shell form or moved to exec-form args, Windows path resolves under Git Bash or a .ps1 twin ships with LF endings, no state written under plugin root, and frontmatter hooks state their lifecycle scope (Stop in agent frontmatter written for the SubagentStop payload).
+**Done when:** every external tool the script needs (`jq`, …) is named in the `hooks.json`
+`description` and the README; each `command` runs its script through the interpreter,
+placeholder quoted, or passes it in exec-form `args`; a PowerShell twin is registered or
+bash-only is declared; `.sh` files are LF in `.gitattributes`; no state under
+`${CLAUDE_PLUGIN_ROOT}`; if Copilot CLI also installs the plugin, the Copilot bullet holds;
+each frontmatter hook fits its component's lifetime (agent-frontmatter `Stop` handles the
+`SubagentStop` payload).
 
 ## 7. Verify it fired
 
@@ -271,8 +285,6 @@ case exited 0 instead of erroring.
 
 ## Firing over and over
 
-- **Hot path.** `PreToolUse` and `PostToolUse` fire every tool call. 200ms hook across
-  few hundred calls = minute of wall clock. Narrow with `if` so process never spawns.
 - **Async anything non-decisive.** `"async": true` (command hooks only) lets Claude keep working;
   hook's `additionalContext` arrives next turn. Async hook decides nothing — action
   already happened. `asyncRewake` plus exit 2 only way it reaches idle session.
@@ -285,21 +297,12 @@ case exited 0 instead of erroring.
   hash, marker file), not event. For `Stop` and `SubagentStop`, read `stop_hook_active`,
   exit 0 when true; after 8 consecutive blocks Claude Code overrides hook anyway.
 - **That flag exists only on `Stop` and `SubagentStop`.** `TeammateIdle`, `TaskCompleted`, and
-  `TaskCreated` also fire repeatedly on same subject with nothing equivalent, so own loop
-  safety there:
-  - Hook injecting into transcript it later parses is in feedback loop with itself.
-    Prefix injected text, skip it on read — tool results are user-role entries too.
-  - Key counter on `session_id`+`agent_id`, make "gave up" a **distinct state** from "never
-    fired". Deleting entry at cap re-arms gate on next fire, turning cap of two
-    into two per event, unbounded.
-  - Fail open at every parse. Missed intervention costs one message you'll notice; false
-    positive traps agent in loop it can't exit by complying.
+  `TaskCreated` also fire repeatedly on same subject with nothing equivalent. Own loop safety
+  there as PATTERNS.md pattern 3 does: a counter keyed on `session_id`+`agent_id`, "gave
+  up" stored as a **distinct state** (deleting it at the cap re-arms the gate), injected
+  text prefixed and skipped on read, fail open at every parse.
 - **Timeouts.** 600s default for command, HTTP, MCP handlers; `UserPromptSubmit` 30s;
   `prompt` 30s; `agent` 60s. All `SessionEnd` hooks share **1.5s** budget — set explicit
   `timeout` (up to 60s) if cleanup needs longer. `UserPromptSubmit` hook that times out is
   cancelled, context discarded — since v2.1.196 transcript shows notice naming hook and
   timeout; earlier versions cancel silently.
-
-## Reading hooks already installed
-
-Load [AUDIT.md](AUDIT.md) — it carries the six-source enumeration order, the ranking of what you find, and the not-firing checklist.
