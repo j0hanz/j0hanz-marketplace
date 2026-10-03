@@ -9,8 +9,8 @@ import { load } from 'js-yaml';
 export const FAILS = new Set(['skill-name']);
 // A model-invoked description loads every session. Over BUDGET words warns in every plugin and
 // fails in the plugins listed here.
-export const BUDGET = 50;
-export const BUDGET_FAILS = new Set([]);
+export const BUDGET = 40;
+export const BUDGET_FAILS = new Set(['workbench']);
 
 export const fails = (problem, plugin) =>
   FAILS.has(problem.check) || (problem.check === 'budget' && BUDGET_FAILS.has(plugin));
