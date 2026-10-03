@@ -88,8 +88,8 @@ Run the same tests and diff the output against step 1.
 
 This skill is one of three that read a landed diff, each on its own axis and none on the others' — [bug-hunt](../bug-hunt/SKILL.md) for correctness and security, [qc](../qc/SKILL.md) for structure. A verdict that turns out to need more than a rename leaves this pass rather than stretching it:
 
-| What the walk surfaced                               | Hands to                             |
-| :--------------------------------------------------- | :----------------------------------- |
-| The code is wrong, not merely unclear                | [bug-hunt](../bug-hunt/SKILL.md)     |
-| The shape is wrong — layering, indirection           | [qc](../qc/SKILL.md)                 |
+| What the walk surfaced                               | Hands to                         |
+| :--------------------------------------------------- | :------------------------------- |
+| The code is wrong, not merely unclear                | [bug-hunt](../bug-hunt/SKILL.md) |
+| The shape is wrong — layering, indirection           | [qc](../qc/SKILL.md)             |
 | The edit no longer fits one behavior-preserving pass | [refactor](../refactor/SKILL.md) |
