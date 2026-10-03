@@ -21,6 +21,8 @@ User-invoked skill expose nothing, so two things follow:
 - Multiply past what you remember, cure is **router skill** — one user-invoked skill names others, when reach each. Hint only.
 - Reference two user-invoked skills both need can live in neither. Push to **external reference**: plain file outside skill system, any skill point at. (Model-invoked all-reference skill host shared reference itself, since another skill can invoke it.)
 
+_Gotcha_: frontmatter must parse as strict YAML. Wrap `description` holding `: ` in single quotes, doubling any `'` inside — unquoted, Claude Code still load skill, Copilot CLI silently drop it.
+
 ## Writing pointers
 
 **Description** is **context pointer** — same rules govern link to disclosed file, one level down. Must-have material behind weakly worded pointer is variance bug: sharpen wording first, inline material only if sharpening fail.
@@ -31,6 +33,7 @@ Pointer do two job — state what material is, list **branches** should trigger 
 - _One trigger per branch._ Synonym renaming single branch = **duplication** — "build features using TDD … asks for test-first development" one branch written twice. Collapse them; keep only genuine distinct branches.
 - _Draw the boundary._ Where neighbour skill could hijack or get hijacked, "not for X" clause is triage between skills, not **negation** — earns its place.
 - _Cut identity body already carry._
+- _Name the material; spend the rest on branches._ Pointer summarising steps behind it get acted on in place of material — one clause say what material is, every other word list branch.
 
 ## Information hierarchy
 
