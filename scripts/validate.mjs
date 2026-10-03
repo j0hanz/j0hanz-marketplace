@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { load } from 'js-yaml';
+import { fails, lintPlugin } from './skill-lint.mjs';
 
 const catalog = JSON.parse(readFileSync('.claude-plugin/marketplace.json', 'utf8'));
 const sources = catalog.plugins.map((p) => p.source).filter((s) => typeof s === 'string');
@@ -40,6 +41,7 @@ const frontmatter = (file) => {
     fail(`${file}: frontmatter is not strict YAML: ${error.message.split('\n')[0]}`);
   }
 };
+const names = catalog.plugins.map((p) => p.name);
 const entries = (dir) => (existsSync(dir) ? readdirSync(dir, { withFileTypes: true }) : []);
 
 for (const { name, source } of catalog.plugins) {
@@ -60,6 +62,11 @@ for (const { name, source } of catalog.plugins) {
   for (const agent of entries(join(source, 'agents'))) {
     if (agent.isFile() && agent.name.endsWith('.md'))
       frontmatter(join(source, 'agents', agent.name));
+  }
+  for (const problem of lintPlugin(source, name, names)) {
+    const where = `${join(source, problem.file)}:${problem.line}: ${problem.message} [${problem.check}]`;
+    if (fails(problem, name)) fail(where);
+    else console.warn(`⚠ ${where}`);
   }
 }
 
