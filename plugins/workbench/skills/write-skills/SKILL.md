@@ -5,7 +5,7 @@ description: Author a new skill or audit an existing one — frontmatter, trigge
 
 **Predictability**.
 
-Bold terms each have heading in [`GLOSSARY.md`](GLOSSARY.md). Load it when auditing skill against full vocabulary, or when term below carry more weight than you can place. Given term as argument, answer from that entry alone.
+Bold terms each have heading in [`GLOSSARY.md`](GLOSSARY.md). Load it on every audit, and while writing whenever bold term below unclear. Given term as argument, answer from that entry alone.
 
 ## Invocation
 
@@ -53,6 +53,8 @@ Two boundary hold top rung. Sequence task don't need = **over-prescription**: wh
 
 Where ladder decide _how far down_ piece sit, **co-location** decide _what sit beside it_ once there: keep concept's definition, rules, caveats under one heading rather than scattered, so reading one part bring neighbours with it.
 
+Give output format as template to fill rather than prose describing it — agent pattern-match concrete structure more reliable than description of one.
+
 ## When to split
 
 **Granularity** how finely divide skills, each cut spend one of two loads, split only when cut earn it. Two cuts:
@@ -69,6 +71,8 @@ Both cuts answer to coherence: one unit of work per skill. Cut too fine, several
 Check every line for relevance.
 
 Then hunt **no-ops** sentence by sentence, not just line by line: run no-op test on each sentence in isolation; when one fail, delete whole sentence rather than trim words. Be aggressive — most prose that fail should go, not get rewritten. Test model-relative: two people disagreeing about no-op disagree about default, settle by running skill, not by debate.
+
+Cut every **cache** line whose lookup cheap.
 
 ## Leading words
 
@@ -92,4 +96,4 @@ Symptom, then cure:
 - **Menu** — different run pick different option at same fork, predictability die there. Name one default; demote rest to escape hatches, each with condition earning it ("use X; for scanned input, fall back to Y").
 - **Negation** — banned behaviour turn up more, not less: _don't think of an elephant_ names elephant. Prompt _positive_ — state target behaviour so banned one never spoken. Keep prohibition only as hard guardrail can't phrase positive, even then pair with what do instead.
 
-Done when every lever above applied — invocation picked, every pointer sharpened, hierarchy placed, every completion criterion checkable, split decided, every line relevance-checked, no-op hunted sentence by sentence, leading words coined, every failure mode confirmed absent. Bar binds whole body, not section subset.
+Done when every lever above applied — invocation picked, every pointer sharpened, hierarchy placed, every completion criterion checkable, every output format given as template, split decided, every line relevance-checked, no-op hunted sentence by sentence, every cheap-lookup cache line cut, leading words coined, every failure mode confirmed absent. Bar binds whole body, not section subset.

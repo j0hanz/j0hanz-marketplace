@@ -82,7 +82,7 @@ _Avoid_: workflow, instructions, choreography
 
 ### Reference
 
-Material agent refer to on demand — definitions, facts, parameters, examples, conditional instructions. When skill got **steps** secondary to them; when skill got none it entire content; or lives outside any skill entirely — see **External Reference**. Reached via **context pointers**, prime candidate for **progressive disclosure**. Output format best given as template to fill rather than prose describing it — agent pattern-match concrete structure more reliable than description of one.
+Material agent refer to on demand — definitions, facts, parameters, examples, conditional instructions. When skill got **steps** secondary to them; when skill got none it entire content; or lives outside any skill entirely — see **External Reference**. Reached via **context pointers**, prime candidate for **progressive disclosure**.
 
 _Avoid_: supporting material, docs, background
 
