@@ -3,7 +3,9 @@ name: qc
 description: Review a whole branch diff for maintainability and return blocking comments. Use once a branch's changes have landed and the question is whether the shape holds across them — layering, indirection, duplication. Not for correctness or security defects (bug-hunt), naming and readability inside a function (clean-code), test coverage (tdd, verify-specs), or repo-wide structural debt outside this branch (architecture-audit).
 ---
 
-Dispatch the review to a background subagent — you keep working while it reviews.
+Dispatch the review to a background subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`, `run_in_background: true`; Copilot: `task`, `agent_type: "general-purpose"`, `mode: "background"`) — you keep working while it reviews.
+
+The diff runs from the merge-base of `HEAD` with the default branch — `origin/HEAD`'s target, else `main`, else `master` — to `HEAD`. Uncommitted changes are not in it; name them beside the refs only when the user asked for them reviewed. On the default branch itself, or with no merge-base, ask the user for the base.
 
 Fill in the refs (hand the subagent refs so it opens the files itself; inline the diff text only where the base ref is unavailable) and pass the template as the agent's prompt.
 
@@ -57,4 +59,4 @@ when every standard is clear and nothing blocking remains.
 </output>
 ```
 
-Relay the review when it returns — the agent's report reaches you, not the user. Acting on it is the next change, at [write-plan](../write-plan/SKILL.md).
+Relay the review when it returns — the agent's report reaches you, not the user. Acting on it is the next change: a behavior-preserving restructure at [refactor](../refactor/SKILL.md), anything that changes behavior at [write-plan](../write-plan/SKILL.md).

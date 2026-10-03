@@ -33,7 +33,7 @@ Write the least code that turns that one test **green** — only the branch the 
 
 Repeat 2–3 until every seam on the list carries a test that has been red at least once. Each pass is a **vertical slice**, and the test you write next is shaped by what the last slice taught you — a test written ahead of that, in bulk, was never red for a predicted reason.
 
-**Land the slice, then refactor.** Restructuring while chasing green makes a design problem and a broken test indistinguishable; refactor against a green suite as its own pass, and hand the structure to [qc](../qc/SKILL.md).
+**Land the slice, then refactor.** Restructuring while chasing green makes a design problem and a broken test indistinguishable; refactor against a green suite as its own pass with [refactor](../refactor/SKILL.md), which hands the new structure to [qc](../qc/SKILL.md).
 
 ## Writing the test
 

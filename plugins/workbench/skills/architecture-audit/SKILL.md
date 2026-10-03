@@ -101,7 +101,8 @@ Where it goes depends on how much of the list gets taken.
 
 | What the list turns into                     | Goes to                              |
 | :------------------------------------------- | :----------------------------------- |
-| One finding, worth doing now                 | [write-plan](../write-plan/SKILL.md) |
+| One finding worth doing now, behavior-preserving inside one build | [refactor](../refactor/SKILL.md) |
+| One finding worth doing now, anything else | [write-plan](../write-plan/SKILL.md) |
 | Several, spanning sessions                   | [frontier](../frontier/SKILL.md)     |
 | A boundary that turns out to be a decision   | [write-adr](../write-adr/SKILL.md)   |
 | A move whose shape is still an open question | [ideation](../ideation/SKILL.md)     |

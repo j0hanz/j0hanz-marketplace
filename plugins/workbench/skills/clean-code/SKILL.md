@@ -62,7 +62,7 @@ Run the same tests and diff the output against step 1.
 - **Stepdown rule** — the file reads top-down like a newspaper, each function above the ones it calls where the language allows it.
 - Command or query — a function returns a value or changes state, and the name says which. `getX()` that also mutates earns a rename admitting the write (`cacheOrderTotal`); split it only where a caller needs the read without the write. Where the mutation is the point — `pop()`, `next()`, `Map.put()`, `getAndIncrement()`, `or_insert()`, `fetchone()`, `@cached_property`, `getInstance()` — rename at most: splitting breaks every caller, and splitting an atomic manufactures a race that passes tests and fails under load.
 - 0–2 arguments read cleanly; 3+ wants a named type. A **flag argument** is two functions wearing one name — split it where it selects behavior at one call site, rename it where it carries data or threads through a call chain.
-- Dead code, dead functions, and unused parameters belong in the verdict, not in this diff. Deletion is its own pass with its own tests.
+- Dead code, dead functions, and unused parameters belong in the verdict, not in this diff. Deletion is its own pass with its own tests, planned at [write-plan](../write-plan/SKILL.md).
 
 ## Comments
 
@@ -92,4 +92,4 @@ This skill is one of three that read a landed diff, each on its own axis and non
 | :--------------------------------------------------- | :----------------------------------- |
 | The code is wrong, not merely unclear                | [bug-hunt](../bug-hunt/SKILL.md)     |
 | The shape is wrong — layering, indirection           | [qc](../qc/SKILL.md)                 |
-| The edit no longer fits one behavior-preserving pass | [write-plan](../write-plan/SKILL.md) |
+| The edit no longer fits one behavior-preserving pass | [refactor](../refactor/SKILL.md) |
