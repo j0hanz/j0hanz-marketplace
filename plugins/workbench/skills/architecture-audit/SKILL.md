@@ -10,7 +10,7 @@ description: Rank a repo's structural debt by churn, worst first, each finding c
 ### 1. Bound it
 
 - **Zones** — the units the repo already declares: workspace packages, apps, top-level source directories, whatever the manifests and entry points name. Take the repo's own division. Inventing a better one is a finding, not a method.
-- **Churn** — `git log --since=1.year --format= --name-only | sort | uniq -c | sort -rn | head -40`, rolled up per zone. The count is the point; the pipe is whatever your shell spells.
+- **Churn** — commits per file over a year, `git log --since=1.year --format= --name-only | sort | uniq -c | sort -rn`, summed per zone over every file under it. Sum the whole list: a cut such as `head` ahead of the rollup leaves every zone outside the busiest files with no count. The per-file list, busiest first, is where to look for a **Pool**. The count is the point; the pipe is whatever your shell spells.
 - **Declared** — what the repo already wrote about its own shape: records in `docs/adr/`, the Constraints of any spec under `docs/plan/`, boundary rules a linter enforces (restricted import paths, project references, import-linter contracts), `CODEOWNERS`. Read here, once. This is the gradient step 2 measures against, and it outranks anything the audit infers.
 - **Excluded** — generated trees, vendored dependencies, and applied migrations carry no architecture to audit. Name them once here and they stay named.
 
@@ -28,19 +28,19 @@ Probes return candidates; ranking is step 3's.
 
 ### 3. Price, then rank
 
-Give each candidate the restructure that takes it out, against [the bar](#the-bar). A candidate whose only move fails the bar is dropped here — save the gate-4 case, which [the bar](#the-bar) routes to write-adr rather than drops. Reporting a dropped one anyway leaves a complaint where a finding was promised.
+Give each candidate the restructure that takes it out, against [the bar](#the-bar). A candidate whose only move fails the bar is dropped here — save one that clears gates 1–3 and fails gate 4 alone: a record blesses the shape, so it skips ranking and goes to **Decisions to reopen** in [the report](#the-report). Reporting a dropped one anyway leaves a complaint where a finding was promised.
 
 Merge before ranking: the same tangle seen from two zones is one finding.
 
 Then order by what the move buys against the churn it disturbs. Where two buy the same, the one resting on a record or a declared rule goes first — its boundary needs no argument. Strict order, no ties, no tiers — a list where three things are "high priority" is the list you already had.
 
-**Done when** every surviving finding carries a move that clears every gate [the bar](#the-bar) puts to it, a file count for its blast radius, and a position no other finding shares.
+**Done when** every ranked finding carries a move that clears every gate [the bar](#the-bar) puts to it, a file count for its blast radius, and a position no other finding shares, and every gate-4 case is set apart for Decisions to reopen.
 
 ### 4. Report
 
 Chat is the deliverable. Follow [the report](#the-report).
 
-**Done when** the table reads in one screen, every finding below it carries its sketch, its `file:line` evidence, what it rests on, the move in one sentence, its size, and its cost, the top finding carries the move it rejected and why, and Coverage names every zone that went unread.
+**Done when** the table reads in one screen, every finding below it carries its sketch, its `file:line` evidence, what it rests on, the move in one sentence, its size, and its cost, the top finding carries the move it rejected and why, every gate-4 case appears under Decisions to reopen citing the record that blesses its shape, and Coverage names every zone that went unread.
 
 ## Shapes
 
@@ -58,12 +58,12 @@ Five, each with the check that settles it. Drift rests on a record; the other fo
 
 ## The bar
 
-A move reaches the report by clearing all four.
+A move is ranked by clearing all four gates.
 
-- **Net deletion** — it takes out more than it puts in. A move whose product is a new layer is next year's finding.
-- **Two, or it is not a seam** — propose a boundary only where something already varies twice; production plus a test counts as two.
-- **Churn, or it does not ship** — code nobody touches earns no restructure.
-- **The record rules, both ways** — read the declared set from step 1 before calling a boundary wrong. Where a record blesses the shape and the friction is real regardless, the finding is a decision to reopen ([write-adr](../write-adr/SKILL.md)), not a defect. Where a record forbids the shape and the code does it anyway, that is **Drift**.
+1. **Net deletion** — it takes out more than it puts in. A move whose product is a new layer is next year's finding.
+2. **Two, or it is not a seam** — propose a boundary only where something already varies twice; production plus a test counts as two.
+3. **Churn, or it does not ship** — code nobody touches earns no restructure.
+4. **The record rules, both ways** — read the declared set from step 1 before calling a boundary wrong. Where a record blesses the shape and the friction is real regardless, the finding is a decision to reopen ([write-adr](../write-adr/SKILL.md)), not a defect. Where a record forbids the shape and the code does it anyway, that is **Drift**.
 
 Drift answers to churn alone — gates 2 and 4 are met by citing the record, and restoring a boundary the repo declared is allowed to add code. Gate 3 still binds — a violated rule in code nobody touches is a lint waiver, not an audit finding.
 
@@ -92,6 +92,8 @@ Then one section per finding, same order, each carrying:
 
 - its cost — files touched, what sits broken while it lands — and what it stops costing
 - for the top finding alone, the move you rejected and why.
+
+Then **Decisions to reopen**, unranked, one line per gate-4 case: the friction at `file:line`, the record that blesses the shape, cited by id, and the hand-off to [write-adr](../write-adr/SKILL.md). Omit the heading when there are none.
 
 Close with **Coverage**: zones read, zones skipped with why, and anything taken from a manifest rather than opened.
 
