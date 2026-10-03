@@ -19,10 +19,10 @@ Before any structure changes, establish a **green net** that captures the behavi
 
 - A passing test already covers the behavior → use it.
 - No test covers it → write a **characterization test** that captures the behavior as it is today, not as it should be, and run it green. This is not red-green: the test encodes current behavior, bugs and all, because the move must not change it.
-- No runnable check exists at all — no test runner, no script, no REPL command that exercises the target → state the absence and hand to [tdd](../tdd/SKILL.md) to establish one. You do not move structure blind.
+- No runnable check exists at all — no test runner, no script, no REPL command that exercises the target → wire the runner the language ships with or the repo already depends on, then write the characterization test above. Adding a new dependency is the user's call: ask first, and if they decline, state the absence and stop. You do not move structure blind.
 - The target has no observable behavior — nothing calls it, or every call is itself dead → flag it dead and hand to [write-plan](../write-plan/SKILL.md) for deletion. There is nothing to characterize.
 
-**Done when** a green test pins every behavior the move touches, or the target is flagged dead or handed off for a missing runner.
+**Done when** a green test pins every behavior the move touches, or the target is flagged dead, or the user declined a runner.
 
 ### 2. Move the structure
 
