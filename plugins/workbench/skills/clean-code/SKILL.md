@@ -21,13 +21,13 @@ Renaming a local is free. The other three edits carry hazards a reader does not 
 
 ### 1. Pin the behavior
 
-Run the tests covering the touched files and save their output. That saved output is what the behavior-preserving pass is measured against; a check written after the edits only asserts what the new code already does.
+Run the tests covering the touched files and save their output. That saved output is what the behavior-preserving pass is measured against; a check written after the edits only asserts what the new code already does — so code no test covers gets its check before its edit, in step 3.
 
 **Done when** the pre-edit output is saved, or the absence of any covering test is stated.
 
 ### 2. List the scope
 
-Every function in the target — every function in the file, the changed functions in a diff, or every function in the files a PR touches. Read each one, then read its direct callers, one hop out. Where the surface is wide, fan out [research](../research/SKILL.md) to find who says each name.
+Every function in the target, keyed on what was named: a file → every function in it; a diff, branch, or PR → the functions the diff changes. Whole touched files only when the user asks for them. Read each one, then read its direct callers, one hop out. Where the surface is wide, fan out [research](../research/SKILL.md) to find who says each name.
 
 Generated, vendored, and applied-migration files stay out of scope: a rename there is reverted by the next codegen run, or breaks a checksum.
 
@@ -37,17 +37,19 @@ Generated, vendored, and applied-migration files stay out of scope: a rename the
 
 One function at a time, against the heuristics below.
 
+Before the first edit to a function no step-1 test exercises — grep its name across the test files — write one **characterization check**: a test that calls it and asserts what it returns or does today, bugs and all. Run it green against the unedited code and save its output beside step 1's. Renaming a local needs none. No way to run a check in this repo: the function's verdict is **left dirty on purpose**, the constraint being no test net.
+
 Before each rename — or each rename verdict, in review mode — grep the identifier as a **string** as well as a symbol. Reflection, DI by name, ORM columns, template variables, string-keyed dispatch, test-discovery names (`test_*`, `Test*`), and CI or Makefile references survive a symbol-aware rename and break at runtime. A name is also wire-visible without appearing as a literal anywhere — an untagged Go field, `vars()`, `asdict()`, or Jackson without `@JsonProperty` serializes under the identifier itself — so check what the payload is built from, not only what the source quotes.
 
 Where two heuristics conflict, a constraint written in the code — a why-comment, a wire format, a hot-path note — outranks the book.
 
-**Done when** every function on the list carries one of three verdicts: **changed**, with what and why; **left clean**; or **left dirty on purpose**, naming the heuristic declined and the constraint that outranked it. A file-level "looks fine" is not a verdict, and neither is "the rest is trivial".
+**Done when** every function on the list carries one of three verdicts: **changed**, with what and why; **left clean**; or **left dirty on purpose**, naming the heuristic declined and the constraint that outranked it; and every **changed** function no step-1 test exercised — a local rename aside — has a characterization check that ran green before its first edit. A file-level "looks fine" is not a verdict, and neither is "the rest is trivial".
 
 ### 4. Preserve the behavior
 
-Run the same tests and diff the output against step 1.
+Run the same tests plus the step-3 characterization checks, and diff the output against what steps 1 and 3 saved. The characterization checks stay in the repo.
 
-**Done when** the tests pass and the output matches. Red or changed means the pass altered behavior — revert the edit that caused it. Where nothing covered the touched code, say so and leave one runnable check behind that fails if the touched logic breaks.
+**Done when** the tests and checks pass and the output matches. Red or changed means the pass altered behavior — revert the edit that caused it.
 
 ## Names
 
