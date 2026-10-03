@@ -70,6 +70,17 @@ for (const { name, source } of catalog.plugins) {
   }
 }
 
+// A plugin whose hooks.json names a hooks module (a mod) ships `*.test.ts` files that only
+// `claude plugin test` can run, and a typecheck that needs the types the engine lays on load.
+for (const source of sources) {
+  const hooks = join(source, 'hooks', 'hooks.json');
+  if (!existsSync(hooks) || !JSON.parse(readFileSync(hooks, 'utf8')).modules) continue;
+  if (run('claude', ['plugin', 'test', source]).status !== 0) fail(`${source}: claude plugin test`);
+  if (!existsSync(join(source, '.claude-plugin', 'types'))) {
+    console.warn(`⚠ ${source}: no generated types; load it once with --plugin-dir to typecheck`);
+  } else if (run('npx', ['tsc', '-p', source]).status !== 0) fail(`${source}: tsc`);
+}
+
 // Smoke test through the real CLI when it is installed, in a throwaway home so the
 // user's own marketplaces and plugins are never touched.
 if (onPath('copilot')) {

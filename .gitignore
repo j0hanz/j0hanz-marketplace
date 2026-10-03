@@ -12,6 +12,7 @@ __pycache__
 .ruff_cache
 .venv
 tsconfig.tsbuildinfo
+plugins/*/.claude-plugin/types
 
 # Tooling scratch
 /.playwright-mcp
