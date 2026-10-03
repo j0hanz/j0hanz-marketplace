@@ -13,17 +13,17 @@ It earns a record when it constrains work that has not started: a technology, a 
 
 One decision per record, titled as the decision rather than its topic — "Issue RS256 JWTs, verified per service", not "Authentication".
 
-Each option carries the one line that lost it. Where nothing was rejected, go find what was; where nothing was, record it as a note instead — an ADR needs a rejected option.
+Each option carries the one line that lost it. Where nothing was rejected, go find what was. Where nothing was, it is not an ADR — write the choice as a code comment at the site it shapes, or, before that code exists, as a line in the governing spec's Constraints ([write-specs](../write-specs/SKILL.md)).
 
 Consequences include what got worse. The cost accepted is the one thing a reader cannot reconstruct from the code.
 
 An accepted record stays as written — its reasoning stood on facts true that day. Supersede instead: a new record, plus one line on the old one linking it.
 
-Done when the record is titled as one decision statement, carries at least one rejected option with the line that lost it, states the decision as a commitment, and names the cost accepted in Consequences. (The supersede rule above governs the record's later life and is not part of this check.)
+Done when the record is written to `docs/adr/NNN-<slug>.md` under the next free number, titled as one decision statement, carries at least one rejected option with the line that lost it, states the decision as a commitment, and names the cost accepted in Consequences. (The supersede rule above governs the record's later life and is not part of this check.)
 
 ## Referencing
 
-Records live under the [referencing convention](../write-specs/SKILL.md#referencing), outside the per-change directories — a decision outlives the change that made it.
+Write the record to `docs/adr/NNN-<slug>.md`: `NNN` is the next zero-padded three-digit number after the highest already in `docs/adr/` (`001` when there is none), `<slug>` the decision in a few kebab-case words. It sits outside the per-change directories under `docs/plan/` — a decision outlives the change that made it.
 
 Paths are relative **to the record**:
 
