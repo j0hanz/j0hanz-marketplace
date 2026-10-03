@@ -5,7 +5,7 @@ Part of [write-qa](SKILL.md), loaded when routing lands on a test plan. The prio
 ```markdown
 # Test Plan: [Feature or Release]
 
-**Status:** Draft | Ready
+**Readiness:** Draft | Ready
 **Owner:** [Name]
 **Target build / release:** [ID]
 **Last updated:** YYYY-MM-DD

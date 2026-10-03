@@ -22,6 +22,7 @@ Default triage: frequent high/critical impact is P0/P1; rare low impact is P3. S
 **Priority:** P0 | P1 | P2 | P3
 **Type:** Functional | UI | Performance | Security | Data | Crash
 **Status:** Open | In Progress | Fixed | Verified | Closed
+**Readiness:** Draft | Ready
 **Traceability:** [Feature, TC-..., or Not required]
 **Reporter:** [Name]
 **Date:** YYYY-MM-DD
@@ -78,6 +79,12 @@ Default triage: frequent high/critical impact is P0/P1; rare low impact is P3. S
 | Data        | [None / corruption / loss]                   |
 | Workaround  | [Steps or None]                              |
 | Regression? | [No / Yes - last good and first bad version] |
+
+## Assumption Register
+
+| Assumption or unknown | Impact                       | Validation needed             |
+| --------------------- | ---------------------------- | ----------------------------- |
+| [Assumption]          | [Scope or confidence impact] | [Question, artifact, or test] |
 ```
 
 ## UI addition

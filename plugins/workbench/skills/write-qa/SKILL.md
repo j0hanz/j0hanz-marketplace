@@ -42,7 +42,7 @@ Gather only what the routed deliverables need to be actionable:
 - Environments, platforms, test data, constraints
 - Changed behavior, designs, blast radius
 
-Missing context the material cannot answer → ask the user; [grilling](../grilling/SKILL.md) is how. User says proceed anyway → fill an **Assumption Register** and mark the deliverable **Draft**.
+Missing context the material cannot answer → ask the user; [grilling](../grilling/SKILL.md) is how. User says proceed anyway → fill the template's **Assumption Register** and set its **Readiness:** line to **Draft**. Every template carries both; with nothing assumed, the register holds one `None` row.
 
 **Done when** every needed input is known, marked unknown, or sits in the Assumption Register.
 
@@ -76,10 +76,10 @@ Read each routed template file, then fill it against the shared scales below.
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Test plan        | Objective, scope, environments, **coverage map**, entry/exit, and risks complete; every gap justified                           |
 | Test case        | At least one **observable** step; priority, objective, preconditions, data, and **traceability** present or marked not required |
-| Regression suite | Level, order, and pass/fail bar set; every affected surface covered or gap justified                                            |
+| Regression suite | Level, order, and pass/fail bar set, with `[N]` replaced by a number; every affected surface covered or gap justified           |
 | Bug report       | At least one **repro** step; environment, expected, actual, severity, and priority set                                          |
 
-**Done when** each deliverable passes its ready gate, or is explicitly **Draft**.
+**Done when** each deliverable passes its ready gate, or its **Readiness:** line reads **Draft**.
 
 ## Test types
 
@@ -100,9 +100,9 @@ One prefix per type, carried in the case ID.
 
 Where a deliverable lives follows its lifetime, under the [referencing convention](../write-specs/SKILL.md#referencing).
 
-Change-scoped QA files follow the [referencing convention](../write-specs/SKILL.md#referencing). Net-new here: standing QA filenames — bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
+Net-new here: standing QA filenames — bugs as `BUG-NNN-<slug>.md`, release and build-gate suites as `<release-or-gate>.regression.md`.
 
-`<name>.cases.md` collects the whole set into one file (structure in `test-case.md`); the coverage map links to anchors inside it.
+`<name>.cases.md` collects the whole set into one file (structure in `test-case.md`). Each case heading is the bare case ID, so a link to a case is the file plus `#` and the lowercased ID: `## TC-FUNC-001` resolves as `#tc-func-001`.
 
 ```markdown
 case to requirement [`R2`](<name>.spec.md#requirements)

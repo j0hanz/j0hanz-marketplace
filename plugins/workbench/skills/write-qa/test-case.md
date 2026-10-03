@@ -2,11 +2,26 @@
 
 Part of [write-qa](SKILL.md), loaded when routing lands on manual cases. The priority scale and type/prefix table live in `SKILL.md`.
 
-Cases collect into one `<name>.cases.md` under `# Test Cases: <name>` — see Referencing in `SKILL.md`. Use the default shape for every case, at `##`, so the file carries one H1. Append only the type addition its **Type** requires.
+Cases collect into one `<name>.cases.md` — see Referencing in `SKILL.md`. The file opens with this header, once:
 
 ```markdown
-## TC-[ID]: [Title]
+# Test Cases: [name]
 
+**Readiness:** Draft | Ready
+
+## Assumption Register
+
+| Assumption or unknown | Impact                       | Validation needed             |
+| --------------------- | ---------------------------- | ----------------------------- |
+| [Assumption]          | [Scope or confidence impact] | [Question, artifact, or test] |
+```
+
+Every case below it uses the default shape, at `##`, so the file carries one H1. Append only the type addition its **Type** requires. The heading is the bare case ID — a prefix from Test types in `SKILL.md` plus a number, such as `TC-FUNC-001` or `SMOKE-001` — so its anchor is the lowercased ID (`#tc-func-001`); the title goes on the **Title:** line.
+
+```markdown
+## [CASE-ID]
+
+**Title:** [Title]
 **Priority:** P0 | P1 | P2 | P3
 **Type:** Functional | UI | Integration | Regression | Security | Performance | Smoke | Exploratory
 **Traceability:** [Requirement ID, coverage-map row, or Not required]

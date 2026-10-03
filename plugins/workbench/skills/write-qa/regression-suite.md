@@ -7,7 +7,7 @@ Build the suite from the **coverage map** of the **blast radius**.
 ```markdown
 # Regression Suite: [Change set or release]
 
-**Status:** Draft | Ready
+**Readiness:** Draft | Ready
 **Level:** Smoke | Sanity | Targeted | Full
 **Build:** [ID]
 **Environment:** [Name]
@@ -19,6 +19,12 @@ Build the suite from the **coverage map** of the **blast radius**.
 - Modified: [area]
 - Connected: [components]
 - Integrations / dependencies: [list]
+
+## Assumption Register
+
+| Assumption or unknown | Impact                       | Validation needed             |
+| --------------------- | ---------------------------- | ----------------------------- |
+| [Assumption]          | [Scope or confidence impact] | [Question, artifact, or test] |
 
 ## Coverage map
 
@@ -36,7 +42,7 @@ Build the suite from the **coverage map** of the **blast radius**.
 
 ## Pass / fail bar
 
-- **Pass:** all P0 pass, the agreed P1 threshold is met, and no critical defects remain open.
+- **Pass:** all P0 pass, P1 pass rate ≥ [N]%, and no critical defects remain open.
 - **Fail (block):** any P0 fails, or a critical defect, security break, or data-loss path is found.
 - **Conditional:** P1 failures have a workaround and documented fix plan.
 
