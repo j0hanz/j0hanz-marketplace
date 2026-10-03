@@ -3,11 +3,21 @@
   "name": "workbench",
   "displayName": "Workbench",
   "version": "0.21.0",
-  "description": "Every tool for the job on one bench: grill out the decisions, spec the behavior, write a plan a cold executor can follow, run it test-first, review the diff for bugs and structure, verify what shipped, and author the skills, hooks and QA docs you reach for next.",
+  "description": "Every tool for the job on one bench: grill out the decisions, research the facts, spec the behavior, plan a change a cold executor can follow, build it test-first, debug, refactor, review the diff for bugs and structure, audit the architecture, verify what shipped, and author the skills, hooks and QA docs you reach for next.",
   "author": {
     "name": "j0hanz",
     "email": "l.johansson93@outlook.com"
   },
   "license": "MIT",
-  "keywords": ["planning", "specs", "tdd", "code-review", "authoring", "workflow"]
+  "keywords": [
+    "planning",
+    "specs",
+    "tdd",
+    "debugging",
+    "research",
+    "refactoring",
+    "code-review",
+    "authoring",
+    "workflow"
+  ]
 }
