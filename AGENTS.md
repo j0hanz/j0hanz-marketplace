@@ -21,6 +21,12 @@ npm run site:data     # rebuilds site/src/data/marketplace.json and rewrites REA
 - `SKILL.md` and agent frontmatter must be strict YAML — quote a `description` that contains `: `.
 - A plugin with nothing to do under Copilot carries the `claude-code-only` catalog tag.
 
+## Mods
+
+- A mod is a plugin whose `hooks/hooks.json` names a TypeScript hooks module (`"modules": ["./register.tsx"]`). Copilot does not run mods, so a mod carries the `claude-code-only` tag.
+- Mod tests are `*.test.ts` under the plugin, run by `claude plugin test` from `npm run validate`. The root `npm test` collects only `*.test.mjs`.
+- Loading a mod with `--plugin-dir` lays `.claude-plugin/types/`, which is gitignored. Load it once so `npm run validate` can typecheck it.
+
 ## Gate
 
 No CI. Run `npm run check` before a change lands.
