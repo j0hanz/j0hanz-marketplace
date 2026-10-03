@@ -23,11 +23,15 @@ Write down the seams under test before any test exists, and confirm them. Where 
 
 Write one failing test at one seam, then run it. A test that errors on a missing import, a typo, or a file that does not exist yet is not **red**, it is broken.
 
+Code that already exists — a coverage gap, a module that never had tests — passes a new test on its first run, so the red comes from the code: break the line the test claims to cover (invert the condition, return a constant), run, and watch it go red for the predicted reason. A test that stays green under the break does not cover that line; rewrite it. A test red before any break, its expected value sourced from outside the code, has found a defect: hand it to [diagnose](../diagnose/SKILL.md).
+
 **Done when** the test is **red** for the reason you predicted.
 
 ### 3. Green
 
 Write the least code that turns that one test **green** — only the branch the current test exercises.
+
+Where step 2 broke existing code for its red, green is undoing the break: `git diff` on the code under test comes back empty.
 
 **Done when** the new test has been **red** at least once and now passes, every existing test still does, and the new test satisfies every rule in [Writing the test](#writing-the-test): one act, value asserted rather than shape, expected value sourced from outside the code, name carrying the requirement ID.
 
