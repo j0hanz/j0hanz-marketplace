@@ -1,4 +1,4 @@
-import { readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import {
@@ -24,6 +24,16 @@ const NEXT = {
   'plan-hunt': 'plan-hunt',
   run: 'run-plan',
   verify: 'verify-specs',
+};
+// Each hunt writes one status line into its report, and a re-hunt appends a section, so the
+// last recognized line is the live verdict. A failing one sends the stem back to the author.
+const STATUS = /^(?:\*\*)?Status:(?:\*\*)? (clean|gaps|dead steps)[ \t]*\r?$/gm;
+const FAILED = { 'spec-hunt': 'gaps', 'plan-hunt': 'dead steps' };
+const verdict = (file) => [...readFileSync(file, 'utf8').matchAll(STATUS)].at(-1)?.[1];
+// write-plan lets a plan of at most two steps skip plan-hunt; the route names that skip
+// instead of contradicting it.
+const SKIP = {
+  'plan-hunt': ' (or run-plan, where write-plan skipped the hunt for a plan of at most two steps)',
 };
 
 let event = '';
@@ -85,18 +95,28 @@ try {
       // Only stages past the furthest one reached are pending. A stage the route skipped on
       // purpose — diagnose bypasses spec — is behind, and routing back to it is wrong.
       const reached = CHAIN.reduce((best, stage, index) => (kinds.has(stage) ? index : best), -1);
-      const missing =
+      const missing = (
         reached < 0
           ? kinds.has('diagnose')
             ? CHAIN.slice(CHAIN.indexOf('plan'))
             : []
-          : CHAIN.slice(reached + 1);
+          : CHAIN.slice(reached + 1)
+      )
+        // verify-specs checks a run against its spec. A stem with no spec (a diagnose fix) has
+        // nothing to verify, and run-plan never hands it there.
+        .filter((stage) => stage !== 'verify' || kinds.has('spec'));
       if (missing.length > 0) incomplete = true;
       // Hunts are reviews, not deliverables: the route names them, the "no …" list does not.
       const owed = missing.filter((stage) => !HUNT.has(stage));
+      const last = CHAIN[reached];
+      const failed =
+        HUNT.has(last) && verdict(join(root, live, `${stem}.${last}.md`)) === FAILED[last];
+      const next = failed
+        ? `${NEXT[CHAIN[reached - 1]]} skill to fix what ${last} found, then the ${last} skill again`
+        : `${NEXT[missing[0]]} skill${SKIP[missing[0]] ?? ''}`;
       lines.push(
         `  stem \`${stem}\`: ${has.join(', ')}${
-          missing.length > 0 ? ` — no ${owed.join(', ')}; next: the ${NEXT[missing[0]]} skill` : ''
+          missing.length > 0 ? ` — no ${owed.join(', ')}; next: the ${next}` : ''
         }`,
       );
     }
