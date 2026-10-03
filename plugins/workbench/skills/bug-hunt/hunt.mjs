@@ -102,10 +102,18 @@ const TAG_WIDTH = Math.max(...TELLS.map((t) => t.tag.length));
 
 const were = (n) => (n === 1 ? 'was' : 'were');
 
-const auditable = (p) =>
-  CODE.has(extname(p)) &&
-  !SKIP_FILE.test(p.split('/').pop()) &&
-  !p.split('/').some((part) => SKIP_DIR.has(part));
+// No SKIP_DIR test here: a path git reports or the user names is source by that
+// fact — bin/cli.mjs is hand-written in most Node CLIs. walk() prunes SKIP_DIR in
+// every directory scan, and resolveScope collapses untracked build output itself.
+const auditable = (p) => CODE.has(extname(p)) && !SKIP_FILE.test(p.split('/').pop());
+
+// A scope only the user can settle: name why, and stop before one is guessed.
+const ask = (why) => {
+  console.error(
+    `${why} — nothing resolves on its own.\nAsk which, then re-run: named paths, or --since <ref>.`,
+  );
+  process.exit(2);
+};
 
 // `from` is the directory the user invoked in — named paths are relative to it,
 // while everything else here is relative to the repo root we already chdir'd to.
@@ -157,12 +165,20 @@ function resolveScope(args, from) {
       console.error('--since needs a ref');
       process.exit(2);
     }
+    // parseArgs accepts `--since=-x`, and git reads a leading dash as an option —
+    // `--output=<file>` among them, which breaks this script's never-writes contract.
+    if (since.startsWith('-')) {
+      console.error(`no such ref: ${since}`);
+      process.exit(2);
+    }
     // A ref that does not resolve is the same class of problem as a clean tree on
     // the default branch — a scope only the user can settle, not a stack trace.
+    // Three dots: what this branch did since it left `since`, not what `since` gained
+    // after the fork. --diff-filter=d: a deleted file has nothing left to read.
     try {
       return {
         rule: `changed since ${since}`,
-        files: git('diff', '--name-only', `${since}..HEAD`).split('\n'),
+        files: git('diff', '--name-only', '--diff-filter=d', `${since}...HEAD`).split('\n'),
       };
     } catch {
       console.error(`no such ref: ${since}`);
@@ -170,40 +186,59 @@ function resolveScope(args, from) {
     }
   }
 
-  // Porcelain v1: two status chars, a space, then the path. A `D` in either
-  // column means the file is gone — keeping it only buys an unreadable-file
-  // line in the brief for a deletion there is nothing left to audit.
-  const dirty = git('status', '--porcelain')
-    .split('\n')
-    .map((l) => /^(..) (.*)$/.exec(l))
-    .filter((m) => m && !m[1].includes('D'))
-    .map((m) => m[2].replace(/^.*? -> /, '').replace(/^"|"$/g, ''));
+  // Porcelain v1 with -z: `XY path`, NUL-terminated, never quoted or escaped; a
+  // rename or copy carries its source as the next field. A `D` in either column
+  // means the file is gone — nothing is left to audit. --untracked-files=all lists
+  // each file of a new directory instead of one `src/new/` line with no extension.
+  // An untracked file under build output or a vendored tree collapses to that
+  // directory: one skipped line, not ten thousand.
+  const fields = git('status', '--porcelain', '-z', '--untracked-files=all').split('\0');
+  const dirty = [];
+  for (let i = 0; i < fields.length; i += 1) {
+    const status = fields[i].slice(0, 2);
+    const path = fields[i].slice(3);
+    if (/[RC]/.test(status)) i += 1;
+    if (!path || status.includes('D')) continue;
+    const parts = path.split('/');
+    const skip = status === '??' ? parts.findIndex((part) => SKIP_DIR.has(part)) : -1;
+    dirty.push(skip === -1 ? path : `${parts.slice(0, skip + 1).join('/')}/`);
+  }
   if (dirty.length > 0) return { rule: 'uncommitted changes in the working tree', files: dirty };
 
-  const head = git('rev-parse', '--abbrev-ref', 'HEAD');
+  let head;
+  try {
+    head = git('rev-parse', '--abbrev-ref', 'HEAD');
+  } catch {
+    ask('no commits yet');
+  }
   let base = '';
   for (const candidate of ['origin/HEAD', 'main', 'master']) {
     try {
-      const resolved = git('rev-parse', '--abbrev-ref', candidate).replace(/^origin\//, '');
-      git('rev-parse', '--verify', resolved); // resolving the ref is not having the branch
-      base = resolved;
+      const ref = git('rev-parse', '--abbrev-ref', candidate);
+      base = ref.replace(/^origin\//, '');
+      // Resolving origin/HEAD is not having the branch: a `clone -b feature` or a CI
+      // checkout has origin/main and no main, so the remote ref is the base.
+      try {
+        git('rev-parse', '--verify', base);
+      } catch {
+        base = ref;
+      }
       break;
     } catch {}
   }
-  if (base && head !== base) {
-    try {
-      // Shallow clones can share no ancestor at all — that is a question for the
-      // user, not a crash.
-      const merge = git('merge-base', base, 'HEAD');
-      if (merge) {
-        return {
-          rule: `branch ${head} against ${base} (${merge.slice(0, 8)})`,
-          files: git('diff', '--name-only', `${merge}..HEAD`).split('\n'),
-        };
-      }
-    } catch {}
+  if (!base) ask(`clean tree on ${head}, and no default branch (origin/HEAD, main, master)`);
+  if (head === base) ask(`clean tree on the default branch (${base})`);
+  try {
+    // Shallow clones can share no ancestor at all — that is a question for the
+    // user, not a crash.
+    const merge = git('merge-base', base, 'HEAD');
+    return {
+      rule: `branch ${head} against ${base} (${merge.slice(0, 8)})`,
+      files: git('diff', '--name-only', '--diff-filter=d', `${merge}..HEAD`).split('\n'),
+    };
+  } catch {
+    ask(`branch ${head} shares no history with ${base}`);
   }
-  return null;
 }
 
 // Scope names the paths; this opens them, once, for every pass that follows. A
@@ -340,18 +375,13 @@ const invokedIn = process.cwd();
 try {
   process.chdir(git('rev-parse', '--show-toplevel'));
 } catch {
-  console.error('not a git repository — name the files or directories to audit');
+  console.error(
+    'not a git repository — hunt.mjs needs git; hunt the named files without the brief',
+  );
   process.exit(1);
 }
 
 const scope = resolveScope(process.argv.slice(2), invokedIn);
-if (!scope) {
-  console.error(
-    'clean tree on the default branch — nothing resolves on its own.\n' +
-      'Ask which, then re-run: named paths, or --since <ref>.',
-  );
-  process.exit(2);
-}
 
 const { source, unreadable, skipped } = readScope(scope.files);
 const changed = [...source].map(([file, text]) => [file, text.split('\n').length]);
