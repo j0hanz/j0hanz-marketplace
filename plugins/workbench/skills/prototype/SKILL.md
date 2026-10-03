@@ -18,7 +18,7 @@ The medium is whatever exposes the open question cheapest:
 
 ### 1. Pick the cheapest medium
 
-A human will look at the thing — sketch it. Otherwise outline it. Reach for a stub only where the disputed point is an interface another component must consume, and for logic code only where the disputed point is a value.
+Name the disputed point in one sentence, then take the medium whose entry in the list above names that kind of point. A point that fits two entries takes the one listed first.
 
 **Done when** one medium is chosen and the reason names the question it exposes.
 
@@ -32,9 +32,9 @@ Build the smallest artifact that surfaces the disputed look or behavior. Every p
 
 Link the artifact as an asset and ask the one sharp question it was built to answer. Take the human's reaction as the answer: it settles the question, or names the next one to prototype.
 
-Assets live in `assets/` inside the effort directory — the map's under [frontier](../frontier/SKILL.md), otherwise the per-change directory [write-specs](../write-specs/SKILL.md#referencing) defines.
+Assets live in `assets/` inside the effort directory, linked from the record that holds the resolution. Under [frontier](../frontier/SKILL.md) that record is the prototype ticket's `## Resolution`. Otherwise it is the decision's node in the [grilling](../grilling/SKILL.md) map, `<name>.map.md` in the per-change directory [write-specs](../write-specs/SKILL.md#referencing) defines; with no map there yet, open one with this decision as its first node.
 
-**Done when** the artifact is linked, the one question it answers is asked, and the human's reaction is recorded as the resolution.
+**Done when** the artifact is linked from that record, the one question it answers is asked, and the human's reaction is written in that record as the resolution.
 
 ## Not a commitment
 
