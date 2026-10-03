@@ -39,9 +39,9 @@ Executing [`<name>.plan.md`](<name>.plan.md), started <YYYY-MM-DD> at `<short SH
 - **3** 2026-08-13 — STOP: `db.ts:40-60` no longer matches Current state.
 ```
 
-Repeat 2–3 until the steps run out.
+Repeat 2–3 until the steps run out or a step logs STOP. A STOP ends the run there: skip Close and report under [Stopping](#stopping).
 
-**Done when** every step in the plan carries a run log line reading done or STOP.
+**Done when** every step in the plan carries a run log line reading done, or the log's last line reads STOP and every line before it reads done.
 
 ### 4. Close
 
