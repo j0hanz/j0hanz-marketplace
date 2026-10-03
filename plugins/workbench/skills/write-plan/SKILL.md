@@ -31,7 +31,7 @@ Order the steps so the build stays passing between them — e.g., add the new pa
 
 Fill the template, then reread it as the executor. Wherever you filled a gap from memory, inline the missing fact.
 
-**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, every out-of-scope file is listed with a reason touching it is wrong, each STOP condition names a risk specific to this change, and every Verify command has been run and produced its expected output.
+**Done when** every **Current state** excerpt has been re-opened at its `file:line` and matched, every step is Gated, every file and symbol mention is a working relative link, every out-of-scope file is listed with a reason touching it is wrong, each STOP condition names a risk specific to this change, and every Verify and Done command has been run once and resolves (no command-not-found, unknown script, bad flag, or missing path), with its expected output naming the state after the step, not the state today.
 
 ## Referencing
 
@@ -137,7 +137,7 @@ Stop and report if:
 
 ## Sizing
 
-The full template is the default. For a change touching at most two files with no ordering constraint, keep Goal, Current state, Steps with their Verify lines, and Done.
+The full template is the default. For a change touching at most two files with no ordering constraint, drop Commands and Notes and keep every other section: run-plan's Orient runs the header's Drift check, its Stopping reads STOP, and Done's last box checks Scope. With no Commands table to fall back on, every step carries its own Verify line.
 
 ## Secrets
 
@@ -150,3 +150,5 @@ The plan is written, not trusted. Hand it to
 than run-plan discovers them. A plan of at most two steps against files this
 session already read may go straight to [run-plan](../run-plan/SKILL.md); say
 which route you took and why.
+
+A plan comes back from plan-hunt with a `<name>.plan-hunt.md` report when the hunt confirmed a finding. Revise it rather than rewriting it: fix each step or section a Confirmed finding names, re-run [Recon](#1-recon) for the files those fixes touch, update **Written against** if HEAD moved, and hand the plan to plan-hunt again. A Suspected finding is a check, not a fix: run its **Settles it** check, and change the step only if the check fails.
