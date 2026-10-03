@@ -23,11 +23,11 @@ A plan with no executable steps is not a plan to hunt, it is a plan to write: re
 
 ### 2. Hunt dead steps
 
-Work each step against the **dead-step tells** below. A tell is a question, not a finding: open the definition or run the check and settle it. Every path a step cites is verified against the repo — `git ls-files <path>`, `grep` for the symbol — before the step passes.
+Work each step against the **dead-step tells** below, then the sections run-plan meets before any step: the Drift check, every **Current state** excerpt, the **Commands** table where present, **Scope**, **Done**, and **STOP**. A tell is a question, not a finding: open the definition or run the check and settle it. Every path the plan cites is verified against the repo — `git ls-files <path>`, `grep` for the symbol — before the step or section passes.
 
 A step that names a file, function, field, or flag is a claim that it exists where the step says it does. Plausible-looking is not enough; open it.
 
-**Done when** every step has been checked against every tell, every cited path and symbol verified against the repo, and each open question is a candidate finding or dismissed with a reason.
+**Done when** every step and every section named above has been checked against every tell, every cited path and symbol verified against the repo, every command in the plan run once, and each open question is a candidate finding or dismissed with a reason.
 
 ### 3. Refute
 
@@ -37,7 +37,7 @@ Fill in and send exactly this, one dispatch per candidate:
 
 ```text
 Refute one finding. Read-only: Read, Grep, Glob. Never edit the plan.
-Finding: <what> — at step <N>: <excerpt>
+Finding: <what> — at <step N or section name>: <excerpt>
 Trigger the claim gives: <trigger>
 Impact the claim gives: <impact>
 Paths the claim cites: <cited paths>
@@ -63,14 +63,14 @@ No subagents available, or a malformed return twice: refute in-thread against th
 
 **Done when** every candidate carries a refuter verdict or a logged in-thread fallback, and nothing reaches Confirmed unrefuted.
 
-### 4. Hand off
+### 4. Write the report, then hand off
 
-Plan-hunt **marks, never edits** the plan — a step rewritten here is a fix made by the reviewer, and the plan's author owns the fix.
+Plan-hunt never edits the plan — a step rewritten here is a fix made by the reviewer, and the plan's author owns the fix. Findings live in the report alone, each keyed to the step number or section it kills. Write `<name>.plan-hunt.md` beside the plan on every run, zero findings included, from the template in [Referencing](#referencing).
 
-- Confirmed defects → hand the marked plan back to [write-plan](../write-plan/SKILL.md) to fix, then re-hunt or proceed. [run-plan](../run-plan/SKILL.md) never receives a plan with confirmed-dead steps.
-- No defects → report zero findings plainly and forward to [run-plan](../run-plan/SKILL.md). Zero is a result; do not pad a clean plan with Minors.
+- Any Confirmed finding → hand the report to [write-plan](../write-plan/SKILL.md) to revise the plan, then hunt the revised plan again. [run-plan](../run-plan/SKILL.md) never receives a plan with confirmed-dead steps.
+- No Confirmed finding → forward the plan to [run-plan](../run-plan/SKILL.md), naming each Suspected finding's **Settles it** check in the handoff. Zero is a result: write `none` under Confirmed and Suspected rather than inventing findings to fill them.
 
-**Done when** confirmed findings are handed to write-plan with the plan marked, or a zero-finding run is forwarded to run-plan.
+**Done when** `<name>.plan-hunt.md` exists beside the plan with its status line and its Confirmed, Suspected, and Coverage sections each filled or reading `none`, and the plan has gone to write-plan (any Confirmed finding) or to run-plan (none).
 
 ## Dead-step tells
 
@@ -81,6 +81,10 @@ A plan's failure modes — each a claim about the repo that can be checked.
 - **Convention violated** — a step does things the repo's way of working forbids: a path outside `${CLAUDE_PLUGIN_ROOT}` from a hook, a manifest field the schema rejects, a test the runner will not discover.
 - **Step with no gate** — a step that adds behavior but names no Verify command, or a Verify command whose expected output is not stated. A cold executor cannot judge it passed.
 - **Dependency or version assumed present** — a step uses a tool, package, or runtime version the repo does not pin or install.
+- **Stale excerpt** — a **Current state** excerpt that no longer matches the code at its `file:line`. Open the file at that line.
+- **Command that won't run** — a Drift check, Commands, Verify, or Done command that fails to start: unknown script, bad flag, missing path. Run it once; a failure only because the step's change is not made yet is not this tell.
+- **Outside reference** — a fact the executor needs that the plan points at instead of inlining: "as discussed", "see the audit", an excerpt with no `file:line`.
+- **Unbounded** — no out-of-scope list, or STOP conditions that name no risk specific to this change.
 
 ## Hard rules
 
@@ -96,4 +100,24 @@ finding step 3 [`bench-skills.plan.md`](bench-skills.plan.md)
 cited path [`db.ts`](../../../src/lib/db.ts)
 ```
 
-Acting on a confirmed finding is the next change, and it re-enters at [write-plan](../write-plan/SKILL.md).
+The report starts with its status line, then the findings:
+
+```markdown
+Status: <dead steps | clean>
+
+# Plan hunt: <plan title>
+
+Hunted [`<name>.plan.md`](<name>.plan.md) at `<short SHA>`, <YYYY-MM-DD>.
+
+## Confirmed
+
+- **Step <N>** (or the section name) — <tell>: <what is dead>. Evidence: <the refuter's verbatim quote, with its `file:line`>.
+
+## Suspected
+
+- **Step <N>** — <what may be dead>. Settles it: <the one check>.
+
+## Coverage
+
+<every step and section checked; any check not run, and why; the `[WARN] refuted in-thread` line when step 3 fell back>
+```
