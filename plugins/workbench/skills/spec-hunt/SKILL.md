@@ -33,7 +33,7 @@ The cold-executor guess check is the one no checklist names: read each requireme
 
 ### 3. Refute
 
-Every candidate goes to **one blind refuter** — a subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`; Copilot: `task`, `agent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the spec. Suspected findings skip the wave: the label already carries its own uncertainty.
+Every candidate goes to **one blind refuter** — a subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`; Copilot: `task`, `agent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the spec. The hunter labels nothing Suspected — only a refuter's `suspected` verdict does — so every candidate goes to the refuter.
 
 Fill in and send exactly this, one dispatch per candidate:
 
@@ -76,7 +76,7 @@ Spec-hunt **marks, never edits** the spec — a requirement rewritten here is a 
 
 ## Referencing
 
-The report lives beside the spec as `<name>.spec-hunt.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — paths relative to the report. Hunting again after fixes appends a dated section; the first report stays.
+The report lives beside the spec as `<name>.spec-hunt.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — paths relative to the report. Hunting again after fixes appends a dated section; the first report stays. The report, and each dated section a re-hunt appends, carries exactly one status line before its first finding, unbolded and on a line of its own: `Status: clean` only when no finding is Confirmed or Suspected, otherwise `Status: gaps`. The workbench brief hook routes the spec on the last status line in the file.
 
 ```markdown
 finding requirement RF2 [`bench-skills.spec.md`](bench-skills.spec.md#refactor)

@@ -31,7 +31,7 @@ A step that names a file, function, field, or flag is a claim that it exists whe
 
 ### 3. Refute
 
-Every candidate goes to **one blind refuter** — a subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`; Copilot: `task`, `agent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the plan. Suspected findings skip the wave: the label already carries its own uncertainty.
+Every candidate goes to **one blind refuter** — a subagent (Claude Code: Agent tool, `subagent_type: "general-purpose"`; Copilot: `task`, `agent_type: "general-purpose"`) that never sees your reasoning. A refuter handed the argument grades the argument; withholding it makes it grade the plan. The hunter labels nothing Suspected — only a refuter's `suspected` verdict does — so every candidate goes to the refuter.
 
 Fill in and send exactly this, one dispatch per candidate:
 
@@ -89,7 +89,7 @@ A plan's failure modes — each a claim about the repo that can be checked.
 
 ## Referencing
 
-The report lives beside the plan as `<name>.plan-hunt.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — paths relative to the report. Hunting again after fixes appends a dated section; the first report stays.
+The report lives beside the plan as `<name>.plan-hunt.md`, under the [referencing convention](../write-specs/SKILL.md#referencing) — paths relative to the report. Hunting again after fixes appends a dated section; the first report stays. The report, and each dated section a re-hunt appends, carries exactly one status line before its first finding, unbolded and on a line of its own: `Status: dead steps` when any finding is Confirmed, otherwise `Status: clean`. Suspected findings alone do not hold the plan back; each keeps its **Settles it** check in the report. The workbench brief hook routes the plan on the last status line in the file.
 
 ```markdown
 finding step 3 [`bench-skills.plan.md`](bench-skills.plan.md)
