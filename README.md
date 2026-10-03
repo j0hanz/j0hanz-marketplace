@@ -31,6 +31,7 @@ Plugins for Claude Code and GitHub Copilot CLI: skills, agents, and MCP servers 
 /plugin install nodejs@j0hanz-marketplace
 /plugin install typescript-pro@j0hanz-marketplace
 /plugin install writeup@j0hanz-marketplace
+/plugin install telltale@j0hanz-marketplace
 ```
 
 <!-- install:end -->
@@ -175,6 +176,11 @@ PR descriptions and commit messages written for people: plain prose, structural 
 
 - Commands: `/writeup:commit`, `/writeup:pr`, `/writeup:show-me`, `/writeup:unslop`
 - Hooks: `PostToolUse`
+
+### telltale
+
+See how Claude uses your skills and MCP servers: a receipt under each answer, a pane of every tool call with what Claude read back and did next, context cost per server and skill, per-turn JSONL logs. Observe-only, local files only (Claude Code only)
+
 
 <!-- plugins:end -->
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "telltale",
+  "displayName": "Telltale",
+  "version": "0.1.0",
+  "description": "See what your skills and MCP servers put in front of Claude, which tools it called, what it read back, and what it did next. Observe-only; writes local logs only.",
+  "author": { "name": "j0hanz", "email": "l.johansson93@outlook.com" },
+  "license": "MIT",
+  "keywords": ["mod", "mcp", "skills", "observability", "context"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "logDir": {
+      "type": "string",
+      "title": "Log folder",
+      "description": "Folder for per-turn logs, relative to the session's working directory",
+      "default": ".claude/telltale"
+    },
+    "fullPayloads": {
+      "type": "boolean",
+      "title": "Log full result text",
+      "description": "Also log each tool result's full text, redacted, not just the 300-character head and tail",
+      "default": false
+    }
+  }
+}
