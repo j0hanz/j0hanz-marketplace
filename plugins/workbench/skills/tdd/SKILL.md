@@ -21,11 +21,11 @@ Write down the seams under test before any test exists, and confirm them. Where 
 
 ### 2. Red
 
-Write one failing test at one seam, then run it. A test that errors on a missing import, a typo, or a file that does not exist yet is not **red**, it is broken.
+Write one failing test at one seam. Before running it, write down the failure you expect: which assertion fails, and the actual value it will report. Then run it. A test that errors on a missing import, a typo, or a file that does not exist yet is not **red**, it is broken.
 
 Code that already exists — a coverage gap, a module that never had tests — passes a new test on its first run, so the red comes from the code: break the line the test claims to cover (invert the condition, return a constant), run, and watch it go red for the predicted reason. A test that stays green under the break does not cover that line; rewrite it. A test red before any break, its expected value sourced from outside the code, has found a defect: hand it to [diagnose](../diagnose/SKILL.md).
 
-**Done when** the test is **red** for the reason you predicted.
+**Done when** the test is **red** and its failure matches the prediction written before the run. A different failure is not done: find out why, predict again, rerun.
 
 ### 3. Green
 
@@ -33,15 +33,15 @@ Write the least code that turns that one test **green** — only the branch the 
 
 Where step 2 broke existing code for its red, green is undoing the break: `git diff` on the code under test comes back empty.
 
-**Done when** the new test has been **red** at least once and now passes, every existing test still does, and the new test satisfies every rule in [Writing the test](#writing-the-test): one act, value asserted rather than shape, expected value sourced from outside the code, name carrying the requirement ID.
+**Done when** the new test has been **red** at least once and now passes, every existing test still does, and the new test satisfies every rule in [Writing the test](#writing-the-test): one act, value asserted rather than shape, expected value sourced from outside the code, name carrying the requirement ID where one exists and the capability alone otherwise.
 
-Repeat 2–3 until every seam on the list carries a test that has been red at least once. Each pass is a **vertical slice**, and the test you write next is shaped by what the last slice taught you — a test written ahead of that, in bulk, was never red for a predicted reason.
+Repeat 2–3 until every requirement ID in scope carries its own test that has been red at least once; with no spec, each behavior the plan step or the repro names counts as one requirement. Each pass is a **vertical slice**, and the test you write next is shaped by what the last slice taught you — a test written ahead of that, in bulk, was never red for a predicted reason.
 
 **Land the slice, then refactor.** Restructuring while chasing green makes a design problem and a broken test indistinguishable; refactor against a green suite as its own pass with [refactor](../refactor/SKILL.md), which hands the new structure to [qc](../qc/SKILL.md).
 
 ## Writing the test
 
-**Name it after the capability, and carry the requirement ID.** `R2 — expired token is rejected` tells you what the system does and which requirement it answers; `checkout calls paymentService.process` describes plumbing a refactor is free to change.
+**Name it after the capability, and carry the requirement ID where one exists.** `R2 — expired token is rejected` tells you what the system does and which requirement it answers; `checkout calls paymentService.process` describes plumbing a refactor is free to change.
 
 **One act per test** — a single call to the seam, so a failure names one behavior. Setup before it, assertions after. Two acts in one test means two tests.
 
