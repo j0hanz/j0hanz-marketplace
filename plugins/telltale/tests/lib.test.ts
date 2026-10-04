@@ -10,6 +10,7 @@ import {
   pretty,
   receipt,
   redact,
+  show,
   toParts,
   usedInAnswer,
 } from '../hooks/lib';
@@ -235,4 +236,20 @@ test('R20: chunks keep leading blank lines and never pass the size', async () =>
 test('R11: JSON is pretty-printed, other text is left alone', async () => {
   expect(pretty('{"a":1}')).toBe('{\n  "a": 1\n}');
   expect(pretty('plain text')).toBe('plain text');
+});
+
+test('R20: two indented fields never pass the 100,000-character serialized tree bound', async () => {
+  // 4,990 one-character strings: 19,961 compact, 34,932 indented, 49,905 serialized.
+  const dense = JSON.stringify(
+    Array.from({ length: 4990 }, (_, i) => String.fromCharCode(97 + (i % 26))),
+  );
+  const shown = show(pretty(dense), dense, dense.length);
+  expect(shown).toBe(dense);
+  expect(JSON.stringify(shown).length * 2).toBeLessThanOrEqual(90_000);
+  // The existing R20 case (1,500 small objects) still indents.
+  const sparse = JSON.stringify(Array.from({ length: 1500 }, (_, i) => ({ i })));
+  expect(show(pretty(sparse), sparse, sparse.length)).toBe(pretty(sparse));
+  // A field over 20,000 characters still takes the cut path.
+  const big = 'w'.repeat(200_000);
+  expect(show(pretty(big), big.slice(0, 20_000), big.length)).toContain('180000 chars cut');
 });

@@ -200,11 +200,15 @@ export const pretty = (text: string): string => {
   }
 };
 
+// The engine unmounts a tree over 100,000 serialized characters. Two fields at 45,000 each,
+// plus the rest of the detail view, stay under it; a compact field is at most 20,000 chars.
+const INDENTED_BUDGET = 45_000;
+
 /** R20 and R11: what the detail view draws for one field. */
 export const show = (indented: string, raw: string, full: number): string =>
   full > 20_000
     ? `${raw.slice(0, 20_000)}\n${full - 20_000} chars cut`
-    : indented.length <= 40_000
+    : JSON.stringify(indented).length <= INDENTED_BUDGET
       ? indented
       : raw;
 
