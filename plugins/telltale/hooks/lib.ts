@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs refer to docs/plan/2026-10-03-telltale/telltale.spec.md + delta.
+// directly. Requirement IDs (R1 to R25) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
