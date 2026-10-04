@@ -327,6 +327,18 @@ test('R14: a secret argument is redacted in the log', async ($, on) => {
   expect(lines(world, `${DIR}/turn-1.jsonl`)[0]!.args).toEqual({ token: '[redacted]', q: 'x' });
 });
 
+test('R14: a secret the answer echoes is redacted in usedInAnswer', async ($, on) => {
+  const world = worldOf(on);
+  const key = 'AKIA' + 'Q7ZX2P9LMN4RTV8W';
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'u1', 'Read', `AWS_ACCESS_KEY_ID=${key}\n`);
+  await respond($ as never, world, []);
+  await complete($ as never, `The key ${key} in .env is exposed; rotate it.`);
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record!.usedInAnswer).toEqual(['[redacted]']);
+  expect(JSON.stringify(record)).not.toContain(key);
+});
+
 test(
   'R15: with full payloads a 600-call turn takes three parts',
   { options: { fullPayloads: true } },

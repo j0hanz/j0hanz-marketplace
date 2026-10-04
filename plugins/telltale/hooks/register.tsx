@@ -457,7 +457,7 @@ export const register: Register = (on, options) => {
             head: text.slice(0, 300),
             tail: text.slice(-300),
             next: done.get(call.id)!.next,
-            usedInAnswer: done.get(call.id)!.used,
+            usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
             ...(fullPayloads ? { text } : {}),
           });
         }),
