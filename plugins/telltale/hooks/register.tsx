@@ -392,7 +392,7 @@ export const register: Register = (on, options) => {
       tokens: mcp.reduce((sum, call) => sum + estTokens(call.text.length), 0),
       skills: turn.skills.map((entry) => entry.skill),
     });
-    await safe(async () => {
+    const ready = await safe(async () => {
       const listed = await safe(() => $.agent.list());
       const running = new Set(
         (listed ?? []).filter((agent) => agent.status === 'running').map((agent) => agent.id),
@@ -414,72 +414,81 @@ export const register: Register = (on, options) => {
           { next: labels[call.id] ?? 'aborted', used: usedInAnswer(call.text, answer) },
         ]),
       );
-      await update($, calls, (list) =>
-        list.map((call) => {
-          const found = done.get(call.id);
-          return found ? { ...call, next: found.next, used: found.used } : call;
-        }),
-      );
-      for (const call of turn.calls) {
-        if (done.get(call.id)!.next === 'pending') pending.set(call.id, call.agentId ?? 'main');
-      }
-      // A subagent response that completed while the labels were written still relabels.
-      for (const agent of new Set(pending.values())) {
-        await relabel($, agent, responses[agent]?.length ?? 0);
-      }
-      // R12 rule 2: a pending call whose agent has stopped with no next response is aborted.
-      // Only on a list that answered: a failed call says nothing about who stopped.
-      const stopped = listed ? [...pending].filter(([, agent]) => !running.has(agent)) : [];
-      if (stopped.length > 0) {
-        const ids = new Set(stopped.map(([id]) => id));
-        await update($, calls, (list) =>
-          list.map((call) =>
-            ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
-          ),
-        );
-        for (const id of ids) pending.delete(id);
-      }
-
-      const records = [
-        ...turn.calls.map((call) => {
-          const text = redact(call.text) as string;
-          return JSON.stringify({
-            type: 'call',
-            tool: call.tool,
-            server: call.server,
-            agentId: call.agentId,
-            ms: call.ms,
-            args: cutArgs(redact(call.args)),
-            chars: call.text.length,
-            estTokens: estTokens(call.text.length),
-            isError: call.isError,
-            blocks: call.blocks,
-            head: text.slice(0, 300),
-            tail: text.slice(-300),
-            next: done.get(call.id)!.next,
-            usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
-            ...(fullPayloads ? { text } : {}),
-          });
-        }),
-        ...turn.skills.map((skill) =>
-          JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
-        ),
-      ];
-      if (records.length > 0) {
-        turnNo += 1;
-        const parts = toParts(records);
-        for (const [k, part] of parts.entries()) {
-          const name =
-            parts.length === 1 ? `turn-${turnNo}.jsonl` : `turn-${turnNo}-part${k + 1}.jsonl`;
-          await write($, name, `${part.join('\n')}\n`);
-        }
-      }
-      if (turn.context) {
-        contextNo += 1;
-        const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
-        await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
-      }
+      return { listed, running, done };
     });
+    if (ready) {
+      const { listed, running, done } = ready;
+      // R5, R6: the logs are the durable output. They are written first, in their own `safe`,
+      // so a refused pane-state write (below) can never cost a turn its file.
+      await safe(async () => {
+        const records = [
+          ...turn.calls.map((call) => {
+            const text = redact(call.text) as string;
+            return JSON.stringify({
+              type: 'call',
+              tool: call.tool,
+              server: call.server,
+              agentId: call.agentId,
+              ms: call.ms,
+              args: cutArgs(redact(call.args)),
+              chars: call.text.length,
+              estTokens: estTokens(call.text.length),
+              isError: call.isError,
+              blocks: call.blocks,
+              head: text.slice(0, 300),
+              tail: text.slice(-300),
+              next: done.get(call.id)!.next,
+              usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
+              ...(fullPayloads ? { text } : {}),
+            });
+          }),
+          ...turn.skills.map((skill) =>
+            JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
+          ),
+        ];
+        if (records.length > 0) {
+          turnNo += 1;
+          const parts = toParts(records);
+          for (const [k, part] of parts.entries()) {
+            const name =
+              parts.length === 1 ? `turn-${turnNo}.jsonl` : `turn-${turnNo}-part${k + 1}.jsonl`;
+            await write($, name, `${part.join('\n')}\n`);
+          }
+        }
+        if (turn.context) {
+          contextNo += 1;
+          const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
+          await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
+        }
+      });
+      await safe(async () => {
+        await update($, calls, (list) =>
+          list.map((call) => {
+            const found = done.get(call.id);
+            return found ? { ...call, next: found.next, used: found.used } : call;
+          }),
+        );
+        for (const call of turn.calls) {
+          if (done.get(call.id)!.next === 'pending') pending.set(call.id, call.agentId ?? 'main');
+        }
+        // A subagent response that completed while the labels were written still relabels.
+        for (const agent of new Set(pending.values())) {
+          await relabel($, agent, responses[agent]?.length ?? 0);
+        }
+        // R12 rule 2: a pending call whose agent has stopped with no next response is aborted.
+        // Only on a list that answered: a failed call says nothing about who stopped.
+        const stopped = listed ? [...pending].filter(([, agent]) => !running.has(agent)) : [];
+        if (stopped.length > 0) {
+          const ids = new Set(stopped.map(([id]) => id));
+          await update($, calls, (list) =>
+            list.map((call) =>
+              ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
+            ),
+          );
+          for (const id of ids) pending.delete(id);
+        }
+      });
+    }
     // delta R6: a headless run shows nothing of its own. A line another hook set stays first.
     if (!interactive || line === null) return r;
     return { ...r, text: r.text === e.answer ? line : `${r.text}\n${line}` };

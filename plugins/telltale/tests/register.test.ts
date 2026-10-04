@@ -374,6 +374,27 @@ test('R16: a failing log folder gives one notice per session, and turns complete
   expect(world.toasts).toEqual([`telltale: cannot write logs to ${DIR}`]);
 });
 
+test('R5: the turn file is written even when a pane-state write is refused', async ($, on) => {
+  const world = worldOf(on);
+  let refuse = false;
+  on('state.set', (_$, e, next) => (refuse ? { deny: 'state refused' } : next(e)));
+  world.results.u1 = { result: 'r', text: 'found order_1182' };
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'u1', name: 'mcp__orders__search' }]);
+  await $.tool.call({ tool: 'mcp__orders__search', tool_use_id: 'u1' } as never);
+  await respond($ as never, world, []);
+  refuse = true;
+  const out = await complete($ as never, 'order_1182 refunded');
+  refuse = false;
+  expect(turnFiles(world)).toEqual([`${DIR}/turn-1.jsonl`]);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({
+    tool: 'mcp__orders__search',
+    next: 'answered',
+    usedInAnswer: ['order_1182'],
+  });
+  expect(out.text).toContain('telltale: 1 MCP call');
+});
+
 test('R6: headless, a failing log folder goes to the debug log only', async ($, on) => {
   const world = worldOf(on);
   world.failWrites = true;
