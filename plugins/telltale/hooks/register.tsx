@@ -4,7 +4,7 @@
 import { atom, read, update } from 'claude-code';
 import type { EngineInterface, Register, SessionUsage } from 'claude-code';
 
-import type { Call, InventoryRow, NextAction, View } from '../types';
+import type { Call, Inventory, InventoryRow, NextAction, View } from '../types';
 import {
   chunks,
   cutArgs,
@@ -207,7 +207,7 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
     };
     if (breakdown === 'full') {
       if (current.status === 'unavailable') return;
-      await update($, inventory, (inv) => ({ ...inv, status: 'measuring' }));
+      await update($, inventory, (inv): Inventory => ({ ...inv, status: 'measuring' }));
     }
     let rows: InventoryRow[] | null = null;
     let failure = 'unknown';
@@ -217,7 +217,7 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
       failure = error instanceof Error && error.message ? error.message : 'unknown';
     }
     if (rows === null) {
-      await update($, inventory, (inv) =>
+      await update($, inventory, (inv): Inventory =>
         breakdown === 'full'
           ? { ...inv, status: `measure failed: ${failure}` }
           : { rows: [], status: 'unavailable' },

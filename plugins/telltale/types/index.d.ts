@@ -25,8 +25,8 @@ export type InventoryRow = {
 };
 export type Inventory = {
   rows: InventoryRow[];
-  status: 'idle' | 'measuring' | 'unavailable' | string;
-}; // a string status is a `measure failed: …` line
+  status: 'idle' | 'measuring' | 'unavailable' | `measure failed: ${string}`;
+};
 
 declare module 'claude-code' {
   interface PluginState {
