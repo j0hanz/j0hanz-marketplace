@@ -275,3 +275,12 @@ test('R20: two indented fields never pass the 100,000-character serialized tree 
   const big = 'w'.repeat(200_000);
   expect(show(pretty(big), big.slice(0, 20_000), big.length)).toContain('180000 chars cut');
 });
+
+test('R20: a field that escapes heavily is cut to fit the serialized budget', async () => {
+  const ctl = '\u0001'.repeat(20_000);
+  const shown = show(ctl, ctl, ctl.length);
+  expect(JSON.stringify(shown).length).toBeLessThanOrEqual(45_100);
+  expect(shown.endsWith('\n12501 chars cut')).toBe(true);
+  const big = '\u0001'.repeat(50_000);
+  expect(show(big, big.slice(0, 20_000), big.length).endsWith('\n42501 chars cut')).toBe(true);
+});

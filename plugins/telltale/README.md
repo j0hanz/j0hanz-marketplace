@@ -159,7 +159,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R17** `/clear` empties the Calls view (and returns from a detail); files already written stay.
 - **R18** Inventory shows context cost in tokens in three groups, each ordered by cost: MCP tools by server (with loaded/deferred state), skills by plugin or by source (`user`, `project`, `other`), memory files; empty groups say `No MCP servers connected`, `No skills listed`, `No memory files loaded`.
 - **R19** The log folder, anchored to the directory the session started in, gets a `.gitignore` containing `*` before its first file.
-- **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented.
+- **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented; a field whose JSON-escaped form would pass 45,000 characters shows only the part that fits, with the same cut line.
 - **R21** Inventory rows show `est` until `m` is pressed; `m` counts MCP tool and memory file rows exactly and marks them `measured` until the next press; skill rows stay `est`; a second `m` during a count is ignored; a failed count keeps the figures and shows `measure failed: <reason>`.
 - **R22** If Claude Code cannot report context usage, Inventory shows `Context usage unavailable` and Calls keeps working.
 - **R23** The pane shows a view row `1: Calls`, `2: Inventory`; `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
