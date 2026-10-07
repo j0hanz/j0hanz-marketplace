@@ -98,6 +98,13 @@ const described = new Map<string, { server: string | null; chars: number; deferr
 // R25: args, result text and used values of the calls the pane lists, by id. Kept here, not in
 // `$.state`, which every plugin can read and which refuses a value over 4 MiB.
 const details = new Map<string, CallDetail>();
+// R3: pane bookkeeping runs after the result is handed back, one step at a time, in call order.
+// The pane and turn end wait for it, so they never see a row missing.
+let settled: Promise<unknown> = Promise.resolve();
+const later = (work: () => Promise<unknown>) => {
+  settled = settled.then(() => safe(work));
+  return settled;
+};
 
 const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
 
@@ -323,7 +330,7 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's.
     if (next.origin.plugin !== 'engine') return r;
-    await safe(async () => {
+    try {
       const ms = ((await safe(() => $.clock.now())) ?? started) - started;
       const { tool, tool_use_id: id, agentId, ...args } = e;
       const text = typeof r.text === 'string' ? r.text : (r.deny ?? '');
@@ -339,30 +346,35 @@ export const register: Register = (on, options) => {
         isError: r.isError === true || r.deny !== undefined,
         blocks: blockKinds(r.result),
       };
+      // Before the return: the turn end reads `buffer` for its log.
       buffer.calls.push(call);
-      const json = JSON.stringify(args);
-      const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
-      const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
-      details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
-      let gone: Call[] = [];
-      const kept = await update($, calls, (list) => {
-        const all = [...list, shown];
-        gone = all.slice(0, Math.max(0, all.length - KEEP));
-        return all.slice(gone.length);
+      void later(async () => {
+        const json = JSON.stringify(args);
+        const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
+        const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
+        details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
+        let gone: Call[] = [];
+        const kept = await update($, calls, (list) => {
+          const all = [...list, shown];
+          gone = all.slice(0, Math.max(0, all.length - KEEP));
+          return all.slice(gone.length);
+        });
+        // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
+        for (const one of gone) details.delete(one.id);
+        const evicted = gone.length;
+        if (evicted > 0) await update($, dropped, (n) => n + evicted);
+        // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
+        const newest = kept.at(-1)?.id ?? null;
+        let moved = false;
+        await update($, selected, (current) => {
+          moved = current === null || !kept.some((call) => call.id === current);
+          return moved ? newest : current;
+        });
+        if (moved) void focusRow($, newest);
       });
-      // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
-      for (const one of gone) details.delete(one.id);
-      const evicted = gone.length;
-      if (evicted > 0) await update($, dropped, (n) => n + evicted);
-      // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
-      const newest = kept.at(-1)?.id ?? null;
-      let moved = false;
-      await update($, selected, (current) => {
-        moved = current === null || !kept.some((call) => call.id === current);
-        return moved ? newest : current;
-      });
-      if (moved) void focusRow($, newest);
-    });
+    } catch {
+      // R3: a fault here never blocks the result.
+    }
     return r;
   });
 
@@ -508,6 +520,7 @@ export const register: Register = (on, options) => {
           await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
         }
       });
+      await settled;
       await safe(async () => {
         for (const [id, found] of done) {
           if (details.has(id)) details.get(id)!.used = found.used;
@@ -551,6 +564,7 @@ export const register: Register = (on, options) => {
 
   // R9, R23, delta R6: `/telltale [calls|inventory]`.
   on('command.run', { command: 'telltale' }, async ($, e) => {
+    await settled;
     if (!interactive) return { text: 'the pane needs an interactive session' };
     const raw = (e.args ?? '').trim();
     const wanted = raw.toLowerCase();
@@ -581,6 +595,7 @@ export const register: Register = (on, options) => {
   });
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await settled;
     const { Box, Text, Button } = $.ui.resolve(e);
     const list = await read($, calls);
     const gone = await read($, dropped);

@@ -209,6 +209,24 @@ test('R3: results pass through unchanged even when every log write fails', async
   expect(await complete($ as never, 'done')).toMatchObject({ text: expect.any(String) });
 });
 
+test('R3: a tool result returns before any pane-state write', async ($, on) => {
+  const world = worldOf(on);
+  // Every pane-state write waits on this gate: a hook that awaited one would never return.
+  let held = false;
+  let open = () => {};
+  const gate = new Promise<void>((resolve) => (open = resolve));
+  on('state.set', async (_$, e, next) => {
+    if (held) await gate;
+    return next(e);
+  });
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'u1', name: 'mcp__o__s' }]);
+  held = true;
+  const out = await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'u1' } as never);
+  expect(out).toEqual({ result: 'ok', text: 'ok' });
+  open();
+});
+
 test('R4: a completed MCP call is recorded with its server, size and estimate', async ($, on) => {
   const world = worldOf(on);
   world.results.u1 = { result: 'r', text: 'x'.repeat(8400) };
