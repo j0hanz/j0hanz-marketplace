@@ -65,11 +65,13 @@ const SECRET_PATTERNS = [
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
 const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
 // R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
-// string holding JSON). ponytail: deeper escaping and non-string values are not matched.
+// string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
+// quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
+// matched.
 const FIELDS = [...SECRET_FIELDS].join('|');
 const JSON_FIELD = new RegExp(String.raw`("(?:${FIELDS})"\s*:\s*")(?:[^"\\]|\\.)*(")`, 'gi');
 const ESCAPED_FIELD = new RegExp(
-  String.raw`(\\"(?:${FIELDS})\\"\s*:\s*\\")(?:(?!\\")[^"])*(\\")`,
+  String.raw`(\\"(?:${FIELDS})\\"\s*:\s*\\")(?:\\\\(?:\\.|[^"\\])|\\[^"\\]|[^"\\])*(\\")`,
   'gi',
 );
 

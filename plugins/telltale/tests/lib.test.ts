@@ -94,6 +94,8 @@ test('R14: a listed field inside escaped JSON text is redacted too', async () =>
   expect(redact('{"body":"{\\"token\\":\\"abc123\\"}"}')).toBe(
     '{"body":"{\\"token\\":\\"[redacted]\\"}"}',
   );
+  const nested = JSON.stringify({ body: JSON.stringify({ token: 'ab"cd\\9', n: 1 }) });
+  expect(redact(nested)).toBe('{"body":"{\\"token\\":\\"[redacted]\\",\\"n\\":1}"}');
 });
 
 test('R14: JSON text without a listed field is unchanged', async () => {
