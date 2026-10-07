@@ -124,6 +124,16 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   return world;
 };
 
+/** The last value telltale wrote to each of its state keys. */
+const stateOf = (on: On) => {
+  const kept = new Map<string, unknown>();
+  on('state.set', (_$, e, next) => {
+    kept.set(e.key, e.value);
+    return next(e);
+  });
+  return kept;
+};
+
 const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const;
 const HEADLESS = { cwd: '/work', surface: null, isInteractive: false } as const;
 
@@ -375,6 +385,17 @@ test('R16: a failing log folder gives one notice per session, and turns complete
     expect(await complete($ as never, 'ok')).toMatchObject({ text: expect.any(String) });
   }
   expect(world.toasts).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
+});
+
+test('R16: the write-failure notice is remembered in pane state', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.failWrites = true;
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'a', name: 'Read' }]);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
+  await complete($ as never);
+  expect(kept.get('warned')).toBe(true);
 });
 
 test('R5: the turn file is written even when a pane-state write is refused', async ($, on) => {
@@ -732,6 +753,20 @@ test('R12: a pending call is relabelled when its agent responds', async ($, on) 
   await press($ as never, 'row:z');
   expect((await draw($ as never)).text).toContain('next: answered');
   expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'pending' });
+});
+
+test('R12: pending ids are kept in pane state until relabelled', async ($, on) => {
+  const world = worldOf(on);
+  world.running = ['a1'];
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'z', name: 'mcp__o__s' }], 'a1');
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'z', agentId: 'a1' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(kept.get('pending')).toEqual({ z: 'a1' });
+  await respond($ as never, world, [], 'a1');
+  expect(kept.get('pending')).toEqual({});
 });
 
 const usageOf = (

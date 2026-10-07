@@ -34,6 +34,10 @@ const inventory = atom({ plugin: 'telltale', key: 'inventory' } as const, {
   status: 'idle',
 });
 const logFolder = atom({ plugin: 'telltale', key: 'folder' } as const, '');
+// Kept in state so a reload (a code edit, or a settings change) neither repeats the notice (R16)
+// nor strands a `pending` row (delta R12).
+const warnedOnce = atom({ plugin: 'telltale', key: 'warned' } as const, false);
+const pendingIds = atom({ plugin: 'telltale', key: 'pending' } as const, {});
 
 type Captured = {
   id: string;
@@ -86,6 +90,10 @@ const responses: Record<string, Response[]> = {};
 const callResponse = new Map<string, { agent: string; index: number }>();
 // Calls labelled `pending` at their turn end, by id, with their agent (delta R12).
 const pending = new Map<string, string>();
+// Pending ids carried over a reload: their response index belongs to the old module.
+const stale = new Set<string>();
+const savePending = ($: EngineInterface) =>
+  safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
 
 const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
@@ -98,8 +106,10 @@ async function write($: EngineInterface, name: string, text: string) {
     }
     await $.fs.write(`${folder}/${name}`, text);
   } catch {
-    if (warned) return; // R16: one notice per session
+    // R16: one notice per session, also across a reload.
+    if (warned || (await safe(() => read($, warnedOnce)))) return;
     warned = true;
+    await safe(() => update($, warnedOnce, () => true));
     const notice = `telltale: cannot write logs to ${folder}`;
     if (interactive) await safe(() => $.ui.toast(notice));
     else await safe(() => $.ui.log(notice, { to: 'debug' })); // delta R6
@@ -121,17 +131,28 @@ async function relabel($: EngineInterface, agent: string, index: number) {
       (call) =>
         pending.get(call.id) === agent &&
         call.next === 'pending' &&
-        call.response !== null &&
-        call.response < index,
+        (stale.has(call.id) || (call.response !== null && call.response < index)),
     );
     labels = labelCalls(
       responses,
-      waiting.map((call) => ({ id: call.id, tool: call.tool, agent, response: call.response })),
+      // A stale call is labelled from the first complete response since the reload.
+      waiting.map((call) => ({
+        id: call.id,
+        tool: call.tool,
+        agent,
+        response: stale.has(call.id) ? -1 : call.response,
+      })),
       () => true,
     );
     return all.map((call) => (labels[call.id] ? { ...call, next: labels[call.id]! } : call));
   });
-  for (const [id, label] of Object.entries(labels)) if (label !== 'pending') pending.delete(id);
+  for (const [id, label] of Object.entries(labels)) {
+    if (label !== 'pending') {
+      pending.delete(id);
+      stale.delete(id);
+    }
+  }
+  await savePending($);
 }
 
 /** Opens a view; the Inventory loads Claude Code's own estimate, which sends no request. */
@@ -250,6 +271,13 @@ export const register: Register = (on, options) => {
       await safe(() => update($, logFolder, () => folder));
     } else {
       root = folder.slice(0, folder.lastIndexOf('/'));
+    }
+    const kept = (await safe(() => read($, pendingIds))) ?? {};
+    for (const [id, agent] of Object.entries(kept)) {
+      if (!pending.has(id)) {
+        pending.set(id, agent);
+        stale.add(id);
+      }
     }
     for (const entry of (await safe(() => $.fs.list(folder))) ?? []) {
       const turn = /^turn-(\d+)/.exec(entry.name);
@@ -373,6 +401,8 @@ export const register: Register = (on, options) => {
     if (e.reason === 'clear') {
       pendingReason = 'clear';
       pending.clear(); // the cleared rows can never be relabelled
+      stale.clear();
+      await savePending($);
       await safe(async () => {
         await update($, calls, () => []);
         await update($, dropped, () => 0);
@@ -484,6 +514,7 @@ export const register: Register = (on, options) => {
         for (const call of turn.calls) {
           if (done.get(call.id)!.next === 'pending') pending.set(call.id, call.agentId ?? 'main');
         }
+        await savePending($);
         // A subagent response that completed while the labels were written still relabels.
         for (const agent of new Set(pending.values())) {
           await relabel($, agent, responses[agent]?.length ?? 0);
@@ -498,7 +529,11 @@ export const register: Register = (on, options) => {
               ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
             ),
           );
-          for (const id of ids) pending.delete(id);
+          for (const id of ids) {
+            pending.delete(id);
+            stale.delete(id);
+          }
+          await savePending($);
         }
       });
     }

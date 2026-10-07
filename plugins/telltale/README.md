@@ -107,6 +107,10 @@ One JSON object per line.
 jq -r 'select(.type=="call") | [.server // "-", .tool, .ms, .estTokens, .next] | @tsv' .claude/telltale/*/turn-*.jsonl
 ```
 
+### Known limits
+
+A reload of the mod (editing it under `--plugin-dir`, or changing its settings) during a turn loses that turn's records made before the reload from its log file; the pane keeps its rows. A call whose model response began before the reload gets its `next` label from incomplete data.
+
 ## Redaction
 
 Redaction applies to the logs only. The pane shows raw data for the 200 most recent calls.
@@ -151,7 +155,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R13** For each call in the turn, up to 5 values (maximal runs of `[A-Za-z0-9_.:/-]`, trailing `.:/-` trimmed, ≥4 chars, with a digit) that appear in both the result and the main answer, in result order; no answer means an empty list.
 - **R14** Before any cut or preview, the listed secret patterns and the whole values of the listed field names (in objects, and string values in JSON text) are replaced with `[redacted]` in argument values, result previews and logged result text, and the secret patterns also in the `usedInAnswer` values; never in tool, server or skill names, paths or field names; a match may not follow a letter, digit, `_` or `-` unless that character ends a JSON escape; a private-key block matches anywhere.
 - **R15** Records over the per-file limit are written across numbered parts, none dropped; a single oversized record has its largest fields replaced in turn by `…[cut N chars]` until it fits and is marked `"truncated": true`.
-- **R16** If a log write fails, one notice per session names the folder; records stay in the pane; the turn is unaffected.
+- **R16** If a log write fails, one notice per session names the folder, also across a reload; records stay in the pane; the turn is unaffected.
 - **R17** `/clear` empties the Calls view (and returns from a detail); files already written stay.
 - **R18** Inventory shows context cost in tokens in three groups, each ordered by cost: MCP tools by server (with loaded/deferred state), skills by plugin or by source (`user`, `project`, `other`), memory files; empty groups say `No MCP servers connected`, `No skills listed`, `No memory files loaded`.
 - **R19** The log folder, anchored to the directory the session started in, gets a `.gitignore` containing `*` before its first file.

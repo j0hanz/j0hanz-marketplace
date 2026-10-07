@@ -37,6 +37,8 @@ declare module 'claude-code' {
       selected: string | null;
       inventory: Inventory;
       folder: string; // absolute log folder for this session ('' until session start)
+      warned: boolean; // R16: the write-failure notice was shown this session
+      pending: Record<string, string>; // delta R12: pending call id -> agent id
     };
   }
 }
