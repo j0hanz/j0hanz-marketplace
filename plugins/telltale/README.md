@@ -46,14 +46,14 @@ Run `/telltale` to open the pane on the Calls view, with the newest call selecte
 
 Set these in the plugin's settings in Claude Code.
 
-| Setting        | Default            | Meaning                                                                                   |
-| -------------- | ------------------ | ----------------------------------------------------------------------------------------- |
-| `logDir`       | `.claude/telltale` | Folder for per-turn logs, relative to the session's working directory                     |
-| `fullPayloads` | `false`            | Also log each tool result's full text, redacted, not just the 300-character head and tail |
+| Setting        | Default            | Meaning                                                                                         |
+| -------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `logDir`       | `.claude/telltale` | Folder for per-turn logs, relative to the directory the session started in, or an absolute path |
+| `fullPayloads` | `false`            | Also log each tool result's full text, redacted, not just the 300-character head and tail       |
 
 ## Logs
 
-Files live under `logDir`, relative to the session's working directory:
+Files live under `logDir`, relative to the directory the session started in (a later `cd` does not move them):
 
 - `<logDir>/.gitignore` contains `*`. It is written before the first log file.
 - `<logDir>/<session-id>/turn-<N>.jsonl` holds one turn's records. When a turn's records exceed 1,000,000 characters they go to `turn-<N>-part<K>.jsonl` files, each under that size. No record is dropped. `N` continues from the highest number already in the folder, so a resumed session appends.
@@ -154,7 +154,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R16** If a log write fails, one notice per session names the folder; records stay in the pane; the turn is unaffected.
 - **R17** `/clear` empties the Calls view (and returns from a detail); files already written stay.
 - **R18** Inventory shows context cost in tokens in three groups, each ordered by cost: MCP tools by server (with loaded/deferred state), skills by plugin or by source (`user`, `project`, `other`), memory files; empty groups say `No MCP servers connected`, `No skills listed`, `No memory files loaded`.
-- **R19** The log folder gets a `.gitignore` containing `*` before its first file.
+- **R19** The log folder, anchored to the directory the session started in, gets a `.gitignore` containing `*` before its first file.
 - **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented.
 - **R21** Inventory rows show `est` until `m` is pressed; `m` counts MCP tool and memory file rows exactly and marks them `measured` until the next press; skill rows stay `est`; a second `m` during a count is ignored; a failed count keeps the figures and shows `measure failed: <reason>`.
 - **R22** If Claude Code cannot report context usage, Inventory shows `Context usage unavailable` and Calls keeps working.

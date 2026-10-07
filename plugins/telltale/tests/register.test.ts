@@ -7,6 +7,7 @@ type Tool = { id: string; name: string };
 type World = {
   files: Map<string, string>;
   writes: { path: string; text: string }[];
+  raw: string[]; // written paths as the engine handed them, before `rel`
   toasts: string[];
   logs: string[];
   opened: { id: string; focus: boolean }[];
@@ -33,6 +34,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   const world: World = {
     files: new Map(Object.entries(files)),
     writes: [],
+    raw: [],
     toasts: [],
     logs: [],
     opened: [],
@@ -65,6 +67,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   });
   on('fs.write', ($, e) => {
     if (world.failWrites) return { deny: `EACCES: ${e.path}` };
+    world.raw.push(e.path.replaceAll('\\', '/'));
     world.writes.push({ path: rel(e.path), text: e.text });
     world.files.set(rel(e.path), e.text);
     return { value: undefined };
@@ -371,7 +374,7 @@ test('R16: a failing log folder gives one notice per session, and turns complete
     await $.tool.call({ tool: 'Read', tool_use_id: id, file_path: '/x' } as never);
     expect(await complete($ as never, 'ok')).toMatchObject({ text: expect.any(String) });
   }
-  expect(world.toasts).toEqual([`telltale: cannot write logs to ${DIR}`]);
+  expect(world.toasts).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
 });
 
 test('R5: the turn file is written even when a pane-state write is refused', async ($, on) => {
@@ -403,7 +406,7 @@ test('R6: headless, a failing log folder goes to the debug log only', async ($, 
   await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
   await complete($ as never);
   expect(world.toasts).toEqual([]);
-  expect(world.logs).toEqual([`telltale: cannot write logs to ${DIR}`]);
+  expect(world.logs).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
 });
 
 test('R19: the log folder gets an ignore file', async ($, on) => {
@@ -413,6 +416,22 @@ test('R19: the log folder gets an ignore file', async ($, on) => {
   await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
   await complete($ as never);
   expect(world.files.get(`${ROOT}/.gitignore`)).toBe('*\n');
+});
+
+test('R19: logs stay under the starting directory after the session moves', async ($, on) => {
+  const world = worldOf(on);
+  let moved = false;
+  on('session.cwd', (_$, e, next) => (moved ? { value: '/work/sub' } : next(e)));
+  await $.session.start(SESSION);
+  moved = true;
+  await respond($ as never, world, [{ id: 'a', name: 'Read' }]);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
+  await complete($ as never);
+  expect(world.raw.length).toBeGreaterThan(0);
+  // On Windows the engine hands `/work` back with a drive letter.
+  for (const path of world.raw) {
+    expect(path.replace(/^[A-Za-z]:/, '').startsWith('/work/.claude/telltale/')).toBe(true);
+  }
 });
 
 test('R2: a background call made between turns lands in the next turn', async ($, on) => {

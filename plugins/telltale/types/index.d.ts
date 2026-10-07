@@ -36,6 +36,7 @@ declare module 'claude-code' {
       view: View;
       selected: string | null;
       inventory: Inventory;
+      folder: string; // absolute log folder for this session ('' until session start)
     };
   }
 }

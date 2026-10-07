@@ -33,6 +33,7 @@ const inventory = atom({ plugin: 'telltale', key: 'inventory' } as const, {
   rows: [],
   status: 'idle',
 });
+const logFolder = atom({ plugin: 'telltale', key: 'folder' } as const, '');
 
 type Captured = {
   id: string;
@@ -68,7 +69,8 @@ const blockKinds = (result: unknown): string[] => {
 };
 
 // Session state. A reload runs the module afresh, so these start over with it.
-let root = '.claude/telltale';
+let logDir = '.claude/telltale';
+let root = '';
 let fullPayloads = false;
 let interactive = true;
 let folder = '';
@@ -85,6 +87,8 @@ const callResponse = new Map<string, { agent: string; index: number }>();
 // Calls labelled `pending` at their turn end, by id, with their agent (delta R12).
 const pending = new Map<string, string>();
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
+
+const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
 
 async function write($: EngineInterface, name: string, text: string) {
   try {
@@ -224,7 +228,8 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
 }
 
 export const register: Register = (on, options) => {
-  root = typeof options.logDir === 'string' && options.logDir ? options.logDir : '.claude/telltale';
+  logDir =
+    typeof options.logDir === 'string' && options.logDir ? options.logDir : '.claude/telltale';
   fullPayloads = options.fullPayloads === true;
 
   on('session.start', async ($, e, next) => {
@@ -236,8 +241,16 @@ export const register: Register = (on, options) => {
         argumentHint: '[calls|inventory]',
       }),
     );
-    // One folder per session id, kept across /clear and resume (delta Assumptions).
-    if (!folder) folder = `${root}/${(await safe(() => $.session.id())) ?? 'session'}`;
+    // R19: anchored to where the session started, and kept in state so a reload or a later
+    // `cd` never moves it. One folder per session id, kept across /clear and resume.
+    folder = (await safe(() => read($, logFolder))) || '';
+    if (!folder) {
+      root = isAbsolute(logDir) ? logDir : `${e.cwd.replace(/[\\/]+$/, '')}/${logDir}`;
+      folder = `${root}/${(await safe(() => $.session.id())) ?? 'session'}`;
+      await safe(() => update($, logFolder, () => folder));
+    } else {
+      root = folder.slice(0, folder.lastIndexOf('/'));
+    }
     for (const entry of (await safe(() => $.fs.list(folder))) ?? []) {
       const turn = /^turn-(\d+)/.exec(entry.name);
       const context = /^context-(\d+)\.json$/.exec(entry.name);
