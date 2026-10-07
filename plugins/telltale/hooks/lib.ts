@@ -64,11 +64,25 @@ const SECRET_PATTERNS = [
   /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
 const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
+// R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
+// string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
+// quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
+// matched.
+const FIELDS = [...SECRET_FIELDS].join('|');
+const JSON_FIELD = new RegExp(String.raw`("(?:${FIELDS})"\s*:\s*")(?:[^"\\]|\\.)*(")`, 'gi');
+const ESCAPED_FIELD = new RegExp(
+  String.raw`(\\"(?:${FIELDS})\\"\s*:\s*\\")(?:\\\\(?:\\.|[^"\\])|\\[^"\\]|[^"\\])*(\\")`,
+  'gi',
+);
 
 const redactText = (text: string): string =>
   SECRET_PATTERNS.reduce(
     (out, pattern) => out.replace(pattern, '[redacted]'),
-    text.replace(PRIVATE_KEY, '[redacted]').replace(BEARER, '$1[redacted]'),
+    text
+      .replace(JSON_FIELD, '$1[redacted]$2')
+      .replace(ESCAPED_FIELD, '$1[redacted]$2')
+      .replace(PRIVATE_KEY, '[redacted]')
+      .replace(BEARER, '$1[redacted]'),
   );
 
 /** R14: a deep copy with secret fields and secret-shaped strings replaced by `[redacted]`. */
@@ -201,16 +215,29 @@ export const pretty = (text: string): string => {
 };
 
 // The engine unmounts a tree over 100,000 serialized characters. Two fields at 45,000 each,
-// plus the rest of the detail view, stay under it; a compact field is at most 20,000 chars.
+// plus the rest of the detail view, stay under it; the budget bounds every path, indented,
+// as stored, or cut.
 const INDENTED_BUDGET = 45_000;
 
-/** R20 and R11: what the detail view draws for one field. */
-export const show = (indented: string, raw: string, full: number): string =>
-  full > 20_000
-    ? `${raw.slice(0, 20_000)}\n${full - 20_000} chars cut`
-    : JSON.stringify(indented).length <= INDENTED_BUDGET
-      ? indented
-      : raw;
+/** The longest prefix of `s` whose JSON string form is at most `budget` characters. */
+const fit = (s: string, budget: number): string => {
+  if (JSON.stringify(s).length <= budget) return s;
+  let lo = 0;
+  let hi = s.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (JSON.stringify(s.slice(0, mid)).length <= budget) lo = mid;
+    else hi = mid - 1;
+  }
+  return s.slice(0, lo);
+};
+
+/** R20 and R11: what the detail view draws for one field, never over the serialized budget. */
+export const show = (indented: string, raw: string, full: number): string => {
+  if (full <= 20_000 && JSON.stringify(indented).length <= INDENTED_BUDGET) return indented;
+  const shown = fit(raw.slice(0, 20_000), INDENTED_BUDGET);
+  return shown.length < full ? `${shown}\n${full - shown.length} chars cut` : shown;
+};
 
 /** The engine refuses a Text child over 10,000 characters: cut the text into slices. */
 export const chunks = (text: string, size = 10_000): string[] =>

@@ -4,7 +4,7 @@
 import { atom, read, update } from 'claude-code';
 import type { EngineInterface, Register, SessionUsage } from 'claude-code';
 
-import type { Call, InventoryRow, NextAction, View } from '../types';
+import type { Call, CallDetail, Inventory, InventoryRow, NextAction, View } from '../types';
 import {
   chunks,
   cutArgs,
@@ -33,6 +33,11 @@ const inventory = atom({ plugin: 'telltale', key: 'inventory' } as const, {
   rows: [],
   status: 'idle',
 });
+const logFolder = atom({ plugin: 'telltale', key: 'folder' } as const, '');
+// Kept in state so a reload (a code edit, or a settings change) neither repeats the notice (R16)
+// nor strands a `pending` row (delta R12).
+const warnedOnce = atom({ plugin: 'telltale', key: 'warned' } as const, false);
+const pendingIds = atom({ plugin: 'telltale', key: 'pending' } as const, {});
 
 type Captured = {
   id: string;
@@ -68,7 +73,8 @@ const blockKinds = (result: unknown): string[] => {
 };
 
 // Session state. A reload runs the module afresh, so these start over with it.
-let root = '.claude/telltale';
+let logDir = '.claude/telltale';
+let root = '';
 let fullPayloads = false;
 let interactive = true;
 let folder = '';
@@ -84,7 +90,23 @@ const responses: Record<string, Response[]> = {};
 const callResponse = new Map<string, { agent: string; index: number }>();
 // Calls labelled `pending` at their turn end, by id, with their agent (delta R12).
 const pending = new Map<string, string>();
+// Pending ids carried over a reload: their response index belongs to the old module.
+const stale = new Set<string>();
+const savePending = ($: EngineInterface) =>
+  safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
+// R25: args, result text and used values of the calls the pane lists, by id. Kept here, not in
+// `$.state`, which every plugin can read and which refuses a value over 4 MiB.
+const details = new Map<string, CallDetail>();
+// R3: pane bookkeeping runs after the result is handed back, one step at a time, in call order.
+// The pane and turn end wait for it, so they never see a row missing.
+let settled: Promise<unknown> = Promise.resolve();
+const later = (work: () => Promise<unknown>) => {
+  settled = settled.then(() => safe(work));
+  return settled;
+};
+
+const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
 
 async function write($: EngineInterface, name: string, text: string) {
   try {
@@ -94,8 +116,10 @@ async function write($: EngineInterface, name: string, text: string) {
     }
     await $.fs.write(`${folder}/${name}`, text);
   } catch {
-    if (warned) return; // R16: one notice per session
+    // R16: one notice per session, also across a reload.
+    if (warned || (await safe(() => read($, warnedOnce)))) return;
     warned = true;
+    await safe(() => update($, warnedOnce, () => true));
     const notice = `telltale: cannot write logs to ${folder}`;
     if (interactive) await safe(() => $.ui.toast(notice));
     else await safe(() => $.ui.log(notice, { to: 'debug' })); // delta R6
@@ -117,17 +141,28 @@ async function relabel($: EngineInterface, agent: string, index: number) {
       (call) =>
         pending.get(call.id) === agent &&
         call.next === 'pending' &&
-        call.response !== null &&
-        call.response < index,
+        (stale.has(call.id) || (call.response !== null && call.response < index)),
     );
     labels = labelCalls(
       responses,
-      waiting.map((call) => ({ id: call.id, tool: call.tool, agent, response: call.response })),
+      // A stale call is labelled from the first complete response since the reload.
+      waiting.map((call) => ({
+        id: call.id,
+        tool: call.tool,
+        agent,
+        response: stale.has(call.id) ? -1 : call.response,
+      })),
       () => true,
     );
     return all.map((call) => (labels[call.id] ? { ...call, next: labels[call.id]! } : call));
   });
-  for (const [id, label] of Object.entries(labels)) if (label !== 'pending') pending.delete(id);
+  for (const [id, label] of Object.entries(labels)) {
+    if (label !== 'pending') {
+      pending.delete(id);
+      stale.delete(id);
+    }
+  }
+  await savePending($);
 }
 
 /** Opens a view; the Inventory loads Claude Code's own estimate, which sends no request. */
@@ -182,7 +217,7 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
     };
     if (breakdown === 'full') {
       if (current.status === 'unavailable') return;
-      await update($, inventory, (inv) => ({ ...inv, status: 'measuring' }));
+      await update($, inventory, (inv): Inventory => ({ ...inv, status: 'measuring' }));
     }
     let rows: InventoryRow[] | null = null;
     let failure = 'unknown';
@@ -192,7 +227,7 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
       failure = error instanceof Error && error.message ? error.message : 'unknown';
     }
     if (rows === null) {
-      await update($, inventory, (inv) =>
+      await update($, inventory, (inv): Inventory =>
         breakdown === 'full'
           ? { ...inv, status: `measure failed: ${failure}` }
           : { rows: [], status: 'unavailable' },
@@ -224,7 +259,8 @@ async function loadInventory($: EngineInterface, breakdown: 'summary' | 'full') 
 }
 
 export const register: Register = (on, options) => {
-  root = typeof options.logDir === 'string' && options.logDir ? options.logDir : '.claude/telltale';
+  logDir =
+    typeof options.logDir === 'string' && options.logDir ? options.logDir : '.claude/telltale';
   fullPayloads = options.fullPayloads === true;
 
   on('session.start', async ($, e, next) => {
@@ -236,8 +272,23 @@ export const register: Register = (on, options) => {
         argumentHint: '[calls|inventory]',
       }),
     );
-    // One folder per session id, kept across /clear and resume (delta Assumptions).
-    if (!folder) folder = `${root}/${(await safe(() => $.session.id())) ?? 'session'}`;
+    // R19: anchored to where the session started, and kept in state so a reload or a later
+    // `cd` never moves it. One folder per session id, kept across /clear and resume.
+    folder = (await safe(() => read($, logFolder))) || '';
+    if (!folder) {
+      root = isAbsolute(logDir) ? logDir : `${e.cwd.replace(/[\\/]+$/, '')}/${logDir}`;
+      folder = `${root}/${(await safe(() => $.session.id())) ?? 'session'}`;
+      await safe(() => update($, logFolder, () => folder));
+    } else {
+      root = folder.slice(0, folder.lastIndexOf('/'));
+    }
+    const kept = (await safe(() => read($, pendingIds))) ?? {};
+    for (const [id, agent] of Object.entries(kept)) {
+      if (!pending.has(id)) {
+        pending.set(id, agent);
+        stale.add(id);
+      }
+    }
     for (const entry of (await safe(() => $.fs.list(folder))) ?? []) {
       const turn = /^turn-(\d+)/.exec(entry.name);
       const context = /^context-(\d+)\.json$/.exec(entry.name);
@@ -253,14 +304,19 @@ export const register: Register = (on, options) => {
     const index = list.push({ toolNames: [], complete: false }) - 1;
     const stream = next(e);
     let step = await stream.next();
-    while (!step.done) {
-      const chunk = step.value;
-      if (chunk.kind === 'tool') {
-        list[index]!.toolNames.push(chunk.name);
-        callResponse.set(chunk.id, { agent, index });
+    try {
+      while (!step.done) {
+        const chunk = step.value;
+        if (chunk.kind === 'tool') {
+          list[index]!.toolNames.push(chunk.name);
+          callResponse.set(chunk.id, { agent, index });
+        }
+        yield chunk;
+        step = await stream.next();
       }
-      yield chunk;
-      step = await stream.next();
+    } finally {
+      // A consumer that stops early ends the stream beneath too.
+      if (!step.done) await stream.return?.(undefined as never);
     }
     const r = step.value;
     // A null stopReason is a request that failed or was cut off: not a response (delta R12).
@@ -274,9 +330,9 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's.
     if (next.origin.plugin !== 'engine') return r;
-    await safe(async () => {
+    try {
       const ms = ((await safe(() => $.clock.now())) ?? started) - started;
-      const { tool, tool_use_id: id, agentId, ...args } = e as typeof e & { agentId?: string };
+      const { tool, tool_use_id: id, agentId, ...args } = e;
       const text = typeof r.text === 'string' ? r.text : (r.deny ?? '');
       const call: Captured = {
         id,
@@ -290,34 +346,35 @@ export const register: Register = (on, options) => {
         isError: r.isError === true || r.deny !== undefined,
         blocks: blockKinds(r.result),
       };
+      // Before the return: the turn end reads `buffer` for its log.
       buffer.calls.push(call);
-      const json = JSON.stringify(args);
-      const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
-      const shown: Call = {
-        ...meta,
-        args: json.slice(0, SHOWN),
-        argsChars: json.length,
-        text: text.slice(0, SHOWN),
-        textChars: text.length,
-        next: null,
-        used: [],
-      };
-      let evicted = 0;
-      const kept = await update($, calls, (list) => {
-        const all = [...list, shown];
-        evicted = Math.max(0, all.length - KEEP);
-        return all.slice(evicted);
+      void later(async () => {
+        const json = JSON.stringify(args);
+        const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
+        const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
+        details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
+        let gone: Call[] = [];
+        const kept = await update($, calls, (list) => {
+          const all = [...list, shown];
+          gone = all.slice(0, Math.max(0, all.length - KEEP));
+          return all.slice(gone.length);
+        });
+        // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
+        for (const one of gone) details.delete(one.id);
+        const evicted = gone.length;
+        if (evicted > 0) await update($, dropped, (n) => n + evicted);
+        // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
+        const newest = kept.at(-1)?.id ?? null;
+        let moved = false;
+        await update($, selected, (current) => {
+          moved = current === null || !kept.some((call) => call.id === current);
+          return moved ? newest : current;
+        });
+        if (moved) void focusRow($, newest);
       });
-      if (evicted > 0) await update($, dropped, (n) => n + evicted);
-      // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
-      const newest = kept.at(-1)?.id ?? null;
-      let moved = false;
-      await update($, selected, (current) => {
-        moved = current === null || !kept.some((call) => call.id === current);
-        return moved ? newest : current;
-      });
-      if (moved) void focusRow($, newest);
-    });
+    } catch {
+      // R3: a fault here never blocks the result.
+    }
     return r;
   });
 
@@ -360,6 +417,9 @@ export const register: Register = (on, options) => {
     if (e.reason === 'clear') {
       pendingReason = 'clear';
       pending.clear(); // the cleared rows can never be relabelled
+      stale.clear();
+      details.clear();
+      await savePending($);
       await safe(async () => {
         await update($, calls, () => []);
         await update($, dropped, () => 0);
@@ -447,11 +507,10 @@ export const register: Register = (on, options) => {
           ),
         ];
         if (records.length > 0) {
-          turnNo += 1;
+          const n = ++turnNo;
           const parts = toParts(records);
           for (const [k, part] of parts.entries()) {
-            const name =
-              parts.length === 1 ? `turn-${turnNo}.jsonl` : `turn-${turnNo}-part${k + 1}.jsonl`;
+            const name = parts.length === 1 ? `turn-${n}.jsonl` : `turn-${n}-part${k + 1}.jsonl`;
             await write($, name, `${part.join('\n')}\n`);
           }
         }
@@ -461,16 +520,21 @@ export const register: Register = (on, options) => {
           await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
         }
       });
+      await settled;
       await safe(async () => {
+        for (const [id, found] of done) {
+          if (details.has(id)) details.get(id)!.used = found.used;
+        }
         await update($, calls, (list) =>
           list.map((call) => {
             const found = done.get(call.id);
-            return found ? { ...call, next: found.next, used: found.used } : call;
+            return found ? { ...call, next: found.next } : call;
           }),
         );
         for (const call of turn.calls) {
           if (done.get(call.id)!.next === 'pending') pending.set(call.id, call.agentId ?? 'main');
         }
+        await savePending($);
         // A subagent response that completed while the labels were written still relabels.
         for (const agent of new Set(pending.values())) {
           await relabel($, agent, responses[agent]?.length ?? 0);
@@ -485,7 +549,11 @@ export const register: Register = (on, options) => {
               ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
             ),
           );
-          for (const id of ids) pending.delete(id);
+          for (const id of ids) {
+            pending.delete(id);
+            stale.delete(id);
+          }
+          await savePending($);
         }
       });
     }
@@ -496,6 +564,7 @@ export const register: Register = (on, options) => {
 
   // R9, R23, delta R6: `/telltale [calls|inventory]`.
   on('command.run', { command: 'telltale' }, async ($, e) => {
+    await settled;
     if (!interactive) return { text: 'the pane needs an interactive session' };
     const raw = (e.args ?? '').trim();
     const wanted = raw.toLowerCase();
@@ -519,13 +588,14 @@ export const register: Register = (on, options) => {
   // delta R11: the selection follows the focus ring across the rows.
   on('ui.focus', async ($, e, next) => {
     const element = e.element;
-    if (e.requestId === PANE && element?.startsWith('row:')) {
+    if (e.plugin === 'telltale' && e.requestId === PANE && element?.startsWith('row:')) {
       await safe(() => update($, selected, () => element.slice(4)));
     }
     return next(e);
   });
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await settled;
     const { Box, Text, Button } = $.ui.resolve(e);
     const list = await read($, calls);
     const gone = await read($, dropped);
@@ -547,6 +617,7 @@ export const register: Register = (on, options) => {
 
     if (current === 'detail' && call) {
       const tokens = formatTokens(estTokens(call.textChars));
+      const detail = details.get(call.id);
       return (
         <Box flexDirection="column">
           {tabs}
@@ -562,17 +633,27 @@ export const register: Register = (on, options) => {
             Back
           </Button>
           <Text bold>{`${call.tool}${call.server ? `  (${call.server})` : ''}`}</Text>
-          <Text dimColor>arguments</Text>
-          {chunks(show(pretty(call.args), call.args, call.argsChars)).map((part) => (
-            <Text>{part}</Text>
-          ))}
-          <Text dimColor>what Claude read</Text>
-          {chunks(show(pretty(call.text), call.text, call.textChars)).map((part) => (
-            <Text>{part}</Text>
-          ))}
+          {detail ? (
+            [
+              <Text key="args" dimColor>
+                arguments
+              </Text>,
+              ...chunks(show(pretty(detail.args), detail.args, call.argsChars)).map((part, i) => (
+                <Text key={`args:${i}`}>{part}</Text>
+              )),
+              <Text key="text" dimColor>
+                what Claude read
+              </Text>,
+              ...chunks(show(pretty(detail.text), detail.text, call.textChars)).map((part, i) => (
+                <Text key={`text:${i}`}>{part}</Text>
+              )),
+            ]
+          ) : (
+            <Text dimColor>text not kept after a reload; see the logs</Text>
+          )}
           <Text>{`size: ${call.textChars} chars · ~${tokens} tok${call.isError ? ' · error' : ''}`}</Text>
           <Text>{`next: ${call.next ?? 'pending'} · ${call.ms}ms (duration includes any permission prompt)`}</Text>
-          <Text>{`used in answer: ${call.used.length > 0 ? call.used.join(', ') : 'none'}`}</Text>
+          <Text>{`used in answer: ${detail && detail.used.length > 0 ? detail.used.join(', ') : 'none'}`}</Text>
         </Box>
       );
     }
@@ -596,13 +677,13 @@ export const register: Register = (on, options) => {
               <Text dimColor>{empty}</Text>
             ) : (
               names.map((name) => (
-                <Box flexDirection="column">
+                <Box key={name} flexDirection="column">
                   {prefix !== 'memory' && <Text>{name.slice(prefix.length)}</Text>}
                   {rows
                     .filter((row) => row.group === name)
                     .sort((a, b) => b.tokens - a.tokens)
                     .map((row) => (
-                      <Text>
+                      <Text key={row.name}>
                         {`  ${row.name}  ${row.tokens} tok  ${row.measured ? 'measured' : 'est'}${row.state ? `  ${row.state}` : ''}`}
                       </Text>
                     ))}

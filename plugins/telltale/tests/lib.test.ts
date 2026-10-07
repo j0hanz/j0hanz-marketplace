@@ -81,6 +81,28 @@ test('R14: secret patterns in strings are redacted', async () => {
   expect(redact('jwt eyJhbGci.eyJzdWIi.sig_1')).toBe('jwt [redacted]');
 });
 
+test('R14: a listed field inside JSON text has its string value redacted', async () => {
+  expect(redact('{"access_token":"abc123","user":"ann"}')).toBe(
+    '{"access_token":"[redacted]","user":"ann"}',
+  );
+  expect(redact('{ "Password" : "p\\"w" , "n": 1 }')).toBe(
+    '{ "Password" : "[redacted]" , "n": 1 }',
+  );
+});
+
+test('R14: a listed field inside escaped JSON text is redacted too', async () => {
+  expect(redact('{"body":"{\\"token\\":\\"abc123\\"}"}')).toBe(
+    '{"body":"{\\"token\\":\\"[redacted]\\"}"}',
+  );
+  const nested = JSON.stringify({ body: JSON.stringify({ token: 'ab"cd\\9', n: 1 }) });
+  expect(redact(nested)).toBe('{"body":"{\\"token\\":\\"[redacted]\\",\\"n\\":1}"}');
+});
+
+test('R14: JSON text without a listed field is unchanged', async () => {
+  const text = '{"max_tokens":1000,"tokenizer":"x","note":"token is fine"}';
+  expect(redact(text)).toBe(text);
+});
+
 test('R14: a value that matches no pattern is unchanged', async () => {
   expect(redact({ q: 'refund', n: 3, ok: true, none: null })).toEqual({
     q: 'refund',
@@ -252,4 +274,13 @@ test('R20: two indented fields never pass the 100,000-character serialized tree 
   // A field over 20,000 characters still takes the cut path.
   const big = 'w'.repeat(200_000);
   expect(show(pretty(big), big.slice(0, 20_000), big.length)).toContain('180000 chars cut');
+});
+
+test('R20: a field that escapes heavily is cut to fit the serialized budget', async () => {
+  const ctl = '\u0001'.repeat(20_000);
+  const shown = show(ctl, ctl, ctl.length);
+  expect(JSON.stringify(shown).length).toBeLessThanOrEqual(45_100);
+  expect(shown.endsWith('\n12501 chars cut')).toBe(true);
+  const big = '\u0001'.repeat(50_000);
+  expect(show(big, big.slice(0, 20_000), big.length).endsWith('\n42501 chars cut')).toBe(true);
 });

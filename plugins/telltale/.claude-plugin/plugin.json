@@ -12,7 +12,7 @@
     "logDir": {
       "type": "string",
       "title": "Log folder",
-      "description": "Folder for per-turn logs, relative to the session's working directory",
+      "description": "Folder for per-turn logs, relative to the directory the session started in, or an absolute path",
       "default": ".claude/telltale"
     },
     "fullPayloads": {

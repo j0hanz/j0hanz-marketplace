@@ -7,6 +7,7 @@ type Tool = { id: string; name: string };
 type World = {
   files: Map<string, string>;
   writes: { path: string; text: string }[];
+  raw: string[]; // written paths as the engine handed them, before `rel`
   toasts: string[];
   logs: string[];
   opened: { id: string; focus: boolean }[];
@@ -33,6 +34,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   const world: World = {
     files: new Map(Object.entries(files)),
     writes: [],
+    raw: [],
     toasts: [],
     logs: [],
     opened: [],
@@ -65,6 +67,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   });
   on('fs.write', ($, e) => {
     if (world.failWrites) return { deny: `EACCES: ${e.path}` };
+    world.raw.push(e.path.replaceAll('\\', '/'));
     world.writes.push({ path: rel(e.path), text: e.text });
     world.files.set(rel(e.path), e.text);
     return { value: undefined };
@@ -119,6 +122,16 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   on('turn.complete', ($, e) => ({ text: world.below ?? e.answer }));
   on('ui.render', () => ({ type: 'Text', children: [''] }) as never);
   return world;
+};
+
+/** The last value telltale wrote to each of its state keys. */
+const stateOf = (on: On) => {
+  const kept = new Map<string, unknown>();
+  on('state.set', (_$, e, next) => {
+    kept.set(e.key, e.value);
+    return next(e);
+  });
+  return kept;
 };
 
 const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const;
@@ -194,6 +207,24 @@ test('R3: results pass through unchanged even when every log write fails', async
   });
   await respond($ as never, world, []);
   expect(await complete($ as never, 'done')).toMatchObject({ text: expect.any(String) });
+});
+
+test('R3: a tool result returns before any pane-state write', async ($, on) => {
+  const world = worldOf(on);
+  // Every pane-state write waits on this gate: a hook that awaited one would never return.
+  let held = false;
+  let open = () => {};
+  const gate = new Promise<void>((resolve) => (open = resolve));
+  on('state.set', async (_$, e, next) => {
+    if (held) await gate;
+    return next(e);
+  });
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'u1', name: 'mcp__o__s' }]);
+  held = true;
+  const out = await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'u1' } as never);
+  expect(out).toEqual({ result: 'ok', text: 'ok' });
+  open();
 });
 
 test('R4: a completed MCP call is recorded with its server, size and estimate', async ($, on) => {
@@ -371,7 +402,18 @@ test('R16: a failing log folder gives one notice per session, and turns complete
     await $.tool.call({ tool: 'Read', tool_use_id: id, file_path: '/x' } as never);
     expect(await complete($ as never, 'ok')).toMatchObject({ text: expect.any(String) });
   }
-  expect(world.toasts).toEqual([`telltale: cannot write logs to ${DIR}`]);
+  expect(world.toasts).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
+});
+
+test('R16: the write-failure notice is remembered in pane state', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.failWrites = true;
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'a', name: 'Read' }]);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
+  await complete($ as never);
+  expect(kept.get('warned')).toBe(true);
 });
 
 test('R5: the turn file is written even when a pane-state write is refused', async ($, on) => {
@@ -403,7 +445,7 @@ test('R6: headless, a failing log folder goes to the debug log only', async ($, 
   await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
   await complete($ as never);
   expect(world.toasts).toEqual([]);
-  expect(world.logs).toEqual([`telltale: cannot write logs to ${DIR}`]);
+  expect(world.logs).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
 });
 
 test('R19: the log folder gets an ignore file', async ($, on) => {
@@ -413,6 +455,22 @@ test('R19: the log folder gets an ignore file', async ($, on) => {
   await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
   await complete($ as never);
   expect(world.files.get(`${ROOT}/.gitignore`)).toBe('*\n');
+});
+
+test('R19: logs stay under the starting directory after the session moves', async ($, on) => {
+  const world = worldOf(on);
+  let moved = false;
+  on('session.cwd', (_$, e, next) => (moved ? { value: '/work/sub' } : next(e)));
+  await $.session.start(SESSION);
+  moved = true;
+  await respond($ as never, world, [{ id: 'a', name: 'Read' }]);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
+  await complete($ as never);
+  expect(world.raw.length).toBeGreaterThan(0);
+  // On Windows the engine hands `/work` back with a drive letter.
+  for (const path of world.raw) {
+    expect(path.replace(/^[A-Za-z]:/, '').startsWith('/work/.claude/telltale/')).toBe(true);
+  }
 });
 
 test('R2: a background call made between turns lands in the next turn', async ($, on) => {
@@ -691,6 +749,54 @@ test('R25: the list keeps 200 calls and counts the rest', async ($, on) => {
   expect(text).toContain('1 older calls are in the logs');
 });
 
+test(
+  'R25: 200 calls with large args and results stay listed, their text out of shared state',
+  { timeoutMs: 120_000 },
+  async ($, on) => {
+    const world = worldOf(on);
+    const state = stateOf(on);
+    await $.session.start(SESSION);
+    for (let i = 0; i < 201; i++) {
+      world.results[`c${i}`] = { result: 'r', text: 'r'.repeat(20_000) };
+      await respond($ as never, world, [{ id: `c${i}`, name: 'Read' }]);
+      await $.tool.call({ tool: 'Read', tool_use_id: `c${i}`, q: 'a'.repeat(20_000) } as never);
+    }
+    await run($ as never);
+    const { text, buttons } = await draw($ as never);
+    expect(buttons.filter((button) => button.key.startsWith('row:'))).toHaveLength(200);
+    expect(text).toContain('1 older calls are in the logs');
+    expect(JSON.stringify(state.get('calls'))).not.toContain('r'.repeat(100));
+    expect(JSON.stringify(state.get('calls'))).not.toContain('a'.repeat(100));
+    await press($ as never, 'row:c200');
+    const detail = (await draw($ as never)).text;
+    expect(detail).toContain('r'.repeat(1000));
+    expect(detail).toContain('a'.repeat(1000));
+  },
+);
+
+test('R25: parallel calls each keep their own text in the detail view', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.results.p1 = { result: 'r', text: 'TEXT-ONE' };
+  world.results.p2 = { result: 'r', text: 'TEXT-TWO' };
+  await respond($ as never, world, [
+    { id: 'p1', name: 'Read' },
+    { id: 'p2', name: 'Read' },
+  ]);
+  await Promise.all([
+    $.tool.call({ tool: 'Read', tool_use_id: 'p1' } as never),
+    $.tool.call({ tool: 'Read', tool_use_id: 'p2' } as never),
+  ]);
+  await run($ as never);
+  await draw($ as never);
+  await press($ as never, 'row:p2');
+  expect((await draw($ as never)).text).toContain('TEXT-TWO');
+  await press($ as never, 'back');
+  await draw($ as never);
+  await press($ as never, 'row:p1');
+  expect((await draw($ as never)).text).toContain('TEXT-ONE');
+});
+
 test('R6: headless, /telltale answers that the pane needs an interactive session', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(HEADLESS);
@@ -713,6 +819,20 @@ test('R12: a pending call is relabelled when its agent responds', async ($, on) 
   await press($ as never, 'row:z');
   expect((await draw($ as never)).text).toContain('next: answered');
   expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'pending' });
+});
+
+test('R12: pending ids are kept in pane state until relabelled', async ($, on) => {
+  const world = worldOf(on);
+  world.running = ['a1'];
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'z', name: 'mcp__o__s' }], 'a1');
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'z', agentId: 'a1' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(kept.get('pending')).toEqual({ z: 'a1' });
+  await respond($ as never, world, [], 'a1');
+  expect(kept.get('pending')).toEqual({});
 });
 
 const usageOf = (

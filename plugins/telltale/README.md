@@ -46,14 +46,14 @@ Run `/telltale` to open the pane on the Calls view, with the newest call selecte
 
 Set these in the plugin's settings in Claude Code.
 
-| Setting        | Default            | Meaning                                                                                   |
-| -------------- | ------------------ | ----------------------------------------------------------------------------------------- |
-| `logDir`       | `.claude/telltale` | Folder for per-turn logs, relative to the session's working directory                     |
-| `fullPayloads` | `false`            | Also log each tool result's full text, redacted, not just the 300-character head and tail |
+| Setting        | Default            | Meaning                                                                                         |
+| -------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `logDir`       | `.claude/telltale` | Folder for per-turn logs, relative to the directory the session started in, or an absolute path |
+| `fullPayloads` | `false`            | Also log each tool result's full text, redacted, not just the 300-character head and tail       |
 
 ## Logs
 
-Files live under `logDir`, relative to the session's working directory:
+Files live under `logDir`, relative to the directory the session started in (a later `cd` does not move them):
 
 - `<logDir>/.gitignore` contains `*`. It is written before the first log file.
 - `<logDir>/<session-id>/turn-<N>.jsonl` holds one turn's records. When a turn's records exceed 1,000,000 characters they go to `turn-<N>-part<K>.jsonl` files, each under that size. No record is dropped. `N` continues from the highest number already in the folder, so a resumed session appends.
@@ -107,9 +107,13 @@ One JSON object per line.
 jq -r 'select(.type=="call") | [.server // "-", .tool, .ms, .estTokens, .next] | @tsv' .claude/telltale/*/turn-*.jsonl
 ```
 
+### Known limits
+
+A reload of the mod (editing it under `--plugin-dir`, or changing its settings) during a turn loses that turn's records made before the reload from its log file; the pane keeps its rows. A call whose model response began before the reload gets its `next` label from incomplete data.
+
 ## Redaction
 
-Redaction applies to the logs only. The pane shows raw data for the 200 most recent calls.
+Redaction applies to the logs only. The pane shows raw data for the 200 most recent calls; that data stays in the mod's memory and is not readable by other plugins.
 
 Before any cut, these patterns are replaced by `[redacted]` in argument values and result text:
 
@@ -124,7 +128,7 @@ Before any cut, these patterns are replaced by `[redacted]` in argument values a
 
 A match may not follow a letter, digit, `_` or `-`, unless that letter ends a JSON escape (`\n`, `\r`, `\t`).
 
-The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `api-key`, `authorization`, `access_token`, `refresh_token` or `client_secret` (case-insensitive) is replaced too.
+The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `api-key`, `authorization`, `access_token`, `refresh_token` or `client_secret` (case-insensitive) is replaced too. This also applies inside JSON text, such as a result that is a JSON document, when the value is a string. `usedInAnswer` values are checked one by one, outside their JSON, so only the patterns above apply to them.
 
 Tool, server and skill names, paths and field names are never redacted.
 
@@ -149,18 +153,18 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R11** Up/Down move the selection, Enter opens the detail; new calls do not move an existing selection; the detail shows args and the text Claude read (pretty-printed only when the compact JSON round-trips losslessly and the indented form serializes (`JSON.stringify`) to at most 45,000 characters), size, error flag, next action and used-in-answer; `b` returns with the same row selected; Esc closes the pane; with nothing selected, or the selection evicted, the newest call is selected.
 - **R12** At main-turn end each call is labelled from its agent's next complete response: `pending` (none yet, agent running), `aborted` (none, agent stopped), `answered` (no tool), `retried` (same tool), `asked-user` (`AskUserQuestion`), `other-tool`; calls from one response share a label; a `pending` row is relabelled in the pane when its agent responds, and becomes `aborted` if the agent stops; the written file keeps `pending`.
 - **R13** For each call in the turn, up to 5 values (maximal runs of `[A-Za-z0-9_.:/-]`, trailing `.:/-` trimmed, ≥4 chars, with a digit) that appear in both the result and the main answer, in result order; no answer means an empty list.
-- **R14** Before any cut or preview, the listed secret patterns and the whole values of the listed field names are replaced with `[redacted]` in argument values, result previews, logged result text and the `usedInAnswer` values; never in tool, server or skill names, paths or field names; a match may not follow a letter, digit, `_` or `-` unless that character ends a JSON escape; a private-key block matches anywhere.
+- **R14** Before any cut or preview, the listed secret patterns and the whole values of the listed field names (in objects, and string values in JSON text) are replaced with `[redacted]` in argument values, result previews and logged result text, and the secret patterns also in the `usedInAnswer` values; never in tool, server or skill names, paths or field names; a match may not follow a letter, digit, `_` or `-` unless that character ends a JSON escape; a private-key block matches anywhere.
 - **R15** Records over the per-file limit are written across numbered parts, none dropped; a single oversized record has its largest fields replaced in turn by `…[cut N chars]` until it fits and is marked `"truncated": true`.
-- **R16** If a log write fails, one notice per session names the folder; records stay in the pane; the turn is unaffected.
+- **R16** If a log write fails, one notice per session names the folder, also across a reload; records stay in the pane; the turn is unaffected.
 - **R17** `/clear` empties the Calls view (and returns from a detail); files already written stay.
 - **R18** Inventory shows context cost in tokens in three groups, each ordered by cost: MCP tools by server (with loaded/deferred state), skills by plugin or by source (`user`, `project`, `other`), memory files; empty groups say `No MCP servers connected`, `No skills listed`, `No memory files loaded`.
-- **R19** The log folder gets a `.gitignore` containing `*` before its first file.
-- **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented.
+- **R19** The log folder, anchored to the directory the session started in, gets a `.gitignore` containing `*` before its first file.
+- **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented; a field whose JSON-escaped form would pass 45,000 characters shows only the part that fits, with the same cut line.
 - **R21** Inventory rows show `est` until `m` is pressed; `m` counts MCP tool and memory file rows exactly and marks them `measured` until the next press; skill rows stay `est`; a second `m` during a count is ignored; a failed count keeps the figures and shows `measure failed: <reason>`.
 - **R22** If Claude Code cannot report context usage, Inventory shows `Context usage unavailable` and Calls keeps working.
 - **R23** The pane shows a view row `1: Calls`, `2: Inventory`; `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
 - **R24** Logged string argument values longer than 2,000 characters are cut to 2,000 followed by `…[cut N chars]`, after redaction.
-- **R25** The pane keeps full, unredacted, uncut args and result text for the 200 most recent calls; older calls leave the list, which ends with `<n> older calls are in the logs`.
+- **R25** The pane keeps the first 20,000 characters of args and result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so; older calls leave the list, which ends with `<n> older calls are in the logs`.
 
 ## License
 
