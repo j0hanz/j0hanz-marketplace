@@ -756,6 +756,29 @@ test(
   },
 );
 
+test('R25: parallel calls each keep their own text in the detail view', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.results.p1 = { result: 'r', text: 'TEXT-ONE' };
+  world.results.p2 = { result: 'r', text: 'TEXT-TWO' };
+  await respond($ as never, world, [
+    { id: 'p1', name: 'Read' },
+    { id: 'p2', name: 'Read' },
+  ]);
+  await Promise.all([
+    $.tool.call({ tool: 'Read', tool_use_id: 'p1' } as never),
+    $.tool.call({ tool: 'Read', tool_use_id: 'p2' } as never),
+  ]);
+  await run($ as never);
+  await draw($ as never);
+  await press($ as never, 'row:p2');
+  expect((await draw($ as never)).text).toContain('TEXT-TWO');
+  await press($ as never, 'back');
+  await draw($ as never);
+  await press($ as never, 'row:p1');
+  expect((await draw($ as never)).text).toContain('TEXT-ONE');
+});
+
 test('R6: headless, /telltale answers that the pane needs an interactive session', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(HEADLESS);

@@ -344,14 +344,15 @@ export const register: Register = (on, options) => {
       const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
       const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
       details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
-      let evicted = 0;
+      let gone: Call[] = [];
       const kept = await update($, calls, (list) => {
         const all = [...list, shown];
-        evicted = Math.max(0, all.length - KEEP);
-        return all.slice(evicted);
+        gone = all.slice(0, Math.max(0, all.length - KEEP));
+        return all.slice(gone.length);
       });
-      const ids = new Set(kept.map((one) => one.id));
-      for (const key of details.keys()) if (!ids.has(key)) details.delete(key);
+      // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
+      for (const one of gone) details.delete(one.id);
+      const evicted = gone.length;
       if (evicted > 0) await update($, dropped, (n) => n + evicted);
       // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
       const newest = kept.at(-1)?.id ?? null;
