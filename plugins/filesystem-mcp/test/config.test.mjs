@@ -20,8 +20,12 @@ test('filesystem plugin pins the server to the plugin version with project-scope
     // Literal args only: the directory validator blocks any variable but
     // ${CLAUDE_PLUGIN_ROOT}. Claude Code starts the server in the project
     // directory, so the working directory is the root and the boundary.
+    // --prefix keeps npx from resolving the spec against the project: inside
+    // the server's own checkout it matches and npx finds no bin to run.
     args: [
       '-y',
+      '--prefix',
+      '${CLAUDE_PLUGIN_ROOT}',
       `@j0hanz/filesystem-mcp@${manifest.version}`,
       '--allow-cwd',
       '--root-boundary',
