@@ -490,11 +490,10 @@ export const register: Register = (on, options) => {
           ),
         ];
         if (records.length > 0) {
-          turnNo += 1;
+          const n = ++turnNo;
           const parts = toParts(records);
           for (const [k, part] of parts.entries()) {
-            const name =
-              parts.length === 1 ? `turn-${turnNo}.jsonl` : `turn-${turnNo}-part${k + 1}.jsonl`;
+            const name = parts.length === 1 ? `turn-${n}.jsonl` : `turn-${n}-part${k + 1}.jsonl`;
             await write($, name, `${part.join('\n')}\n`);
           }
         }
