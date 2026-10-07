@@ -294,14 +294,19 @@ export const register: Register = (on, options) => {
     const index = list.push({ toolNames: [], complete: false }) - 1;
     const stream = next(e);
     let step = await stream.next();
-    while (!step.done) {
-      const chunk = step.value;
-      if (chunk.kind === 'tool') {
-        list[index]!.toolNames.push(chunk.name);
-        callResponse.set(chunk.id, { agent, index });
+    try {
+      while (!step.done) {
+        const chunk = step.value;
+        if (chunk.kind === 'tool') {
+          list[index]!.toolNames.push(chunk.name);
+          callResponse.set(chunk.id, { agent, index });
+        }
+        yield chunk;
+        step = await stream.next();
       }
-      yield chunk;
-      step = await stream.next();
+    } finally {
+      // A consumer that stops early ends the stream beneath too.
+      if (!step.done) await stream.return?.(undefined as never);
     }
     const r = step.value;
     // A null stopReason is a request that failed or was cut off: not a response (delta R12).
