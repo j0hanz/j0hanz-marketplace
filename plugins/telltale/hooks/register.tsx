@@ -615,12 +615,12 @@ export const register: Register = (on, options) => {
           </Button>
           <Text bold>{`${call.tool}${call.server ? `  (${call.server})` : ''}`}</Text>
           <Text dimColor>arguments</Text>
-          {chunks(show(pretty(call.args), call.args, call.argsChars)).map((part) => (
-            <Text>{part}</Text>
+          {chunks(show(pretty(call.args), call.args, call.argsChars)).map((part, i) => (
+            <Text key={`args:${i}`}>{part}</Text>
           ))}
           <Text dimColor>what Claude read</Text>
-          {chunks(show(pretty(call.text), call.text, call.textChars)).map((part) => (
-            <Text>{part}</Text>
+          {chunks(show(pretty(call.text), call.text, call.textChars)).map((part, i) => (
+            <Text key={`text:${i}`}>{part}</Text>
           ))}
           <Text>{`size: ${call.textChars} chars · ~${tokens} tok${call.isError ? ' · error' : ''}`}</Text>
           <Text>{`next: ${call.next ?? 'pending'} · ${call.ms}ms (duration includes any permission prompt)`}</Text>
@@ -648,13 +648,13 @@ export const register: Register = (on, options) => {
               <Text dimColor>{empty}</Text>
             ) : (
               names.map((name) => (
-                <Box flexDirection="column">
+                <Box key={name} flexDirection="column">
                   {prefix !== 'memory' && <Text>{name.slice(prefix.length)}</Text>}
                   {rows
                     .filter((row) => row.group === name)
                     .sort((a, b) => b.tokens - a.tokens)
                     .map((row) => (
-                      <Text>
+                      <Text key={row.name}>
                         {`  ${row.name}  ${row.tokens} tok  ${row.measured ? 'measured' : 'est'}${row.state ? `  ${row.state}` : ''}`}
                       </Text>
                     ))}
