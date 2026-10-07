@@ -571,7 +571,7 @@ export const register: Register = (on, options) => {
   // delta R11: the selection follows the focus ring across the rows.
   on('ui.focus', async ($, e, next) => {
     const element = e.element;
-    if (e.requestId === PANE && element?.startsWith('row:')) {
+    if (e.plugin === 'telltale' && e.requestId === PANE && element?.startsWith('row:')) {
       await safe(() => update($, selected, () => element.slice(4)));
     }
     return next(e);
