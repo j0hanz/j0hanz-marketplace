@@ -322,7 +322,7 @@ export const register: Register = (on, options) => {
     if (next.origin.plugin !== 'engine') return r;
     await safe(async () => {
       const ms = ((await safe(() => $.clock.now())) ?? started) - started;
-      const { tool, tool_use_id: id, agentId, ...args } = e as typeof e & { agentId?: string };
+      const { tool, tool_use_id: id, agentId, ...args } = e;
       const text = typeof r.text === 'string' ? r.text : (r.deny ?? '');
       const call: Captured = {
         id,
