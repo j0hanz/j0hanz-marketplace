@@ -12,6 +12,7 @@ type World = {
   logs: string[];
   opened: { id: string; focus: boolean }[];
   failWrites: boolean;
+  failList: boolean;
   steps: Tool[][];
   results: Record<string, { result: unknown; text?: string; isError?: true }>;
   running: string[];
@@ -39,6 +40,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     logs: [],
     opened: [],
     failWrites: false,
+    failList: false,
     steps: [],
     results: {},
     running: [],
@@ -87,14 +89,18 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   on('ui.focus', ($, e) => {
     return {};
   });
-  on('agent.list', () => ({
-    value: world.running.map((id) => ({
-      id,
-      description: id,
-      type: 'general-purpose',
-      status: 'running',
-    })),
-  }));
+  on('agent.list', () =>
+    world.failList
+      ? { deny: 'no list' }
+      : {
+          value: world.running.map((id) => ({
+            id,
+            description: id,
+            type: 'general-purpose',
+            status: 'running',
+          })),
+        },
+  );
   on('session.usage', ($, e) => {
     world.usageCalls.push(String((e as { breakdown?: string }).breakdown ?? 'none'));
     return world.usage instanceof Error
@@ -595,7 +601,8 @@ const buttonsOf = (node: unknown): { key: string; autoFocus: boolean }[] => {
 
 const draw = async ($: never) => {
   const tree = await ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render(PANE);
-  return { text: stringsOf(tree).join(''), buttons: buttonsOf(tree) };
+  const strings = stringsOf(tree);
+  return { text: strings.join(''), strings, buttons: buttonsOf(tree) };
 };
 const run = ($: never, args = '') =>
   ($ as { command: { run: (e: unknown) => Promise<{ text?: string }> } }).command.run({
@@ -1050,4 +1057,74 @@ test('R11: when the selected call is evicted, the newest kept call is selected',
   await callThrough($ as never, world, 'late', 'Read');
   const { buttons } = await draw($ as never);
   expect(buttons.find((button) => button.autoFocus)?.key).toBe('row:c200');
+});
+
+// Regressions from the 2026-10-07 bug hunt (telltale.hunt.md).
+
+test('R12: a failed agent list leaves a subagent call pending, not aborted', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'z', name: 'mcp__o__s' }], 'a1');
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'z', agentId: 'a1' } as never);
+  await respond($ as never, world, []);
+  world.failList = true;
+  await complete($ as never);
+  world.failList = false;
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'pending' });
+  await respond($ as never, world, [], 'a1');
+  await run($ as never);
+  await draw($ as never);
+  await press($ as never, 'row:z');
+  expect((await draw($ as never)).text).toContain('next: answered');
+});
+
+test(
+  'R2: a call Claude streamed is counted even when a plugin’s hook raised it',
+  {
+    plugins: [
+      {
+        name: 'spawner',
+        register: (on) => {
+          on('session.start', async ($, e, next) => {
+            await $.command.register({ name: 'relay', description: 'relays a streamed call' });
+            return next(e);
+          });
+          on('command.run', { command: 'relay' }, async ($) => {
+            await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'z', agentId: 'a1' } as never);
+            return { text: 'relayed' };
+          });
+        },
+      },
+    ],
+  },
+  async ($, on) => {
+    const world = worldOf(on);
+    world.results.z = { result: 'r', text: 'z'.repeat(400) };
+    await $.session.start(SESSION);
+    await respond($ as never, world, [{ id: 'z', name: 'mcp__o__s' }], 'a1');
+    await $.command.run({
+      command: 'relay',
+      args: '',
+      origin: { kind: 'composer' },
+      presentation: { isFullscreen: false, columns: 100 },
+    } as never);
+    await respond($ as never, world, []);
+    expect((await complete($ as never, 'done')).text).toBe('telltale: 1 MCP call · ~100 tok');
+  },
+);
+
+test('R13: a long used-in-answer value never puts over 10,000 characters in one Text', async ($, on) => {
+  const world = worldOf(on);
+  const long = 'v1' + 'x'.repeat(12_000);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'u', 'mcp__o__s', `found ${long} here`);
+  await respond($ as never, world, []);
+  await complete($ as never, `The value is ${long}.`);
+  await run($ as never);
+  await draw($ as never);
+  await press($ as never, 'row:u');
+  const { text, strings } = await draw($ as never);
+  // Text nodes are joined with a newline here; the value itself spans two of them.
+  expect(text.replaceAll('\n', '')).toContain(`used in answer: ${long}`);
+  for (const s of strings) expect(s.length).toBeLessThanOrEqual(10_000);
 });

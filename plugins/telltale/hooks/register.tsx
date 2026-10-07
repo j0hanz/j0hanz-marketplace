@@ -398,8 +398,10 @@ export const register: Register = (on, options) => {
   on('tool.call', async ($, e, next) => {
     const started = (await safe(() => $.clock.now())) ?? 0;
     const r = await next(e);
-    // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's.
-    if (next.origin.plugin !== 'engine') return r;
+    // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's: it gets its
+    // own id, which no `turn.step` streamed. A subagent a plugin spawned carries that plugin's
+    // origin too, but its model streams each call first, so those stay counted (R2).
+    if (next.origin.plugin !== 'engine' && !callResponse.has(e.tool_use_id)) return r;
     try {
       const ms = ((await safe(() => $.clock.now())) ?? started) - started;
       const { tool, tool_use_id: id, agentId, ...args } = e;
@@ -512,7 +514,9 @@ export const register: Register = (on, options) => {
           agent: call.agentId ?? 'main',
           response: call.response,
         })),
-        (agent) => agent !== 'main' && running.has(agent),
+        // A list that failed says nothing about who stopped: every subagent then counts as
+        // running, so its calls go `pending` and a later turn end settles them (R12 rule 2).
+        (agent) => agent !== 'main' && (listed === undefined || running.has(agent)),
       );
       const answer = e.reason === 'answer' ? e.answer : null;
       const done = new Map(
@@ -656,7 +660,11 @@ export const register: Register = (on, options) => {
           )}
           <Text>{`size: ${call.textChars} chars · ~${tokens} tok${call.isError ? ' · error' : ''}`}</Text>
           <Text>{`next: ${call.next ?? 'pending'} · ${call.ms}ms (duration includes any permission prompt)`}</Text>
-          <Text>{`used in answer: ${detail && detail.used.length > 0 ? detail.used.join(', ') : 'none'}`}</Text>
+          {chunks(
+            `used in answer: ${detail && detail.used.length > 0 ? detail.used.join(', ') : 'none'}`,
+          ).map((part, i) => (
+            <Text key={`used:${i}`}>{part}</Text>
+          ))}
         </Box>
       );
     }
