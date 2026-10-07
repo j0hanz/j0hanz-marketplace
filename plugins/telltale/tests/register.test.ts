@@ -731,6 +731,31 @@ test('R25: the list keeps 200 calls and counts the rest', async ($, on) => {
   expect(text).toContain('1 older calls are in the logs');
 });
 
+test(
+  'R25: 200 calls with large args and results stay listed, their text out of shared state',
+  { timeoutMs: 120_000 },
+  async ($, on) => {
+    const world = worldOf(on);
+    const state = stateOf(on);
+    await $.session.start(SESSION);
+    for (let i = 0; i < 201; i++) {
+      world.results[`c${i}`] = { result: 'r', text: 'r'.repeat(20_000) };
+      await respond($ as never, world, [{ id: `c${i}`, name: 'Read' }]);
+      await $.tool.call({ tool: 'Read', tool_use_id: `c${i}`, q: 'a'.repeat(20_000) } as never);
+    }
+    await run($ as never);
+    const { text, buttons } = await draw($ as never);
+    expect(buttons.filter((button) => button.key.startsWith('row:'))).toHaveLength(200);
+    expect(text).toContain('1 older calls are in the logs');
+    expect(JSON.stringify(state.get('calls'))).not.toContain('r'.repeat(100));
+    expect(JSON.stringify(state.get('calls'))).not.toContain('a'.repeat(100));
+    await press($ as never, 'row:c200');
+    const detail = (await draw($ as never)).text;
+    expect(detail).toContain('r'.repeat(1000));
+    expect(detail).toContain('a'.repeat(1000));
+  },
+);
+
 test('R6: headless, /telltale answers that the pane needs an interactive session', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(HEADLESS);

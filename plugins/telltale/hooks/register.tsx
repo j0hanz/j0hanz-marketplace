@@ -4,7 +4,7 @@
 import { atom, read, update } from 'claude-code';
 import type { EngineInterface, Register, SessionUsage } from 'claude-code';
 
-import type { Call, Inventory, InventoryRow, NextAction, View } from '../types';
+import type { Call, CallDetail, Inventory, InventoryRow, NextAction, View } from '../types';
 import {
   chunks,
   cutArgs,
@@ -95,6 +95,9 @@ const stale = new Set<string>();
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
+// R25: args, result text and used values of the calls the pane lists, by id. Kept here, not in
+// `$.state`, which every plugin can read and which refuses a value over 4 MiB.
+const details = new Map<string, CallDetail>();
 
 const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
 
@@ -339,21 +342,16 @@ export const register: Register = (on, options) => {
       buffer.calls.push(call);
       const json = JSON.stringify(args);
       const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
-      const shown: Call = {
-        ...meta,
-        args: json.slice(0, SHOWN),
-        argsChars: json.length,
-        text: text.slice(0, SHOWN),
-        textChars: text.length,
-        next: null,
-        used: [],
-      };
+      const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
+      details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
       let evicted = 0;
       const kept = await update($, calls, (list) => {
         const all = [...list, shown];
         evicted = Math.max(0, all.length - KEEP);
         return all.slice(evicted);
       });
+      const ids = new Set(kept.map((one) => one.id));
+      for (const key of details.keys()) if (!ids.has(key)) details.delete(key);
       if (evicted > 0) await update($, dropped, (n) => n + evicted);
       // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
       const newest = kept.at(-1)?.id ?? null;
@@ -407,6 +405,7 @@ export const register: Register = (on, options) => {
       pendingReason = 'clear';
       pending.clear(); // the cleared rows can never be relabelled
       stale.clear();
+      details.clear();
       await savePending($);
       await safe(async () => {
         await update($, calls, () => []);
@@ -509,10 +508,13 @@ export const register: Register = (on, options) => {
         }
       });
       await safe(async () => {
+        for (const [id, found] of done) {
+          if (details.has(id)) details.get(id)!.used = found.used;
+        }
         await update($, calls, (list) =>
           list.map((call) => {
             const found = done.get(call.id);
-            return found ? { ...call, next: found.next, used: found.used } : call;
+            return found ? { ...call, next: found.next } : call;
           }),
         );
         for (const call of turn.calls) {
@@ -599,6 +601,7 @@ export const register: Register = (on, options) => {
 
     if (current === 'detail' && call) {
       const tokens = formatTokens(estTokens(call.textChars));
+      const detail = details.get(call.id);
       return (
         <Box flexDirection="column">
           {tabs}
@@ -614,17 +617,27 @@ export const register: Register = (on, options) => {
             Back
           </Button>
           <Text bold>{`${call.tool}${call.server ? `  (${call.server})` : ''}`}</Text>
-          <Text dimColor>arguments</Text>
-          {chunks(show(pretty(call.args), call.args, call.argsChars)).map((part, i) => (
-            <Text key={`args:${i}`}>{part}</Text>
-          ))}
-          <Text dimColor>what Claude read</Text>
-          {chunks(show(pretty(call.text), call.text, call.textChars)).map((part, i) => (
-            <Text key={`text:${i}`}>{part}</Text>
-          ))}
+          {detail ? (
+            [
+              <Text key="args" dimColor>
+                arguments
+              </Text>,
+              ...chunks(show(pretty(detail.args), detail.args, call.argsChars)).map((part, i) => (
+                <Text key={`args:${i}`}>{part}</Text>
+              )),
+              <Text key="text" dimColor>
+                what Claude read
+              </Text>,
+              ...chunks(show(pretty(detail.text), detail.text, call.textChars)).map((part, i) => (
+                <Text key={`text:${i}`}>{part}</Text>
+              )),
+            ]
+          ) : (
+            <Text dimColor>text not kept after a reload; see the logs</Text>
+          )}
           <Text>{`size: ${call.textChars} chars · ~${tokens} tok${call.isError ? ' · error' : ''}`}</Text>
           <Text>{`next: ${call.next ?? 'pending'} · ${call.ms}ms (duration includes any permission prompt)`}</Text>
-          <Text>{`used in answer: ${call.used.length > 0 ? call.used.join(', ') : 'none'}`}</Text>
+          <Text>{`used in answer: ${detail && detail.used.length > 0 ? detail.used.join(', ') : 'none'}`}</Text>
         </Box>
       );
     }

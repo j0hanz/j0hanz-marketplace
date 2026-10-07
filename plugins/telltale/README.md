@@ -113,7 +113,7 @@ A reload of the mod (editing it under `--plugin-dir`, or changing its settings) 
 
 ## Redaction
 
-Redaction applies to the logs only. The pane shows raw data for the 200 most recent calls.
+Redaction applies to the logs only. The pane shows raw data for the 200 most recent calls; that data stays in the mod's memory and is not readable by other plugins.
 
 Before any cut, these patterns are replaced by `[redacted]` in argument values and result text:
 
@@ -164,7 +164,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R22** If Claude Code cannot report context usage, Inventory shows `Context usage unavailable` and Calls keeps working.
 - **R23** The pane shows a view row `1: Calls`, `2: Inventory`; `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
 - **R24** Logged string argument values longer than 2,000 characters are cut to 2,000 followed by `…[cut N chars]`, after redaction.
-- **R25** The pane keeps full, unredacted, uncut args and result text for the 200 most recent calls; older calls leave the list, which ends with `<n> older calls are in the logs`.
+- **R25** The pane keeps the first 20,000 characters of args and result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so; older calls leave the list, which ends with `<n> older calls are in the logs`.
 
 ## License
 
