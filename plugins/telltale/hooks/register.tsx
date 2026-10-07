@@ -51,6 +51,7 @@ type Captured = {
   isError: boolean;
   blocks: string[];
 };
+type Done = { next: NextAction; used: string[] };
 type Turn = {
   calls: Captured[];
   skills: { skill: string; chars: number }[];
@@ -92,6 +93,10 @@ const callResponse = new Map<string, { agent: string; index: number }>();
 const pending = new Map<string, string>();
 // Pending ids carried over a reload: their response index belongs to the old module.
 const stale = new Set<string>();
+const forget = (id: string) => {
+  pending.delete(id);
+  stale.delete(id);
+};
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
@@ -126,6 +131,74 @@ async function write($: EngineInterface, name: string, text: string) {
   }
 }
 
+/** R4, R5, R7, R8, R15: one turn's records, and its context record when it has one. */
+async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>) {
+  const records = [
+    ...turn.calls.map((call) => {
+      const text = redact(call.text) as string;
+      return JSON.stringify({
+        type: 'call',
+        tool: call.tool,
+        server: call.server,
+        agentId: call.agentId,
+        ms: call.ms,
+        args: cutArgs(redact(call.args)),
+        chars: call.text.length,
+        estTokens: estTokens(call.text.length),
+        isError: call.isError,
+        blocks: call.blocks,
+        head: text.slice(0, 300),
+        tail: text.slice(-300),
+        next: done.get(call.id)!.next,
+        usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
+        ...(fullPayloads ? { text } : {}),
+      });
+    }),
+    ...turn.skills.map((skill) =>
+      JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
+    ),
+  ];
+  if (records.length > 0) {
+    const n = ++turnNo;
+    const parts = toParts(records);
+    for (const [k, part] of parts.entries()) {
+      const name = parts.length === 1 ? `turn-${n}.jsonl` : `turn-${n}-part${k + 1}.jsonl`;
+      await write($, name, `${part.join('\n')}\n`);
+    }
+  }
+  if (turn.context) {
+    contextNo += 1;
+    const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
+    await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
+  }
+}
+
+/** R10, R11, R25: a call's pane row and detail, keeping the newest 200. */
+async function listCall($: EngineInterface, call: Captured) {
+  const json = JSON.stringify(call.args);
+  const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
+  const shown: Call = { ...meta, argsChars: json.length, textChars: call.text.length, next: null };
+  details.set(call.id, { args: json.slice(0, SHOWN), text: call.text.slice(0, SHOWN), used: [] });
+  let gone: Call[] = [];
+  const kept = await update($, calls, (list) => {
+    const all = [...list, shown];
+    gone = all.slice(0, Math.max(0, all.length - KEEP));
+    return all.slice(gone.length);
+  });
+  // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
+  for (const one of gone) details.delete(one.id);
+  const evicted = gone.length;
+  if (evicted > 0) await update($, dropped, (n) => n + evicted);
+  // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
+  const newest = kept.at(-1)?.id ?? null;
+  let moved = false;
+  await update($, selected, (current) => {
+    moved = current === null || !kept.some((one) => one.id === current);
+    return moved ? newest : current;
+  });
+  if (moved) void focusRow($, newest);
+}
+
 /** Puts the focus ring on a row; a pane without the keys answers `{ deny }`, which is fine. */
 async function focusRow($: EngineInterface, id: string | null) {
   if (id !== null) await $.ui.focus({ requestId: PANE, key: `row:${id}` }).catch(() => {});
@@ -157,10 +230,7 @@ async function relabel($: EngineInterface, agent: string, index: number) {
     return all.map((call) => (labels[call.id] ? { ...call, next: labels[call.id]! } : call));
   });
   for (const [id, label] of Object.entries(labels)) {
-    if (label !== 'pending') {
-      pending.delete(id);
-      stale.delete(id);
-    }
+    if (label !== 'pending') forget(id);
   }
   await savePending($);
 }
@@ -348,30 +418,7 @@ export const register: Register = (on, options) => {
       };
       // Before the return: the turn end reads `buffer` for its log.
       buffer.calls.push(call);
-      void later(async () => {
-        const json = JSON.stringify(args);
-        const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
-        const shown: Call = { ...meta, argsChars: json.length, textChars: text.length, next: null };
-        details.set(id, { args: json.slice(0, SHOWN), text: text.slice(0, SHOWN), used: [] });
-        let gone: Call[] = [];
-        const kept = await update($, calls, (list) => {
-          const all = [...list, shown];
-          gone = all.slice(0, Math.max(0, all.length - KEEP));
-          return all.slice(gone.length);
-        });
-        // Only the ids this update evicted: a parallel call may have set its detail meanwhile.
-        for (const one of gone) details.delete(one.id);
-        const evicted = gone.length;
-        if (evicted > 0) await update($, dropped, (n) => n + evicted);
-        // delta R11: with nothing selected, or the selection evicted, the newest kept call takes it.
-        const newest = kept.at(-1)?.id ?? null;
-        let moved = false;
-        await update($, selected, (current) => {
-          moved = current === null || !kept.some((call) => call.id === current);
-          return moved ? newest : current;
-        });
-        if (moved) void focusRow($, newest);
-      });
+      void later(() => listCall($, call));
     } catch {
       // R3: a fault here never blocks the result.
     }
@@ -480,46 +527,7 @@ export const register: Register = (on, options) => {
       const { listed, running, done } = ready;
       // R5, R6: the logs are the durable output. They are written first, in their own `safe`,
       // so a refused pane-state write (below) can never cost a turn its file.
-      await safe(async () => {
-        const records = [
-          ...turn.calls.map((call) => {
-            const text = redact(call.text) as string;
-            return JSON.stringify({
-              type: 'call',
-              tool: call.tool,
-              server: call.server,
-              agentId: call.agentId,
-              ms: call.ms,
-              args: cutArgs(redact(call.args)),
-              chars: call.text.length,
-              estTokens: estTokens(call.text.length),
-              isError: call.isError,
-              blocks: call.blocks,
-              head: text.slice(0, 300),
-              tail: text.slice(-300),
-              next: done.get(call.id)!.next,
-              usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
-              ...(fullPayloads ? { text } : {}),
-            });
-          }),
-          ...turn.skills.map((skill) =>
-            JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
-          ),
-        ];
-        if (records.length > 0) {
-          const n = ++turnNo;
-          const parts = toParts(records);
-          for (const [k, part] of parts.entries()) {
-            const name = parts.length === 1 ? `turn-${n}.jsonl` : `turn-${n}-part${k + 1}.jsonl`;
-            await write($, name, `${part.join('\n')}\n`);
-          }
-        }
-        if (turn.context) {
-          contextNo += 1;
-          const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
-          await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
-        }
-      });
+      await safe(() => writeLogs($, turn, done));
       await settled;
       await safe(async () => {
         for (const [id, found] of done) {
@@ -549,10 +557,7 @@ export const register: Register = (on, options) => {
               ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
             ),
           );
-          for (const id of ids) {
-            pending.delete(id);
-            stale.delete(id);
-          }
+          for (const id of ids) forget(id);
           await savePending($);
         }
       });
@@ -618,6 +623,14 @@ export const register: Register = (on, options) => {
     if (current === 'detail' && call) {
       const tokens = formatTokens(estTokens(call.textChars));
       const detail = details.get(call.id);
+      const field = (key: string, label: string, raw: string, full: number) => [
+        <Text key={key} dimColor>
+          {label}
+        </Text>,
+        ...chunks(show(pretty(raw), raw, full)).map((part, i) => (
+          <Text key={`${key}:${i}`}>{part}</Text>
+        )),
+      ];
       return (
         <Box flexDirection="column">
           {tabs}
@@ -635,18 +648,8 @@ export const register: Register = (on, options) => {
           <Text bold>{`${call.tool}${call.server ? `  (${call.server})` : ''}`}</Text>
           {detail ? (
             [
-              <Text key="args" dimColor>
-                arguments
-              </Text>,
-              ...chunks(show(pretty(detail.args), detail.args, call.argsChars)).map((part, i) => (
-                <Text key={`args:${i}`}>{part}</Text>
-              )),
-              <Text key="text" dimColor>
-                what Claude read
-              </Text>,
-              ...chunks(show(pretty(detail.text), detail.text, call.textChars)).map((part, i) => (
-                <Text key={`text:${i}`}>{part}</Text>
-              )),
+              ...field('args', 'arguments', detail.args, call.argsChars),
+              ...field('text', 'what Claude read', detail.text, call.textChars),
             ]
           ) : (
             <Text dimColor>text not kept after a reload; see the logs</Text>
