@@ -81,6 +81,26 @@ test('R14: secret patterns in strings are redacted', async () => {
   expect(redact('jwt eyJhbGci.eyJzdWIi.sig_1')).toBe('jwt [redacted]');
 });
 
+test('R14: a listed field inside JSON text has its string value redacted', async () => {
+  expect(redact('{"access_token":"abc123","user":"ann"}')).toBe(
+    '{"access_token":"[redacted]","user":"ann"}',
+  );
+  expect(redact('{ "Password" : "p\\"w" , "n": 1 }')).toBe(
+    '{ "Password" : "[redacted]" , "n": 1 }',
+  );
+});
+
+test('R14: a listed field inside escaped JSON text is redacted too', async () => {
+  expect(redact('{"body":"{\\"token\\":\\"abc123\\"}"}')).toBe(
+    '{"body":"{\\"token\\":\\"[redacted]\\"}"}',
+  );
+});
+
+test('R14: JSON text without a listed field is unchanged', async () => {
+  const text = '{"max_tokens":1000,"tokenizer":"x","note":"token is fine"}';
+  expect(redact(text)).toBe(text);
+});
+
 test('R14: a value that matches no pattern is unchanged', async () => {
   expect(redact({ q: 'refund', n: 3, ok: true, none: null })).toEqual({
     q: 'refund',

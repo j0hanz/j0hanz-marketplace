@@ -64,11 +64,23 @@ const SECRET_PATTERNS = [
   /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
 const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
+// R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
+// string holding JSON). ponytail: deeper escaping and non-string values are not matched.
+const FIELDS = [...SECRET_FIELDS].join('|');
+const JSON_FIELD = new RegExp(String.raw`("(?:${FIELDS})"\s*:\s*")(?:[^"\\]|\\.)*(")`, 'gi');
+const ESCAPED_FIELD = new RegExp(
+  String.raw`(\\"(?:${FIELDS})\\"\s*:\s*\\")(?:(?!\\")[^"])*(\\")`,
+  'gi',
+);
 
 const redactText = (text: string): string =>
   SECRET_PATTERNS.reduce(
     (out, pattern) => out.replace(pattern, '[redacted]'),
-    text.replace(PRIVATE_KEY, '[redacted]').replace(BEARER, '$1[redacted]'),
+    text
+      .replace(JSON_FIELD, '$1[redacted]$2')
+      .replace(ESCAPED_FIELD, '$1[redacted]$2')
+      .replace(PRIVATE_KEY, '[redacted]')
+      .replace(BEARER, '$1[redacted]'),
   );
 
 /** R14: a deep copy with secret fields and secret-shaped strings replaced by `[redacted]`. */

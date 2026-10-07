@@ -124,7 +124,7 @@ Before any cut, these patterns are replaced by `[redacted]` in argument values a
 
 A match may not follow a letter, digit, `_` or `-`, unless that letter ends a JSON escape (`\n`, `\r`, `\t`).
 
-The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `api-key`, `authorization`, `access_token`, `refresh_token` or `client_secret` (case-insensitive) is replaced too.
+The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `apikey`, `api-key`, `authorization`, `access_token`, `refresh_token` or `client_secret` (case-insensitive) is replaced too. This also applies inside JSON text, such as a result that is a JSON document, when the value is a string.
 
 Tool, server and skill names, paths and field names are never redacted.
 
@@ -149,7 +149,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R11** Up/Down move the selection, Enter opens the detail; new calls do not move an existing selection; the detail shows args and the text Claude read (pretty-printed only when the compact JSON round-trips losslessly and the indented form serializes (`JSON.stringify`) to at most 45,000 characters), size, error flag, next action and used-in-answer; `b` returns with the same row selected; Esc closes the pane; with nothing selected, or the selection evicted, the newest call is selected.
 - **R12** At main-turn end each call is labelled from its agent's next complete response: `pending` (none yet, agent running), `aborted` (none, agent stopped), `answered` (no tool), `retried` (same tool), `asked-user` (`AskUserQuestion`), `other-tool`; calls from one response share a label; a `pending` row is relabelled in the pane when its agent responds, and becomes `aborted` if the agent stops; the written file keeps `pending`.
 - **R13** For each call in the turn, up to 5 values (maximal runs of `[A-Za-z0-9_.:/-]`, trailing `.:/-` trimmed, ≥4 chars, with a digit) that appear in both the result and the main answer, in result order; no answer means an empty list.
-- **R14** Before any cut or preview, the listed secret patterns and the whole values of the listed field names are replaced with `[redacted]` in argument values, result previews, logged result text and the `usedInAnswer` values; never in tool, server or skill names, paths or field names; a match may not follow a letter, digit, `_` or `-` unless that character ends a JSON escape; a private-key block matches anywhere.
+- **R14** Before any cut or preview, the listed secret patterns and the whole values of the listed field names (in objects, and string values in JSON text) are replaced with `[redacted]` in argument values, result previews, logged result text and the `usedInAnswer` values; never in tool, server or skill names, paths or field names; a match may not follow a letter, digit, `_` or `-` unless that character ends a JSON escape; a private-key block matches anywhere.
 - **R15** Records over the per-file limit are written across numbered parts, none dropped; a single oversized record has its largest fields replaced in turn by `…[cut N chars]` until it fits and is marked `"truncated": true`.
 - **R16** If a log write fails, one notice per session names the folder; records stay in the pane; the turn is unaffected.
 - **R17** `/clear` empties the Calls view (and returns from a detail); files already written stay.
