@@ -3,7 +3,15 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "--prefix", "${CLAUDE_PLUGIN_ROOT}", "@j0hanz/filesystem-mcp@2.7.3", "--allow-cwd", "--root-boundary", "."],
+      "args": [
+        "-y",
+        "--prefix",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "@j0hanz/filesystem-mcp@2.7.3",
+        "--allow-cwd",
+        "--root-boundary",
+        "."
+      ],
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",

@@ -255,7 +255,9 @@ const section = (plugin) =>
       'MCP servers',
       plugin.mcpServers.map((server) => `${code(server.name)} (${server.transport})`),
     ),
-  ].join('\n');
+  ]
+    .join('\n')
+    .replace(/\n+$/, ''); // a plugin with no bullets (a mod) would end on a blank line
 
 const REGIONS = {
   install: (site) => fence(site.plugins.map((p) => p.installCommand)),
