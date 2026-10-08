@@ -12,6 +12,7 @@ export type Call = {
   textChars: number;
   isError: boolean;
   next: NextAction | null; // null until the turn ends
+  turn: number; // R34: the number of the turn file the call's record goes to
 };
 // R25: a listed call's text, kept in the mod's memory rather than in `$.state`.
 export type CallDetail = {
@@ -29,7 +30,21 @@ export type InventoryRow = {
 export type Inventory = {
   rows: InventoryRow[];
   status: 'idle' | 'measuring' | 'unavailable' | `measure failed: ${string}`;
+  window: number | null; // R41: the context window the breakdown measures against
+  measured: Record<string, number>; // R21, R47: the last `m` figures, by row id
 };
+// R26, R42: counts since session start or the last /clear, kept across a hot reload (R47).
+export type ToolTotals = { calls: number; errors: number; tokens: number };
+export type Totals = {
+  calls: number;
+  errors: number;
+  tokens: number;
+  skills: string[];
+  ctx: number | null; // R26: Claude Code's share of the context window in use
+  tools: Record<string, ToolTotals>; // by full tool name
+};
+// R29: counted calls in flight, by tool_use_id.
+export type Running = Record<string, { tool: string; startedAt: number }>;
 
 declare module 'claude-code' {
   interface PluginState {
@@ -40,8 +55,15 @@ declare module 'claude-code' {
       selected: string | null;
       inventory: Inventory;
       folder: string; // absolute log folder for this session ('' until session start)
+      start: string; // R10: the directory the session started in ('' until session start)
       warned: boolean; // R16: the write-failure notice was shown this session
       pending: Record<string, string>; // delta R12: pending call id -> agent id
+      totals: Totals;
+      running: Running;
+      tick: number; // R29: bumped each second while a call runs, so the band redraws
+      turnNo: number; // R34: the last turn number this process took
+      toastedTurn: number; // R28: the turn that already had its toast
+      message: string | null; // R39, R40: the detail view's last copy message
     };
   }
 }

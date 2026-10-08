@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs (R1 to R25) are indexed in ../README.md, "Requirements index".
+// directly. Requirement IDs (R1 to R48) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
@@ -17,7 +17,7 @@ export const estTokens = (chars: number): number => Math.ceil(chars / 4);
 export const formatTokens = (t: number): string =>
   t < 1000 ? String(t) : `${(Math.round(t / 100) / 10).toFixed(1)}k`;
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** R1: the receipt line, or null when the turn used no MCP tool and no skill. */
 export const receipt = (turn: {
@@ -244,3 +244,240 @@ export const chunks = (text: string, size = 10_000): string[] =>
   Array.from({ length: Math.max(1, Math.ceil(text.length / size)) }, (_, i) =>
     text.slice(i * size, (i + 1) * size),
   );
+
+// v0.3 helpers: the display (R26 to R48) and the paths, JSON and naming checks the hooks share
+// (R10, R19, R37, delta R18). The IDs are in the README index.
+
+/** R32: the tool name without its `mcp__<server>__` prefix. */
+export const toolName = (tool: string): string => {
+  const server = mcpServer(tool);
+  return server === null ? tool : tool.slice(`mcp__${server}__`.length);
+};
+
+/** R32: below 1,000 ms as `812ms`, else seconds to one decimal, rounded half up. */
+export const formatDur = (ms: number): string =>
+  ms < 1000 ? `${Math.round(ms)}ms` : `${(Math.floor(ms / 100 + 0.5) / 10).toFixed(1)}s`;
+
+/** R29: whole seconds, or `<m>m<ss>s` from a minute. */
+export const formatElapsed = (ms: number): string => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
+};
+
+/** R48: `text` if it fits `width`, else cut to `width` ending with `…`. */
+export const clip = (text: string, width: number): string =>
+  text.length <= width ? text : `${text.slice(0, Math.max(0, width - 1))}…`;
+
+/** R26: the status entry, or undefined while nothing was called or expanded. */
+export const statusLine = (t: {
+  calls: number;
+  errors: number;
+  tokens: number;
+  skills: number;
+  ctx: number | null;
+}): string | undefined => {
+  if (t.calls === 0 && t.skills === 0) return undefined;
+  const parts = ['telltale'];
+  if (t.calls > 0) parts.push(`${t.calls} MCP`);
+  if (t.errors > 0) parts.push(`${t.errors}✗`);
+  if (t.calls > 0) parts.push(`~${formatTokens(t.tokens)} tok`);
+  if (t.skills > 0) parts.push(plural(t.skills, 'skill'));
+  if (t.ctx !== null) parts.push(`ctx ${t.ctx}%`);
+  return parts.join(' · ');
+};
+
+/** R29: the band row; parts 4 then 3 drop to fit, then the call's name is cut. */
+export const bandRow = (
+  b: {
+    tool: string;
+    elapsedMs: number;
+    more: number;
+    turnCalls: number;
+    turnTokens: number;
+    turnErrors: number;
+  },
+  width: number,
+): string => {
+  const elapsed = formatElapsed(b.elapsedMs);
+  const more = b.more > 0 ? ` +${b.more} running` : '';
+  const turn =
+    b.turnCalls > 0 ? ` · turn: ${b.turnCalls} MCP · ~${formatTokens(b.turnTokens)} tok` : '';
+  const errors = b.turnCalls > 0 && b.turnErrors > 0 ? ` · ${b.turnErrors}✗` : '';
+  const head = (name: string) => `◐ ${name} ${elapsed}${more}`;
+  for (const row of [head(b.tool) + turn + errors, head(b.tool) + turn, head(b.tool)]) {
+    if (row.length <= width) return row;
+  }
+  const room = width - head('').length;
+  return clip(head(clip(b.tool, Math.max(1, room))), width);
+};
+
+export type TableRow = {
+  tool: string; // as drawn: prefix removed, `↳ ` for a subagent's call
+  server: string | null;
+  ms: number;
+  tokens: number;
+  isError: boolean;
+  next: string | null; // the R12 label, null until the turn ends
+};
+export type Table = {
+  header: string;
+  narrow: boolean;
+  // `main` holds TOOL, SERVER, TIME and `~<tok>`; `mark` is ` ✗` or ''; `next` is the
+  // spacing up to the NEXT column and its label ('' when narrow).
+  rows: { main: string; mark: string; next: string }[];
+};
+
+/** R32 (amended): columns two spaces apart, SERVER at most 12, TOOL 4 to 32 and what is left. */
+export const callTable = (rows: TableRow[], width: number): Table => {
+  const narrow = width < 50;
+  const cells = rows.map((r) => ({
+    tool: r.tool,
+    server: clip(r.server ?? '-', 12),
+    time: formatDur(r.ms),
+    tok: `~${formatTokens(r.tokens)}`,
+    mark: r.isError ? ' ✗' : '',
+    next: r.next ?? '…',
+  }));
+  const widest = (header: string, values: string[]) =>
+    Math.max(header.length, ...values.map((v) => v.length));
+  const serverW = widest(
+    'SERVER',
+    cells.map((c) => c.server),
+  );
+  const timeW = widest(
+    'TIME',
+    cells.map((c) => c.time),
+  );
+  const tokW = widest(
+    'TOK',
+    cells.map((c) => c.tok + c.mark),
+  );
+  const nextW = widest(
+    'NEXT',
+    cells.map((c) => c.next),
+  );
+  const others = narrow ? timeW + tokW + 4 : serverW + timeW + tokW + nextW + 8;
+  const toolW = Math.max(
+    4,
+    Math.min(
+      32,
+      widest(
+        'TOOL',
+        cells.map((c) => c.tool),
+      ),
+      width - others,
+    ),
+  );
+  const pad = (s: string, w: number) => clip(s, w).padEnd(w);
+  const lead = (tool: string, server: string, time: string) =>
+    narrow
+      ? `${pad(tool, toolW)}  ${pad(time, timeW)}  `
+      : `${pad(tool, toolW)}  ${pad(server, serverW)}  ${pad(time, timeW)}  `;
+  return {
+    narrow,
+    header: narrow
+      ? `${lead('TOOL', '', 'TIME')}TOK`
+      : `${lead('TOOL', 'SERVER', 'TIME')}${pad('TOK', tokW)}  NEXT`,
+    rows: cells.map((c) => ({
+      main: lead(c.tool, c.server, c.time) + c.tok,
+      mark: c.mark,
+      next: narrow ? '' : `${' '.repeat(tokW - c.tok.length - c.mark.length + 2)}${c.next}`,
+    })),
+  };
+};
+
+/** R41: 20 cells, filled by share of the costliest, rounded half up; at least 1 above zero. */
+export const bar = (tokens: number, max: number): string => {
+  const filled =
+    max <= 0
+      ? 0
+      : Math.min(20, Math.max(tokens > 0 ? 1 : 0, Math.floor((20 * tokens) / max + 0.5)));
+  return '━'.repeat(filled) + '─'.repeat(20 - filled);
+};
+
+/** R41: `part` over `whole` as a percentage to one decimal, rounded half up. */
+export const pct = (part: number, whole: number): string =>
+  (Math.floor((part * 1000) / whole + 0.5) / 10).toFixed(1);
+
+/** R42: a server's share of the session totals, or `never called`. */
+export const usageText = (
+  u: { calls: number; errors: number; tokens: number } | undefined,
+): string => {
+  if (!u || u.calls === 0) return 'never called';
+  const parts = [plural(u.calls, 'call')];
+  if (u.errors > 0) parts.push(`${u.errors}✗`);
+  parts.push(`~${formatTokens(u.tokens)} read`);
+  return parts.join(' · ');
+};
+
+/** R41 (amended): `<server>  <bar>  <tok> tok · <p>% · <usage>`. */
+export const serverHeading = (h: {
+  name: string;
+  pad: number;
+  tokens: number;
+  max: number;
+  window: number | null;
+  usage: string;
+}): string =>
+  `${h.name.padEnd(h.pad)}  ${bar(h.tokens, h.max)}  ${formatTokens(h.tokens)} tok` +
+  `${h.window ? ` · ${pct(h.tokens, h.window)}%` : ''} · ${h.usage}`;
+
+/** R36 (amended): `<tool> · <server> · agent <id> · <dur> · <c> chars · ~<tok> tok · <next>`. */
+export const detailHeader = (c: {
+  tool: string;
+  server: string | null;
+  agentId: string | null;
+  ms: number;
+  chars: number;
+  tokens: number;
+  next: string | null;
+}): string =>
+  [
+    c.tool,
+    ...(c.server ? [c.server] : []),
+    ...(c.agentId ? [`agent ${c.agentId}`] : []),
+    formatDur(c.ms),
+    `${c.chars} chars`,
+    `~${formatTokens(c.tokens)} tok`,
+    c.next ?? '…',
+  ].join(' · ');
+
+/** R19: a path that starts at a drive or a root, not at the session's directory. */
+export const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
+
+/** `path` with `/` separators and its `.` and `..` segments resolved. */
+const normalize = (path: string): string => {
+  const slashed = path.replaceAll('\\', '/');
+  const parts: string[] = [];
+  for (const part of slashed.split('/')) {
+    if (part === '..' && parts.length > 1) parts.pop();
+    else if (part !== '.' && (part !== '' || parts.length === 0)) parts.push(part);
+  }
+  // A UNC share (`\\host\share`) keeps both of its leading separators.
+  return (slashed.startsWith('//') ? '/' : '') + parts.join('/');
+};
+
+/** R10 (amended): the log folder relative to the start directory when under it, else absolute. */
+export const logsPath = (folder: string, startDir: string): string => {
+  const path = normalize(folder);
+  const base = normalize(startDir).replace(/\/+$/, '');
+  if (base === '') return path; // an unknown start directory: no prefix to strip
+  return path.startsWith(`${base}/`) ? path.slice(base.length + 1) : path;
+};
+
+/** R37: whether `text` parses as JSON. */
+export const isJson = (text: string): boolean => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** delta R18: a skill's group: its plugin, else its source without `Settings`, else `other`. */
+export const skillGroup = (source?: string, plugin?: string): string =>
+  source === 'plugin' ? (plugin ?? 'other') : source ? source.replace(/Settings$/, '') : 'other';
+
+/** R28, R29: a call named as `<server>.<tool>`. */
+export const serverTool = (tool: string): string => `${mcpServer(tool)}.${toolName(tool)}`;
