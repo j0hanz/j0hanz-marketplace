@@ -120,6 +120,46 @@ test('R14: JSON text without a listed field is unchanged', async () => {
   expect(redact(text)).toBe(text);
 });
 
+test('R14: a listed field in camelCase or with - or _ is redacted', async () => {
+  expect(
+    redact({ accessToken: 'a', 'refresh-token': 'b', clientSecret: 'c', API_KEY: 'd' }),
+  ).toEqual({
+    accessToken: '[redacted]',
+    'refresh-token': '[redacted]',
+    clientSecret: '[redacted]',
+    API_KEY: '[redacted]',
+  });
+  expect(redact('{"accessToken":"a","user":"ann"}')).toBe(
+    '{"accessToken":"[redacted]","user":"ann"}',
+  );
+  expect(redact(JSON.stringify({ body: JSON.stringify({ clientSecret: 'z', n: 1 }) }))).toBe(
+    '{"body":"{\\"clientSecret\\":\\"[redacted]\\",\\"n\\":1}"}',
+  );
+});
+
+test('R14: the added credential field names are redacted', async () => {
+  const names = [
+    'x-api-key',
+    'id_token',
+    'authToken',
+    'sessionToken',
+    'private_key',
+    'aws_secret_access_key',
+    'Cookie',
+    'Set-Cookie',
+  ];
+  const input = Object.fromEntries(names.map((name) => [name, 'v']));
+  const output = Object.fromEntries(names.map((name) => [name, '[redacted]']));
+  expect(redact(input)).toEqual(output);
+  expect(redact(JSON.stringify(input))).toBe(JSON.stringify(output));
+});
+
+test('R14: pagination and count fields stay unredacted', async () => {
+  const value = { pageToken: 'p1', next_page_token: 'p2', max_tokens: 10, tokenizer: 'x' };
+  expect(redact(value)).toEqual(value);
+  expect(redact(JSON.stringify(value))).toBe(JSON.stringify(value));
+});
+
 test('R14: a value that matches no pattern is unchanged', async () => {
   expect(redact({ q: 'refund', n: 3, ok: true, none: null })).toEqual({
     q: 'refund',

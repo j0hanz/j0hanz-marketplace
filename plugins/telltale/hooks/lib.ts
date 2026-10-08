@@ -34,19 +34,29 @@ export const receipt = (turn: {
   return parts.length > 0 ? `telltale: ${parts.join(' · ')}` : null;
 };
 
-const SECRET_FIELDS = new Set([
+// R14: written with `_` between words; a key matches ignoring case and with `_`, `-` or nothing
+// between its words.
+const SECRET_FIELDS = [
   'password',
   'passwd',
   'secret',
   'token',
   'api_key',
-  'apikey',
-  'api-key',
+  'x_api_key',
   'authorization',
   'access_token',
   'refresh_token',
+  'id_token',
+  'auth_token',
+  'session_token',
   'client_secret',
-]);
+  'private_key',
+  'aws_secret_access_key',
+  'cookie',
+  'set_cookie',
+];
+const squash = (key: string) => key.toLowerCase().replace(/[_-]/g, '');
+const SECRET_KEYS = new Set(SECRET_FIELDS.map(squash));
 
 // R14. A match must not follow a letter, digit, `_` or `-`, unless that letter ends a JSON
 // escape (`\n`, `\r`, `\t`): MCP results are often JSON text. A private key block matches anywhere.
@@ -68,7 +78,7 @@ const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
 // string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
 // quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
 // matched.
-const FIELDS = [...SECRET_FIELDS].join('|');
+const FIELDS = SECRET_FIELDS.map((name) => name.replaceAll('_', '[_-]?')).join('|');
 const JSON_FIELD = new RegExp(String.raw`("(?:${FIELDS})"\s*:\s*")(?:[^"\\]|\\.)*(")`, 'gi');
 const ESCAPED_FIELD = new RegExp(
   String.raw`(\\"(?:${FIELDS})\\"\s*:\s*\\")(?:\\\\(?:\\.|[^"\\])|\\[^"\\]|[^"\\])*(\\")`,
@@ -93,7 +103,7 @@ export const redact = (value: unknown): unknown => {
     return Object.fromEntries(
       Object.entries(value).map(([key, inner]) => [
         key,
-        SECRET_FIELDS.has(key.toLowerCase()) ? '[redacted]' : redact(inner),
+        SECRET_KEYS.has(squash(key)) ? '[redacted]' : redact(inner),
       ]),
     );
   }
