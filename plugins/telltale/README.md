@@ -6,7 +6,7 @@ See what your skills and MCP servers put in front of Claude, which tools it call
 
 ## What it is
 
-Telltale is a Claude Code mod (a hooks module). It only observes: it never changes, delays or blocks a tool call, and it opens no network connection. It writes local files only. It needs Claude Code 2.1.287 or later (built and tested against 2.1.288). Copilot CLI does not run mods, so the plugin carries the `claude-code-only` catalog tag.
+Telltale is a Claude Code mod (a hooks module). It only observes: it never changes, delays or blocks a tool call, and it opens no network connection. It writes local files only. It needs Claude Code 2.1.288 or later (built and tested against 2.1.294). Copilot CLI does not run mods, so the plugin carries the `claude-code-only` catalog tag.
 
 ## Install
 
@@ -26,7 +26,28 @@ telltale: 2 MCP calls · 1 error · ~2.1k tok
 
 Segments appear only when non-zero, and a `skills: a, b` segment lists expanded skills. Tokens are characters divided by 4, rounded up per call. The count prints as an integer below 1,000, else one decimal with `k`. Built-in tools are never counted.
 
-Run `/telltale` to open the pane on the Calls view, with the newest call selected. Press Enter to open its detail: the arguments, the text Claude read, its size, whether it was an error, what Claude did next, and which values from the result showed up in the answer. Press `b` to go back to the list. Press `2` for the Inventory, which shows what each MCP server, skill and memory file costs in context. Press `m` there to measure exactly.
+While you work, without opening anything:
+
+- **Status line.** Session totals since start or the last `/clear`, with Claude Code's share of the context window in use:
+
+  ```text
+  telltale · 7 MCP · 1✗ · ~12.6k tok · ctx 61%
+  ```
+
+- **Band above the prompt.** While an MCP call runs, it shows the longest-running call, its elapsed time, and the turn so far. It is empty otherwise.
+
+  ```text
+  ◐ db.run_query 3s · turn: 2 MCP · ~2.2k tok · 1✗
+  ```
+
+- **Transcript.** Each completed MCP call's row gets one dim line beneath its tool line: `812ms · ~1.9k tok`, plus `· error` when it failed.
+- **Toast.** At most one per turn, for an MCP call that failed (`db.run_query failed · /telltale`) or that returned 40,000 characters or more (`github.search returned ~15.0k tok`).
+
+Run `/telltale` to open the pane on the Calls view, with the newest call selected. Calls is a table (`TOOL`, `SERVER`, `TIME`, `TOK`, `NEXT`), grouped by turn under `turn <N>` separators whose numbers match the log files. Failures are marked `✗` in the error colour. `retried`, `aborted` and `pending` show in the warning colour.
+
+Press Enter to open a call's detail. Its header reads `tool · server · time · chars · tokens · next`. The arguments and the text Claude read follow, coloured as JSON when they are JSON, then the values from the result that showed up in the answer. Press `n` and `p` to step to the older and newer call, `c` and `y` to copy the arguments or the result, and `b` to go back to the list.
+
+Press `2` for the Inventory, which shows what each MCP server, skill and memory file costs in context: totals and shares of the window, a bar per server, how often each server was called, and `never called` on tools loaded but not used. Press `m` there to measure exactly. In the fullscreen layout the pane docks beside the transcript and lets toasts show while it stays open.
 
 `/telltale [calls|inventory]` picks the view. An empty argument or `calls` opens Calls, and `inventory` opens Inventory. Anything else opens Calls and replies `unknown view "<arg>"; views: calls, inventory`.
 
@@ -39,6 +60,8 @@ Run `/telltale` to open the pane on the Calls view, with the newest call selecte
 | Up / Down | Calls     | move the selection                                                                                      |
 | Enter     | Calls     | open the detail of the selected call                                                                    |
 | `b`       | detail    | return to the list                                                                                      |
+| `n` / `p` | detail    | the next older / newer call                                                                             |
+| `c` / `y` | detail    | copy the arguments / the result text the pane keeps (the first 20,000 characters)                       |
 | `m`       | Inventory | measure: ask Claude Code for an exact token count of MCP tools and memory files (skills stay estimates) |
 | Esc       | anywhere  | close the pane                                                                                          |
 
@@ -109,7 +132,7 @@ jq -r 'select(.type=="call") | [.server // "-", .tool, .ms, .estTokens, .next] |
 
 ### Known limits
 
-A reload of the mod (editing it under `--plugin-dir`, or changing its settings) during a turn loses that turn's records made before the reload from its log file; the pane keeps its rows. A call whose model response began before the reload gets its `next` label from incomplete data.
+A reload of the mod (editing it under `--plugin-dir`, or changing its settings) during a turn loses that turn's records made before the reload from its log file; the pane keeps its rows. A call whose model response began before the reload gets its `next` label from incomplete data. A call still running when the mod reloads leaves the band and is not recorded.
 
 ## Redaction
 
@@ -138,7 +161,7 @@ Under `claude -p` the mod writes the same files and prints nothing of its own to
 
 ## Requirements index
 
-The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar). Each line is the current wording. Update the matching line whenever behaviour changes.
+The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar). Each line is the current wording. Update the matching line whenever behaviour changes.
 
 - **R1** After a main-thread turn in which Claude or a subagent called an MCP tool or expanded a skill, one receipt line `telltale: …` appears under the answer with MCP call count, error count, `~t tok` (chars ÷ 4, rounded up per call; `k` from 1,000 with one decimal) and `skills:` once each in first-expansion order; built-in tools never count; a call another plugin made via `$.tool.call` never counts (its id was never streamed by a model response), while a call Claude streamed counts whichever plugin's origin it carries; when another hook already set a line under the answer, the receipt follows it.
 - **R2** Subagent turns show no receipt; their calls count in the main turn that was running, or, between turns, in the next main turn that ends.
@@ -149,7 +172,7 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R7** Each skill expansion is recorded with skill name, chars and estTokens in the turn it belongs to.
 - **R8** When the first turn after a context build ends, a new `context-<N>.json` is written (N past the highest present) with reason `start`, `clear` or `compact`, the instruction files loaded and the tool descriptions sent; only a main-conversation compaction that went ahead counts as `compact`.
 - **R9** `/telltale` opens the pane at any width, or reuses and focuses it, showing the view R23 picks, with the newest row selected in Calls.
-- **R10** Calls lists the most recent calls since session start or the last `/clear`, up to the 200 R25 keeps, newest first, each row with tool, server, duration, estimated tokens and an error marker.
+- **R10** Calls lists the most recent calls since session start or the last `/clear`, up to the 200 R25 keeps, newest first, each row with tool, server, duration, estimated tokens, an error marker and the next action, laid out as R32 says (server and next left out below 50 columns); an empty list shows `No tool calls yet` and `logs: <folder>`, relative to the starting directory with `/` separators.
 - **R11** Up/Down move the selection, Enter opens the detail; new calls do not move an existing selection; the detail shows args and the text Claude read (pretty-printed only when the compact JSON round-trips losslessly and the indented form serializes (`JSON.stringify`) to at most 45,000 characters), size, error flag, next action and used-in-answer; `b` returns with the same row selected; Esc closes the pane; with nothing selected, or the selection evicted, the newest call is selected.
 - **R12** At main-turn end each call is labelled from its agent's next complete response: `pending` (none yet, agent running), `aborted` (none, agent stopped), `answered` (no tool), `retried` (same tool), `asked-user` (`AskUserQuestion`), `other-tool`; calls from one response share a label; a `pending` row is relabelled in the pane when its agent responds, and becomes `aborted` if the agent stops; when the agent list cannot be read at turn end, every subagent counts as running; the written file keeps `pending`.
 - **R13** For each call in the turn, up to 5 values (maximal runs of `[A-Za-z0-9_.:/-]`, trailing `.:/-` trimmed, ≥4 chars, with a digit) that appear in both the result and the main answer, in result order; no answer means an empty list.
@@ -161,10 +184,33 @@ The source and tests cite these IDs (`R1` to `R25`, and "delta R12" and similar)
 - **R19** The log folder, anchored to the directory the session started in, gets a `.gitignore` containing `*` before its first file.
 - **R20** A field over 20,000 characters shows its first 20,000 followed by `<N> chars cut`, as stored, not indented; a field whose JSON-escaped form would pass 45,000 characters shows only the part that fits, with the same cut line.
 - **R21** Inventory rows show `est` until `m` is pressed; `m` counts MCP tool and memory file rows exactly and marks them `measured` until the next press; skill rows stay `est`; a second `m` during a count is ignored; a failed count keeps the figures and shows `measure failed: <reason>`.
-- **R22** If Claude Code cannot report context usage, Inventory shows `Context usage unavailable` and Calls keeps working.
-- **R23** The pane shows a view row `1: Calls`, `2: Inventory`; `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
+- **R22** If Claude Code cannot report context usage when the Inventory loads (`/telltale inventory` or `2`), it shows `Context usage unavailable` and Calls keeps working; a failed reload at turn end keeps the figures shown (R43).
+- **R23** The pane shows a view row `1: Calls`, `2: Inventory`, the view not shown dim (the detail counts as Calls); `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
 - **R24** Logged string argument values longer than 2,000 characters are cut to 2,000 followed by `…[cut N chars]`, after redaction.
-- **R25** The pane keeps the first 20,000 characters of args and result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so; older calls leave the list, which ends with `<n> older calls are in the logs`.
+- **R25** The pane keeps the first 20,000 characters of the args (compact JSON) and of the result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so (R47); older calls leave the list, which ends with `<n> older calls are in the logs`.
+- **R26** In an interactive session a status entry shows the session totals (counted MCP calls and distinct skills since start or the last `/clear`, kept across a hot reload): `telltale · <n> MCP · <e>✗ · ~<t> tok · <k> skills · ctx <p>%`, each segment only when non-zero or reported; it updates when a counted call completes, at turn end and at `/clear`; with no call and no skill there is no entry.
+- **R27** When Claude Code reports no context share (before the first response, or a failed usage report), the status entry drops only its `ctx` segment.
+- **R28** In an interactive session, at most one toast per main-thread turn, for a counted call that errored (`<server>.<tool> failed · /telltale`) or returned 40,000 characters or more (`<server>.<tool> returned ~<t> tok`); the error text wins; the R16 notice does not count toward the limit.
+- **R29** While a counted call runs, the band above the prompt shows `◐ <server>.<tool> <elapsed>` for the longest-running call, ` +<k> running`, then ` · turn: <n> MCP · ~<t> tok` and ` · <e>✗` over the turn's completed calls; elapsed is whole seconds (`<m>m<ss>s` from a minute), never more than 2 seconds behind; parts drop, then the name is cut, to fit.
+- **R30** With no counted call running, the band holds no telltale row.
+- **R31** While Claude Code shows its survey above the prompt, the band holds no telltale row.
+- **R32** Calls is a table with a `TOOL SERVER TIME TOK NEXT` header; the tool loses its `mcp__<server>__` prefix (`↳ ` for a subagent's call), built-ins show server `-`, the label is `…` until the turn ends; columns are two spaces apart, each as wide as its longest value, SERVER at most 12 and TOOL 4 to 32, longer values cut with `…`; below 50 columns SERVER and NEXT are left out.
+- **R33** In Calls each `✗` is in the error colour and each `retried`, `aborted` or `pending` label in the warning colour.
+- **R34** Calls groups rows by turn, newest first, under `turn <N> · <k> calls · ~<t> tok`; `<N>` is the turn file's number, a failed write still uses its number, and a call between turns joins the next turn.
+- **R35** Each view ends with a dim key row: `↑↓ select · enter open · esc close`, `n/p older/newer · c copy args · y copy result · b back`, `m measure · esc close`; messages sit above it.
+- **R36** The detail header reads `<tool> · <server> · agent <id> · <dur> · <c> chars · ~<t> tok · <next>`, then ` · error` in the error colour; server and agent parts only where they apply.
+- **R37** The detail draws arguments and result as JSON code when the shown text parses as JSON, plain otherwise, changing no character.
+- **R38** In the detail `n` shows the next older call and `p` the next newer one; at the ends nothing changes; `b` returns with the call last shown selected.
+- **R39** In the detail `c` copies the arguments and `y` the result text the pane keeps (R25), and the view shows `copied <k> chars` or `copied <k> of <total> chars` until the next press, focus move or view change.
+- **R40** A copy Claude Code refuses shows `copy failed: <reason>`; a call whose text was not kept after a hot reload shows `copy failed: text not kept after a reload` and makes no copy request.
+- **R41** Each Inventory group title shows its total and `<p>% of <window>`; each MCP server heading reads `<server>  <bar>  <t> tok · <p>% · <usage>`, the bar 20 cells by share of the costliest server, rounded half up, at least 1 above zero.
+- **R42** A server heading's usage is the counted calls matching its tool rows by full name (`<n> calls · <e>✗ · ~<t> read`, or `never called`); a tool row with no counted call shows `never called`.
+- **R43** An open Inventory reloads Claude Code's estimate at each main-thread turn end; measured rows keep their figures; a failed reload keeps the figures shown.
+- **R44** In an interactive session a completed counted call the pane keeps gets one dim line beneath its transcript tool line, `<dur> · ~<t> tok` (` · error` when it failed); the engine's row is drawn unchanged; running, built-in, folded and evicted calls get none.
+- **R45** `/telltale` in the fullscreen layout opens the pane without holding toasts; on the main screen it holds them until it closes.
+- **R46** A telltale drawing that fails leaves the band and transcript rows as Claude Code draws them, shows no status entry or toast, and keeps the pane open with its view row, `this view could not be drawn` and its key row.
+- **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast and the measured Inventory figures; it drops the kept argument and result text of earlier calls.
+- **R48** No pane or band row is wider than the drawable width; a longer row is cut with `…`, except the detail's argument and result text, which scroll.
 
 ## License
 

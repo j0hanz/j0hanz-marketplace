@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing';
 import type { On } from 'claude-code';
+import type { MockClock } from 'claude-code/testing';
 
 // The world beneath the plugin, in memory: files the `$.fs` calls answer from, and a record of
 // what the plugin asked the engine to do.
@@ -10,7 +11,7 @@ type World = {
   raw: string[]; // written paths as the engine handed them, before `rel`
   toasts: string[];
   logs: string[];
-  opened: { id: string; focus: boolean }[];
+  opened: { id: string; focus: boolean; holdToasts: boolean }[];
   failWrites: boolean;
   failList: boolean;
   steps: Tool[][];
@@ -19,6 +20,13 @@ type World = {
   usage: unknown;
   usageCalls: string[];
   below: string | null;
+  clock: MockClock;
+  slow: Record<string, number>; // tool_use_id -> ms the call runs on the mocked clock
+  status: (string | undefined)[];
+  copied: string[];
+  copyResult: unknown;
+  listHold: Promise<void>; // agent.list answers once this settles
+  throws: Set<string>; // tool_use_ids whose call rejects
 };
 
 const ROOT = '.claude/telltale';
@@ -47,8 +55,15 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     usage: undefined,
     usageCalls: [],
     below: null,
+    clock: undefined as never,
+    slow: {},
+    status: [],
+    copied: [],
+    copyResult: { isCopied: true },
+    listHold: Promise.resolve(),
+    throws: new Set(),
   };
-  mock.clock(on);
+  world.clock = mock.clock(on);
   on('session.start', ($, e) => ({ cwd: e.cwd }));
   on('session.end', ($, e) => ({ sessionId: e.sessionId }) as never);
   on('session.id', () => ({ value: 's1' }));
@@ -78,19 +93,28 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     world.toasts.push(e.text);
     return { value: undefined };
   });
+  on('ui.status', ($, e) => {
+    world.status.push(e.text);
+    return { value: undefined };
+  });
+  on('ui.copy', ($, e) => {
+    world.copied.push(e.text);
+    return { value: world.copyResult } as never;
+  });
   on('ui.log', ($, e) => {
     world.logs.push(e.text);
     return { value: undefined };
   });
   on('ui.open', ($, e) => {
-    world.opened.push({ id: e.id, focus: e.focus === true });
+    world.opened.push({ id: e.id, focus: e.focus === true, holdToasts: e.holdToasts === true });
     return { value: { isPlaced: true } } as never;
   });
   on('ui.focus', ($, e) => {
     return {};
   });
-  on('agent.list', () =>
-    world.failList
+  on('agent.list', async () => {
+    await world.listHold;
+    return world.failList
       ? { deny: 'no list' }
       : {
           value: world.running.map((id) => ({
@@ -99,8 +123,8 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
             type: 'general-purpose',
             status: 'running',
           })),
-        },
-  );
+        };
+  });
   on('session.usage', ($, e) => {
     world.usageCalls.push(String((e as { breakdown?: string }).breakdown ?? 'none'));
     return world.usage instanceof Error
@@ -121,10 +145,12 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
       usage: null,
     } as never;
   });
-  on(
-    'tool.call',
-    ($, e) => (world.results[e.tool_use_id] ?? { result: 'ok', text: 'ok' }) as never,
-  );
+  on('tool.call', async ($, e) => {
+    const ms = world.slow[e.tool_use_id];
+    if (ms !== undefined) await world.clock.sleep(ms);
+    if (world.throws.has(e.tool_use_id)) throw new Error('the call failed beneath');
+    return (world.results[e.tool_use_id] ?? { result: 'ok', text: 'ok' }) as never;
+  });
   on('turn.complete', ($, e) => ({ text: world.below ?? e.answer }));
   on('ui.render', () => ({ type: 'Text', children: [''] }) as never);
   return world;
@@ -586,7 +612,9 @@ const stringsOf = (node: unknown): string[] => {
   if (Array.isArray(node)) return node.flatMap(stringsOf);
   const element = node as Element;
   const label = typeof element.props?.label === 'string' ? [element.props.label] : [];
-  return [...label, ...(element.children ?? []).flatMap(stringsOf), '\n'];
+  // A Code element carries its text as `source`, not as children.
+  const source = typeof element.props?.source === 'string' ? [element.props.source] : [];
+  return [...label, ...source, ...(element.children ?? []).flatMap(stringsOf), '\n'];
 };
 const buttonsOf = (node: unknown): { key: string; autoFocus: boolean }[] => {
   if (node === null || typeof node !== 'object') return [];
@@ -632,7 +660,7 @@ test('R9: /telltale opens a focused pane at 100 columns on the newest call', asy
   await callThrough($ as never, world, 'a');
   await callThrough($ as never, world, 'b');
   expect((await run($ as never)).text).toBe('opened');
-  expect(world.opened).toEqual([{ id: 'telltale', focus: true }]);
+  expect(world.opened).toEqual([{ id: 'telltale', focus: true, holdToasts: true }]);
   expect(focusOf((await draw($ as never)).buttons)).toBe('row:b');
 });
 
@@ -655,10 +683,10 @@ test('R10: an empty list says so, and rows run newest first', async ($, on) => {
   await $.session.start(SESSION);
   await run($ as never);
   expect((await draw($ as never)).text).toContain('No tool calls yet');
-  await callThrough($ as never, world, 'a', 'mcp__first__x');
-  await callThrough($ as never, world, 'b', 'mcp__second__y');
+  await callThrough($ as never, world, 'a', 'mcp__first__xxx');
+  await callThrough($ as never, world, 'b', 'mcp__second__yyy');
   const { text } = await draw($ as never);
-  expect(text.indexOf('mcp__second__y')).toBeLessThan(text.indexOf('mcp__first__x'));
+  expect(text.indexOf('yyy')).toBeLessThan(text.indexOf('xxx'));
 });
 
 test('R11: a row opens its detail, and b returns with the same call selected', async ($, on) => {
@@ -824,7 +852,7 @@ test('R12: a pending call is relabelled when its agent responds', async ($, on) 
   await run($ as never);
   await draw($ as never);
   await press($ as never, 'row:z');
-  expect((await draw($ as never)).text).toContain('next: answered');
+  expect((await draw($ as never)).text).toContain('· answered');
   expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'pending' });
 });
 
@@ -850,6 +878,7 @@ const usageOf = (
   context: {
     window: 200_000,
     breakdown: {
+      rawMaxTokens: 200_000,
       mcpTools: tools.map(([serverName, name, tokens, isLoaded]) => ({
         serverName,
         name,
@@ -945,7 +974,7 @@ test('R22: no usage report leaves the Calls view working', async ($, on) => {
   expect((await draw($ as never)).text).toContain('Context usage unavailable');
   await press($ as never, 'measure').catch(() => undefined);
   await press($ as never, 'view:calls');
-  expect((await draw($ as never)).text).toContain('mcp__o__s');
+  expect((await draw($ as never)).buttons.some((button) => button.key === 'row:a')).toBe(true);
 });
 
 // Regressions from the 2026-10-03 bug hunt (telltale.hunt.md).
@@ -1046,7 +1075,7 @@ test('R12: a pending call becomes aborted once its agent stops without respondin
   await run($ as never);
   await draw($ as never);
   await press($ as never, 'row:z');
-  expect((await draw($ as never)).text).toContain('next: aborted');
+  expect((await draw($ as never)).text).toContain('· aborted');
 });
 
 test('R11: when the selected call is evicted, the newest kept call is selected', async ($, on) => {
@@ -1075,7 +1104,7 @@ test('R12: a failed agent list leaves a subagent call pending, not aborted', asy
   await run($ as never);
   await draw($ as never);
   await press($ as never, 'row:z');
-  expect((await draw($ as never)).text).toContain('next: answered');
+  expect((await draw($ as never)).text).toContain('· answered');
 });
 
 test(
@@ -1124,7 +1153,996 @@ test('R13: a long used-in-answer value never puts over 10,000 characters in one 
   await draw($ as never);
   await press($ as never, 'row:u');
   const { text, strings } = await draw($ as never);
-  // Text nodes are joined with a newline here; the value itself spans two of them.
-  expect(text.replaceAll('\n', '')).toContain(`used in answer: ${long}`);
+  // R48: the line is cut to the pane width; the full values are in the logs.
+  expect(text).toContain(`used in answer: v1${'x'.repeat(10)}`);
   for (const s of strings) expect(s.length).toBeLessThanOrEqual(10_000);
+  for (const line of text.split('\n')) {
+    if (line.startsWith('used in answer')) expect(line.length).toBeLessThanOrEqual(96);
+  }
 });
+
+// v0.3: session totals, calls in flight and turn numbers (R34, R47).
+
+test('R34: a failed log write still uses up its turn number', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  world.failWrites = true;
+  await callThrough($ as never, world, 'a');
+  await respond($ as never, world, []);
+  await complete($ as never);
+  world.failWrites = false;
+  await callThrough($ as never, world, 'b');
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(turnFiles(world)).toEqual([`${DIR}/turn-2.jsonl`]);
+  expect((kept.get('calls') as { turn: number }[]).map((call) => call.turn)).toEqual([1, 2]);
+  expect(kept.get('turnNo')).toBe(2);
+});
+
+test('R34: a call made between turns joins the next turn', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  await respond($ as never, world, []);
+  await complete($ as never);
+  await callThrough($ as never, world, 'b');
+  await world.clock.settle();
+  expect((kept.get('calls') as { turn: number }[]).map((call) => call.turn)).toEqual([1, 2]);
+});
+
+test('R47: session totals and the turn number are kept in pane state', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  on('skill.prompt', ($, e) => ({ text: e.text }));
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'u1', 'mcp__o__s', 'x'.repeat(40));
+  world.results.u2 = { result: 'r', text: 'x'.repeat(400), isError: true };
+  await respond($ as never, world, [{ id: 'u2', name: 'mcp__o__t' }]);
+  await $.tool.call({ tool: 'mcp__o__t', tool_use_id: 'u2' } as never);
+  await callThrough($ as never, world, 'r1', 'Read', 'y'.repeat(4000));
+  await $.skill.prompt({ skill: 's', text: 'S' });
+  await $.skill.prompt({ skill: 's', text: 'S' });
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(kept.get('totals')).toMatchObject({
+    calls: 2,
+    errors: 1,
+    tokens: 110,
+    skills: ['s'],
+    tools: {
+      mcp__o__s: { calls: 1, errors: 0, tokens: 10 },
+      mcp__o__t: { calls: 1, errors: 1, tokens: 100 },
+    },
+  });
+  expect(kept.get('turnNo')).toBe(1);
+});
+
+test('R47: a second session.start keeps the totals and clears calls in flight', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'u1');
+  await respond($ as never, world, []);
+  await complete($ as never);
+  await $.session.start(SESSION);
+  expect((kept.get('totals') as { calls: number }).calls).toBe(1);
+  expect(kept.get('running')).toEqual({});
+});
+
+test('R26: /clear resets the session totals', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'u1');
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  expect(kept.get('totals')).toMatchObject({
+    calls: 0,
+    errors: 0,
+    tokens: 0,
+    skills: [],
+    tools: {},
+  });
+});
+
+test('R29: a counted call is in flight until its result returns', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.slow.slow = 5000;
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'slow', name: 'mcp__db__run_query' }]);
+  const call = $.tool.call({ tool: 'mcp__db__run_query', tool_use_id: 'slow' } as never);
+  await world.clock.settle();
+  expect(Object.keys((kept.get('running') ?? {}) as object)).toEqual(['slow']);
+  await world.clock.advance(5000);
+  await call;
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(kept.get('running')).toEqual({});
+});
+
+// v0.3: the status entry and toasts (R26, R27, R28).
+
+/** One counted (or built-in) call through the plugin, errored when asked. */
+const callOne = async (
+  $: never,
+  world: World,
+  id: string,
+  tool: string,
+  text: string,
+  isError = false,
+) => {
+  await respond($, world, [{ id, name: tool }]);
+  world.results[id] = isError ? { result: 'r', text, isError: true } : { result: 'r', text };
+  await ($ as { tool: { call: (e: unknown) => Promise<unknown> } }).tool.call({
+    tool,
+    tool_use_id: id,
+  });
+  await world.clock.settle();
+};
+const endTurn = async ($: never, world: World) => {
+  await respond($, world, []);
+  await complete($);
+  await world.clock.settle();
+};
+
+test('R26: the status entry shows the session totals and the context share', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = { context: { window: 200_000, percent: 61 } };
+  await $.session.start(SESSION);
+  for (let i = 0; i < 7; i++) {
+    await callOne($ as never, world, `u${i}`, 'mcp__o__s', 'x'.repeat(7200), i === 0);
+  }
+  expect(world.status.at(-1)).toBe('telltale · 7 MCP · 1✗ · ~12.6k tok');
+  await endTurn($ as never, world);
+  expect(world.status.at(-1)).toBe('telltale · 7 MCP · 1✗ · ~12.6k tok · ctx 61%');
+});
+
+test('R26: no counted call and no skill means no status entry', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'r', 'Read', 'x');
+  await endTurn($ as never, world);
+  expect(world.status.filter((text) => text !== undefined)).toEqual([]);
+});
+
+test('R26: /clear removes the status entry', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u', 'mcp__o__s', 'x'.repeat(3600));
+  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~900 tok');
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(world.status.at(-1)).toBe(undefined);
+});
+
+test('R27: a failing usage report drops only the ctx segment', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = new Error('no usage');
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__o__s', 'x'.repeat(1500));
+  await callOne($ as never, world, 'b', 'mcp__o__s', 'x'.repeat(1500));
+  await endTurn($ as never, world);
+  expect(world.status.at(-1)).toBe('telltale · 2 MCP · ~750 tok');
+});
+
+test('R28: one toast per turn, and an errored call gets the error text', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await callOne($ as never, world, 'b', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  expect(kept.get('toastedTurn')).toBe(1);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: a result under 40,000 characters raises no toast', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__o__s', 'x'.repeat(39_999));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([]);
+});
+
+test('R28: a built-in call that errors raises no toast', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'Read', 'no such file', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([]);
+});
+
+test('R28: the log-write notice does not use up the turn toast', async ($, on) => {
+  const world = worldOf(on);
+  world.failWrites = true;
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    `telltale: cannot write logs to /work/${DIR}`,
+  ]);
+});
+
+test('R6: headless, telltale sets no status entry and raises no R28 toast', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(HEADLESS);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.status).toEqual([]);
+  expect(world.toasts).toEqual([]);
+});
+
+// v0.3: the live band above the prompt (R29, R30, R31).
+
+const band = async ($: never, props: Record<string, unknown> = {}) => {
+  const tree = await ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render({
+    component: 'AbovePrompt',
+    surface: 'terminal',
+    requestId: 'above',
+    viewport: { columns: 100, rows: 40, isFullscreen: true },
+    props: {
+      hasSurvey: false,
+      isWorking: true,
+      maxRows: 10,
+      bodyColumns: 80,
+      scroll: { offset: 0, bodyRows: 10 },
+      view: {},
+      ...props,
+    },
+  });
+  return stringsOf(tree).join('').trim();
+};
+/** Starts a counted call that runs `ms` on the mocked clock; await the result to finish it. */
+const startSlow = async ($: never, world: World, id: string, tool: string, ms: number) => {
+  world.slow[id] = ms;
+  await respond($, world, [{ id, name: tool }]);
+  const done = ($ as { tool: { call: (e: unknown) => Promise<unknown> } }).tool.call({
+    tool,
+    tool_use_id: id,
+  });
+  await world.clock.settle();
+  // Wrapped: an async function returning the promise itself would wait for the call to end.
+  return { done };
+};
+
+test('R29: the band names the running call, its time and the turn so far', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__o__s', 'x'.repeat(4400), true);
+  await callOne($ as never, world, 'b', 'mcp__o__s', 'x'.repeat(4400));
+  const { done: slow } = await startSlow($ as never, world, 'q', 'mcp__db__run_query', 10_000);
+  await world.clock.advance(3000);
+  expect(await band($ as never)).toBe('◐ db.run_query 3s · turn: 2 MCP · ~2.2k tok · 1✗');
+  expect(kept.get('tick')).toBeGreaterThanOrEqual(3);
+  expect(await band($ as never, { bodyColumns: 30 })).toBe('◐ db.run_query 3s');
+  await world.clock.advance(7000);
+  await slow;
+});
+
+test('R29: two running calls name the longest and count the rest', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const { done: first } = await startSlow($ as never, world, 'a', 'mcp__a__x', 20_000);
+  await world.clock.advance(7000);
+  const { done: second } = await startSlow($ as never, world, 'b', 'mcp__b__y', 20_000);
+  await world.clock.advance(2000);
+  expect(await band($ as never)).toBe('◐ a.x 9s +1 running');
+  await world.clock.advance(20_000);
+  await Promise.all([first, second]);
+});
+
+test('R29: past a minute the elapsed time reads minutes and seconds', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const { done: slow } = await startSlow($ as never, world, 'a', 'mcp__x__y', 100_000);
+  await world.clock.advance(75_000);
+  expect(await band($ as never)).toBe('◐ x.y 1m15s');
+  await world.clock.advance(25_000);
+  await slow;
+});
+
+test('R30: the band is empty once the last running call completes', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const { done: slow } = await startSlow($ as never, world, 'a', 'mcp__x__y', 2000);
+  expect(await band($ as never)).toBe('◐ x.y 0s');
+  await world.clock.advance(2000);
+  await slow;
+  await world.clock.settle();
+  expect(await band($ as never)).toBe('');
+});
+
+test('R30: a running built-in call draws nothing in the band', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const { done: slow } = await startSlow($ as never, world, 'a', 'Bash', 5000);
+  await world.clock.advance(3000);
+  expect(await band($ as never)).toBe('');
+  await world.clock.advance(2000);
+  await slow;
+});
+
+test('R31: a survey above the prompt holds the band', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const { done: slow } = await startSlow($ as never, world, 'a', 'mcp__x__y', 5000);
+  await world.clock.advance(3000);
+  expect(await band($ as never, { hasSurvey: true })).toBe('');
+  await world.clock.advance(2000);
+  await slow;
+});
+
+// v0.3: the Calls view as a table (R10, R23, R32-R35, R46, R48).
+
+const paneAt = (columns: number) =>
+  ({
+    ...(PANE as object),
+    props: { ...(PANE as { props: object }).props, bodyColumns: columns },
+  }) as never;
+const drawAt = async ($: never, columns: number) =>
+  ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render(paneAt(columns));
+const findKey = (node: unknown, key: string): Element | undefined => {
+  if (node === null || typeof node !== 'object') return undefined;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findKey(child, key);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const element = node as Element;
+  if (element.props?.key === key) return element;
+  return findKey(element.children ?? [], key);
+};
+const elementsOf = (node: unknown): Element[] => {
+  if (node === null || typeof node !== 'object') return [];
+  if (Array.isArray(node)) return node.flatMap(elementsOf);
+  const element = node as Element;
+  return [element, ...(element.children ?? []).flatMap(elementsOf)];
+};
+const rowText = (tree: unknown, id: string) =>
+  stringsOf(findKey(tree, `line:${id}`))
+    .join('')
+    .replaceAll('\n', '');
+const linesOf = (tree: unknown) =>
+  stringsOf(tree)
+    .join('')
+    .split('\n')
+    .filter((line) => line !== '');
+
+/** Calls made from one model response, each running `ms` on the mocked clock. */
+const callBatch = async (
+  $: never,
+  world: World,
+  batch: { id: string; tool: string; text: string; ms?: number; agentId?: string }[],
+) => {
+  await respond(
+    $,
+    world,
+    batch.map(({ id, tool }) => ({ id, name: tool })),
+    batch[0]?.agentId,
+  );
+  for (const one of batch) {
+    world.results[one.id] = { result: 'r', text: one.text };
+    world.slow[one.id] = one.ms ?? 0;
+    const done = ($ as { tool: { call: (e: unknown) => Promise<unknown> } }).tool.call({
+      tool: one.tool,
+      tool_use_id: one.id,
+      ...(one.agentId ? { agentId: one.agentId } : {}),
+    });
+    await world.clock.advance(one.ms ?? 0);
+    await done;
+  }
+  await world.clock.settle();
+};
+
+test('R32: the Calls view draws an aligned table at 80 columns', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: 'mcp__github__search_issues', text: 'x'.repeat(7600), ms: 812 },
+    { id: 'b', tool: 'Read', text: 'y'.repeat(1240), ms: 12 },
+  ]);
+  await endTurn($ as never, world);
+  await run($ as never);
+  const tree = await drawAt($ as never, 80);
+  expect(rowText(tree, 'a')).toBe('search_issues  github  812ms  ~1.9k  answered');
+  expect(rowText(tree, 'b')).toBe('Read           -       12ms   ~310   answered');
+  expect(linesOf(tree)).toContain('TOOL           SERVER  TIME   TOK    NEXT');
+});
+
+test('R32: below 50 columns SERVER and NEXT are left out', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: `mcp__github__${'t'.repeat(60)}`, text: 'ok' },
+  ]);
+  await run($ as never);
+  expect(rowText(await drawAt($ as never, 40), 'a')).toBe(`${'t'.repeat(28)}…  0ms   ~1`);
+});
+
+test('R32: a subagent call reads ↳ before its tool', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: 'ok', agentId: 'a1' }]);
+  await run($ as never);
+  expect(rowText(await drawAt($ as never, 80), 'a').startsWith('↳ s')).toBe(true);
+});
+
+test('R33: ✗ is drawn in the error colour and retried in the warning colour', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'e', name: 'mcp__o__s' }]);
+  world.results.e = { result: 'r', text: 'boom', isError: true };
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'e' } as never);
+  await respond($ as never, world, [{ id: 'f', name: 'mcp__o__s' }]);
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'f' } as never);
+  await endTurn($ as never, world);
+  await run($ as never);
+  const tree = await drawAt($ as never, 80);
+  const coloured = elementsOf(tree).filter((el) => el.type === 'Text' && el.props?.color);
+  const textOf = (el: Element) => stringsOf(el).join('').replaceAll('\n', '').trim();
+  expect(coloured.find((el) => textOf(el) === '✗')?.props?.color).toBe('error');
+  expect(coloured.find((el) => textOf(el) === 'retried')?.props?.color).toBe('warning');
+});
+
+test('R34: rows are grouped by turn, newest turn first, under a separator', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: 'mcp__o__s', text: 'ok' },
+    { id: 'b', tool: 'mcp__o__s', text: 'ok' },
+  ]);
+  await endTurn($ as never, world);
+  await callBatch($ as never, world, [{ id: 'c', tool: 'mcp__o__s', text: 'ok' }]);
+  await run($ as never);
+  const lines = linesOf(await drawAt($ as never, 80));
+  const second = lines.indexOf('turn 2 · 1 call · ~1 tok');
+  const first = lines.indexOf('turn 1 · 2 calls · ~2 tok');
+  expect(second).toBeGreaterThan(-1);
+  expect(first).toBeGreaterThan(second);
+});
+
+test('R35: the Calls view ends with its key row', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: 'ok' }]);
+  await run($ as never);
+  expect(linesOf(await drawAt($ as never, 80)).at(-1)).toBe('↑↓ select · enter open · esc close');
+});
+
+test('R48: no Calls view row is wider than 40 columns at 40', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    {
+      id: 'a',
+      tool: `mcp__${'s'.repeat(30)}__${'t'.repeat(60)}`,
+      text: 'x'.repeat(5000),
+      ms: 61_000,
+    },
+  ]);
+  await run($ as never);
+  const tree = await drawAt($ as never, 40);
+  expect(rowText(tree, 'a').length).toBeLessThanOrEqual(40);
+  for (const line of linesOf(tree)) expect(line.length).toBeLessThanOrEqual(40);
+});
+
+test('R10: an empty Calls view names the log folder', async ($, on) => {
+  worldOf(on);
+  await $.session.start(SESSION);
+  await run($ as never);
+  const lines = linesOf(await drawAt($ as never, 80));
+  expect(lines).toContain('No tool calls yet');
+  expect(lines).toContain(`logs: ${DIR}`);
+});
+
+test('R23: the tab of the view not shown is dim', async ($, on) => {
+  worldOf(on);
+  await $.session.start(SESSION);
+  await run($ as never);
+  const tree = await drawAt($ as never, 80);
+  expect(findKey(tree, 'view:inventory')?.props?.dimColor).toBe(true);
+  expect(findKey(tree, 'view:calls')?.props?.dimColor).not.toBe(true);
+});
+
+test('R46: a view that fails to draw keeps the pane open with the view row', async ($, on) => {
+  const world = worldOf(on);
+  // A row the view cannot draw: what reaches the store is not what telltale wrote.
+  on('state.set', (_$, e, next) =>
+    next(e.key === 'calls' ? ({ ...e, value: [{ id: 'x', tool: null }] } as never) : e),
+  );
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  await run($ as never);
+  const tree = await drawAt($ as never, 80);
+  expect(linesOf(tree)).toContain('this view could not be drawn');
+  expect(findKey(tree, 'view:calls')).toBeDefined();
+  expect(linesOf(tree).at(-1)).toBe('↑↓ select · enter open · esc close');
+});
+
+// v0.3: the detail view (R35-R40, R47).
+
+const openDetail = async ($: never, id: string, columns = 80) => {
+  await run($);
+  await drawAt($, columns);
+  await press($, `row:${id}`);
+  return drawAt($, columns);
+};
+
+test('R36: the detail header reads the call row figures in order', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: 'mcp__github__search_issues', text: 'x'.repeat(7600), ms: 812 },
+  ]);
+  await endTurn($ as never, world);
+  const lines = linesOf(await openDetail($ as never, 'a'));
+  expect(lines).toContain('search_issues · github · 812ms · 7600 chars · ~1.9k tok · answered');
+});
+
+test('R36: an errored subagent call puts the agent right after the server', async ($, on) => {
+  const world = worldOf(on);
+  world.running = ['a1b2'];
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'q', name: 'mcp__db__run_query' }], 'a1b2');
+  world.results.q = { result: 'r', text: 'x'.repeat(120), isError: true };
+  world.slow.q = 2100;
+  const done = $.tool.call({
+    tool: 'mcp__db__run_query',
+    tool_use_id: 'q',
+    agentId: 'a1b2',
+  } as never);
+  await world.clock.advance(2100);
+  await done;
+  await respond($ as never, world, [{ id: 'q2', name: 'mcp__db__run_query' }], 'a1b2');
+  await endTurn($ as never, world);
+  const tree = await openDetail($ as never, 'q');
+  expect(linesOf(tree)).toContain(
+    'run_query · db · agent a1b2 · 2.1s · 120 chars · ~30 tok · retried',
+  );
+  const error = elementsOf(tree).find(
+    (el) => el.type === 'Text' && stringsOf(el).join('').trim() === '· error',
+  );
+  expect(error?.props?.color).toBe('error');
+});
+
+test('R37: JSON text is drawn as json code, and other text plain', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: '{"a":1}' }]);
+  const tree = await openDetail($ as never, 'a');
+  const code = elementsOf(tree).filter((el) => el.type === 'Code');
+  expect(code.map((el) => el.props?.language)).toEqual(['json', 'json']);
+  expect(code.map((el) => el.props?.source)).toContain('{\n  "a": 1\n}');
+});
+
+test('R37: a field cut at 20,000 characters is drawn plain', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const big = JSON.stringify({ list: 'x'.repeat(200_000) });
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: big }]);
+  const tree = await openDetail($ as never, 'a');
+  const sources = elementsOf(tree)
+    .filter((el) => el.type === 'Code')
+    .map((el) => String(el.props?.source));
+  expect(sources.some((source) => source.length > 1000)).toBe(false);
+  expect(stringsOf(tree).join('')).toContain(`${big.length - 20_000} chars cut`);
+});
+
+test('R38: n shows the older call, p the newer, and b returns to the last shown', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  for (const id of ['a', 'b', 'c']) {
+    await callBatch($ as never, world, [{ id, tool: `mcp__o__${id}${id}${id}${id}`, text: 'ok' }]);
+  }
+  await openDetail($ as never, 'b');
+  await press($ as never, 'older');
+  expect(linesOf(await drawAt($ as never, 80)).some((line) => line.startsWith('aaaa · o'))).toBe(
+    true,
+  );
+  await press($ as never, 'back');
+  expect(focusOf(buttonsOf(await drawAt($ as never, 80)))).toBe('row:a');
+  await press($ as never, 'row:c');
+  await drawAt($ as never, 80);
+  await press($ as never, 'newer');
+  expect(linesOf(await drawAt($ as never, 80)).some((line) => line.startsWith('cccc · o'))).toBe(
+    true,
+  );
+});
+
+test('R39: y copies the kept result text and says how much', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: 'mcp__o__s', text: 'r'.repeat(3000) },
+    { id: 'b', tool: 'mcp__o__s', text: 'q'.repeat(200_000) },
+  ]);
+  await openDetail($ as never, 'a');
+  await press($ as never, 'copyText');
+  expect(world.copied).toEqual(['r'.repeat(3000)]);
+  expect(linesOf(await drawAt($ as never, 80))).toContain('copied 3000 chars');
+  await press($ as never, 'newer');
+  expect(linesOf(await drawAt($ as never, 80))).not.toContain('copied 3000 chars');
+  await press($ as never, 'copyText');
+  expect(world.copied[1]).toBe('q'.repeat(20_000));
+  expect(linesOf(await drawAt($ as never, 80))).toContain('copied 20000 of 200000 chars');
+  await press($ as never, 'copyArgs');
+  expect(world.copied[2]).toBe('{}');
+});
+
+test('R40: a copy Claude Code refuses names its reason', async ($, on) => {
+  const world = worldOf(on);
+  world.copyResult = { isCopied: false, reason: 'no-clipboard' };
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: 'ok' }]);
+  await openDetail($ as never, 'a');
+  await press($ as never, 'copyArgs');
+  expect(linesOf(await drawAt($ as never, 80))).toContain('copy failed: no-clipboard');
+});
+
+test('R40, R47: a call whose text was not kept makes no copy request', async ($, on) => {
+  const world = worldOf(on);
+  // A row from before a reload: listed in state, its text gone from this module's memory.
+  const ghost = {
+    id: 'ghost',
+    tool: 'mcp__o__s',
+    server: 'o',
+    agentId: null,
+    response: null,
+    ms: 5,
+    argsChars: 2,
+    textChars: 2,
+    isError: false,
+    next: 'answered',
+    turn: 1,
+  };
+  on('state.set', (_$, e, next) =>
+    next(
+      e.key === 'calls'
+        ? ({
+            ...e,
+            value: [ghost, ...(e.value as { id: string }[]).filter((c) => c.id !== 'ghost')],
+          } as never)
+        : e,
+    ),
+  );
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: 'ok' }]);
+  const tree = await openDetail($ as never, 'ghost');
+  expect(linesOf(tree)).toContain('s · o · 5ms · 2 chars · ~1 tok · answered');
+  expect(linesOf(tree)).toContain('text not kept after a reload; see the logs');
+  await press($ as never, 'copyText');
+  expect(world.copied).toEqual([]);
+  expect(linesOf(await drawAt($ as never, 80))).toContain(
+    'copy failed: text not kept after a reload',
+  );
+});
+
+test('R35, R48: the detail ends with its key row, cut to the width', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'a', tool: `mcp__github__${'t'.repeat(40)}`, text: 'ok', ms: 812 },
+  ]);
+  expect(linesOf(await openDetail($ as never, 'a', 80)).at(-1)).toBe(
+    'n/p older/newer · c copy args · y copy result · b back',
+  );
+  const narrow = linesOf(await drawAt($ as never, 40));
+  expect(narrow.at(-1)!.startsWith('n/p older/newer')).toBe(true);
+  expect(narrow.at(-1)!.endsWith('…')).toBe(true);
+  for (const line of narrow) expect(line.length).toBeLessThanOrEqual(40);
+});
+
+// v0.3: the Inventory view (R22, R35, R41-R43, R47).
+
+const githubDb = () =>
+  usageOf([
+    ['github', 'mcp__github__search', 8000, true],
+    ['github', 'mcp__github__create_issue', 3000, true],
+    ['db', 'mcp__db__query', 4900, false],
+  ]);
+
+test('R41: group totals, server bars and shares of the context window', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  for (const id of ['s1', 's2', 's3']) {
+    await callOne($ as never, world, id, 'mcp__github__search', 'x'.repeat(3000), id === 's1');
+  }
+  await run($ as never, 'inventory');
+  const lines = linesOf(await drawAt($ as never, 100));
+  expect(lines).toContain('MCP tools  15.9k tok · 8.0% of 200.0k');
+  expect(lines).toContain(
+    `github  ${'━'.repeat(20)}  11.0k tok · 5.5% · 3 calls · 1✗ · ~2.3k read`,
+  );
+  expect(lines).toContain(
+    `db      ${'━'.repeat(9)}${'─'.repeat(11)}  4.9k tok · 2.5% · never called`,
+  );
+});
+
+test('R41: a server at zero tokens draws an empty bar', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = usageOf([['z', 'mcp__z__t', 0, false]]);
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  const lines = linesOf(await drawAt($ as never, 100));
+  expect(lines.some((line) => line.startsWith(`z  ${'─'.repeat(20)}  0 tok`))).toBe(true);
+});
+
+test('R42: a tool row with no counted call reads never called', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 's1', 'mcp__github__search', 'ok');
+  await run($ as never, 'inventory');
+  const lines = linesOf(await drawAt($ as never, 100));
+  expect(lines.find((line) => line.includes('mcp__github__create_issue'))).toContain(
+    'never called',
+  );
+  expect(lines.find((line) => line.includes('mcp__github__search'))).not.toContain('never called');
+});
+
+test('R42: a call evicted from the list still counts for its tool and server', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'first', 'mcp__github__search');
+  for (let i = 0; i < 200; i++) await callThrough($ as never, world, `r${i}`, 'Read');
+  await run($ as never, 'inventory');
+  const lines = linesOf(await drawAt($ as never, 100));
+  expect(lines.find((line) => line.includes('mcp__github__search'))).not.toContain('never called');
+  expect(lines.find((line) => line.startsWith('github'))).toContain('1 call · ~1 read');
+});
+
+test('R43: the open Inventory reloads at turn end and shows a new server', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  await drawAt($ as never, 100);
+  world.usage = usageOf([
+    ['github', 'mcp__github__search', 8000, true],
+    ['c', 'mcp__c__t', 10, true],
+  ]);
+  await endTurn($ as never, world);
+  expect(linesOf(await drawAt($ as never, 100)).some((line) => line.startsWith('c  '))).toBe(true);
+});
+
+test('R43, R22: a failed turn-end reload keeps the figures shown', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  await drawAt($ as never, 100);
+  world.usage = new Error('gone');
+  await endTurn($ as never, world);
+  const lines = linesOf(await drawAt($ as never, 100));
+  expect(lines).toContain('MCP tools  15.9k tok · 8.0% of 200.0k');
+  expect(lines).not.toContain('Context usage unavailable');
+});
+
+test('R47: measured figures are kept in pane state', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  await drawAt($ as never, 100);
+  await press($ as never, 'measure');
+  const measured = (kept.get('inventory') as { measured: Record<string, number> }).measured;
+  expect(Object.values(measured).sort((a, b) => a - b)).toEqual([3000, 4900, 8000]);
+});
+
+test('R35: the Inventory ends with its key row', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  expect(linesOf(await drawAt($ as never, 100)).at(-1)).toBe('m measure · esc close');
+});
+
+// v0.3: the transcript line, the docked pane and drawing faults (R44, R45, R46).
+
+const ENGINE_ROW = { type: 'Text', children: [''] };
+const toolRow = async ($: never, id: string, tool: string, isRunning = false) =>
+  ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render({
+    component: 'ToolUse',
+    surface: 'terminal',
+    requestId: id,
+    viewport: { columns: 100, rows: 40, isFullscreen: true },
+    props: { tool_use_id: id, tool, input: {}, isRunning, isErrored: false, isInterrupted: false },
+  });
+
+test('R44: a completed MCP call gets its cost line beneath the engine row', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'u1', tool: 'mcp__github__search_issues', text: 'x'.repeat(7600), ms: 812 },
+  ]);
+  const tree = (await toolRow($ as never, 'u1', 'mcp__github__search_issues')) as Element;
+  expect(tree.type).toBe('Box');
+  expect(tree.props?.flexDirection).toBe('column');
+  expect(tree.children?.[0]).toEqual(ENGINE_ROW);
+  const line = tree.children?.[1] as Element;
+  expect(line.props?.dimColor).toBe(true);
+  expect(stringsOf(line).join('').trim()).toBe('812ms · ~1.9k tok');
+});
+
+test('R44: an errored call says so on its line', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__db__q', 'x'.repeat(40), true);
+  const tree = await toolRow($ as never, 'u1', 'mcp__db__q');
+  expect(stringsOf(tree).join('')).toContain('0ms · ~10 tok · error');
+});
+
+test('R44: running, built-in and unknown calls keep the engine row alone', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'r', 'Read', 'ok');
+  await callOne($ as never, world, 'm', 'mcp__o__s', 'ok');
+  expect(await toolRow($ as never, 'r', 'Read')).toEqual(ENGINE_ROW);
+  expect(await toolRow($ as never, 'm', 'mcp__o__s', true)).toEqual(ENGINE_ROW);
+  expect(await toolRow($ as never, 'nope', 'mcp__o__s')).toEqual(ENGINE_ROW);
+});
+
+test('R45: the fullscreen layout opens the pane without holding toasts', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  const open = (isFullscreen: boolean) =>
+    $.command.run({
+      command: 'telltale',
+      args: '',
+      origin: { kind: 'composer' },
+      presentation: { isFullscreen, columns: 160 },
+    } as never);
+  await open(true);
+  await open(false);
+  expect(world.opened.map((one) => one.holdToasts)).toEqual([false, true]);
+});
+
+test('R46: a transcript line that fails to draw leaves the engine row', async ($, on) => {
+  const world = worldOf(on);
+  on('state.set', (_$, e, next) =>
+    next(
+      e.key === 'calls'
+        ? ({
+            ...e,
+            value: (e.value as { textChars: unknown }[]).map((one) => ({
+              ...one,
+              textChars: 10n,
+            })),
+          } as never)
+        : e,
+    ),
+  );
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__o__s', 'ok');
+  expect(await toolRow($ as never, 'u1', 'mcp__o__s')).toEqual(ENGINE_ROW);
+});
+
+// Fixes from the 2026-10-08 v0.3 review.
+
+test('R34: a call that lands while the turn ends joins the next turn', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.running = ['a1'];
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__o__s', 'ok');
+  let release = () => {};
+  world.listHold = new Promise<void>((resolve) => (release = resolve));
+  await respond($ as never, world, []);
+  const ending = complete($ as never);
+  await world.clock.settle();
+  // The turn end now waits on the agent list; a background subagent's call lands meanwhile.
+  await callOne($ as never, world, 'b', 'mcp__o__t', 'ok');
+  release();
+  await ending;
+  await endTurn($ as never, world);
+  const turns = Object.fromEntries(
+    (kept.get('calls') as { id: string; turn: number }[]).map((call) => [call.id, call.turn]),
+  );
+  expect(turns).toEqual({ a: 1, b: 2 });
+  expect(turnFiles(world)).toEqual([`${DIR}/turn-1.jsonl`, `${DIR}/turn-2.jsonl`]);
+  expect(lines(world, `${DIR}/turn-2.jsonl`).map((record) => record.tool)).toEqual(['mcp__o__t']);
+});
+
+test('R29: a call that rejects leaves flight, so the band empties', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.throws.add('x');
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'x', name: 'mcp__o__s' }]);
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'x' } as never).catch(() => undefined);
+  await world.clock.settle();
+  expect(kept.get('running')).toEqual({});
+  expect(await band($ as never)).toBe('');
+});
+
+test('R26: /clear waits for queued work, so no call from before it counts after', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'z', name: 'mcp__o__s' }], 'a1');
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'z', agentId: 'a1' } as never);
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect((kept.get('totals') as { calls: number }).calls).toBe(0);
+  expect(kept.get('calls')).toEqual([]);
+});
+
+test('R26, R27: /clear drops the old context share from the status entry', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = { context: { window: 200_000, percent: 61 } };
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__o__s', 'ok');
+  await endTurn($ as never, world);
+  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~1 tok · ctx 61%');
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await callOne($ as never, world, 'b', 'mcp__o__s', 'ok');
+  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~1 tok');
+});
+
+const parentOf = (node: unknown, key: string): Element | undefined =>
+  elementsOf(node).find((el) =>
+    (el.children ?? []).some((child) => (child as Element)?.props?.key === key),
+  );
+
+test('R48: the detail buttons stack below the width they need', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'a', tool: 'mcp__o__s', text: 'ok' }]);
+  const wide = await openDetail($ as never, 'a', 57);
+  expect(parentOf(wide, 'back')?.props?.flexDirection).toBe('row');
+  expect(parentOf(await drawAt($ as never, 56), 'back')?.props?.flexDirection).toBe('column');
+});
+
+test('R48: a long used-in-answer line is cut to the width', async ($, on) => {
+  const world = worldOf(on);
+  const value = `v1${'x'.repeat(200)}`;
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [{ id: 'u', tool: 'mcp__o__s', text: `got ${value}` }]);
+  await respond($ as never, world, []);
+  await complete($ as never, `It is ${value}.`);
+  await world.clock.settle();
+  const lines = linesOf(await openDetail($ as never, 'u', 80));
+  const used = lines.find((line) => line.startsWith('used in answer'));
+  expect(used?.length).toBe(80);
+  expect(used?.endsWith('…')).toBe(true);
+});
+
+test('R35, R21: an unavailable Inventory still binds m, which changes nothing', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = new Error('no usage');
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  const tree = await drawAt($ as never, 80);
+  expect(linesOf(tree)).toContain('Context usage unavailable');
+  expect(linesOf(tree).at(-1)).toBe('m measure · esc close');
+  expect(findKey(tree, 'measure')).toBeDefined();
+  await press($ as never, 'measure');
+  expect(world.usageCalls).not.toContain('full');
+  expect(linesOf(await drawAt($ as never, 80))).toContain('Context usage unavailable');
+});
+
+test(
+  'R10: a log folder outside the start directory is shown as an absolute path',
+  { options: { logDir: '../out' } },
+  async ($, on) => {
+    worldOf(on);
+    await $.session.start(SESSION);
+    await run($ as never);
+    expect(linesOf(await drawAt($ as never, 80))).toContain('logs: /out/s1');
+  },
+);
