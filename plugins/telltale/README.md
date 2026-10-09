@@ -40,7 +40,7 @@ While you work, without opening anything:
   ◐ db.run_query 3s · turn: 2 MCP · ~2.2k tok · 1✗
   ```
 
-- **Transcript.** Each completed MCP call's row gets one dim line beneath its tool line: `812ms · ~1.9k tok`, plus `· error` when it failed.
+- **Transcript.** Each completed MCP call's row gets one dim line beneath its tool line: `812ms · ~1.9k tok`, plus `· error` when it failed. A folded run of calls gets one such line beneath its count line instead, summing its MCP calls: `3 MCP calls · ~1.1k tok`, plus `· 1 error` when any failed.
 - **Toast.** At most one per turn, for an MCP call that failed (`db.run_query failed · /telltale`) or that returned 40,000 characters or more (`github.search returned ~15.0k tok`). A failure toast shows as the call completes; a large-result toast waits for the turn to end, and shows only when no call failed that turn.
 
 Run `/telltale` to open the pane on the Calls view, with the newest call selected. Calls is a table (`TOOL`, `SERVER`, `TIME`, `TOK`, `NEXT`), grouped by turn under `turn <N>` separators whose numbers match the log files. Failures are marked `✗` in the error colour. `retried`, `aborted` and `pending` show in the warning colour.
@@ -224,7 +224,7 @@ The source and tests cite these IDs (`R1` to `R50`, and "delta R12" and similar)
 - **R41** Each Inventory group title shows its total and `<p>% of <window>`; each MCP server heading reads `<server>  <bar>  <t> tok · <p>% · <usage>`, the bar 20 cells by share of the costliest server, rounded half up, at least 1 above zero.
 - **R42** A server heading's usage is the counted calls matching its tool rows by full name (`<n> calls · <e>✗ · ~<t> read`, or `never called`); a tool row with no counted call shows `never called`.
 - **R43** An open Inventory reloads Claude Code's estimate at each main-thread turn end; measured rows keep their figures; a failed reload keeps the figures shown.
-- **R44** In an interactive session a completed counted call the pane keeps gets one dim line beneath its transcript tool line, `<dur> · ~<t> tok` (` · error` when it failed); the engine's row is drawn unchanged; running, built-in, folded and evicted calls get none.
+- **R44** In an interactive session a completed counted call the pane keeps gets one dim line beneath its transcript tool line, `<dur> · ~<t> tok` (` · error` when it failed); a folded group of tool calls that is no longer active gets one dim line beneath its count line instead, `<k> MCP call(s) · ~<t> tok` (` · <n> error(s)` when any failed), summing its completed counted calls the pane keeps, and none when it has none or the host does not identify its calls; an expanded group's calls get their own lines; the engine's rows are drawn unchanged; running, built-in and evicted calls get none.
 - **R45** `/telltale` in the fullscreen layout opens the pane without holding toasts; on the main screen it holds them until it closes.
 - **R46** A telltale drawing that fails leaves the band and transcript rows as Claude Code draws them, shows no status entry or toast, and keeps the pane open with its view row, `this view could not be drawn` and its key row.
 - **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast, fired or held, the measured Inventory figures and the subagent names; it drops the kept argument and result text of earlier calls.

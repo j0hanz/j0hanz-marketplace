@@ -2194,6 +2194,78 @@ test('R44: running, built-in and unknown calls keep the engine row alone', async
   expect(await toolRow($ as never, 'nope', 'mcp__o__s')).toEqual(ENGINE_ROW);
 });
 
+const groupRow = async (
+  $: never,
+  members: { id?: string; tool: string; isRunning?: boolean }[],
+  state = { isActive: false, isExpanded: false },
+) =>
+  ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render({
+    component: 'ToolGroup',
+    surface: 'terminal',
+    requestId: 'g1',
+    viewport: { columns: 100, rows: 40, isFullscreen: false },
+    props: {
+      calls: members.map(({ id, tool, isRunning = false }) => ({
+        ...(id === undefined ? {} : { tool_use_id: id }),
+        tool,
+        input: {},
+        isRunning,
+        isErrored: false,
+        isInterrupted: false,
+      })),
+      ...state,
+    },
+  });
+
+test('R44: a folded group sums its completed MCP calls on one line', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'u1', tool: 'mcp__github__search_issues', text: 'x'.repeat(4000) },
+    { id: 'u2', tool: 'mcp__db__q', text: 'y'.repeat(400) },
+  ]);
+  await callOne($ as never, world, 'u3', 'mcp__db__q', 'x'.repeat(40), true);
+  await callOne($ as never, world, 'r', 'Read', 'ok');
+  const tree = (await groupRow($ as never, [
+    { id: 'u1', tool: 'mcp__github__search_issues' },
+    { id: 'u2', tool: 'mcp__db__q' },
+    { id: 'u3', tool: 'mcp__db__q' },
+    { id: 'r', tool: 'Read' },
+  ])) as Element;
+  expect(tree.type).toBe('Box');
+  expect(tree.props?.flexDirection).toBe('column');
+  expect(tree.children?.[0]).toEqual(ENGINE_ROW);
+  const line = tree.children?.[1] as Element;
+  expect(line.props?.dimColor).toBe(true);
+  expect(stringsOf(line).join('').trim()).toBe('3 MCP calls · ~1.1k tok · 1 error');
+});
+
+test('R44: an expanded, active or unmatched group keeps the engine row alone', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__o__s', 'ok');
+  const one = [{ id: 'u1', tool: 'mcp__o__s' }];
+  expect(await groupRow($ as never, one, { isActive: false, isExpanded: true })).toEqual(
+    ENGINE_ROW,
+  );
+  expect(await groupRow($ as never, one, { isActive: true, isExpanded: false })).toEqual(
+    ENGINE_ROW,
+  );
+  expect(await groupRow($ as never, [{ tool: 'mcp__o__s' }])).toEqual(ENGINE_ROW);
+  expect(await groupRow($ as never, [{ id: 'nope', tool: 'mcp__o__s' }])).toEqual(ENGINE_ROW);
+  expect(await groupRow($ as never, [{ id: 'u1', tool: 'mcp__o__s', isRunning: true }])).toEqual(
+    ENGINE_ROW,
+  );
+});
+
+test('R46: a group line that fails to draw leaves the engine row', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__o__s', 'ok');
+  // A non-string tool name makes `mcpServer` throw inside the hook's `try`.
+  expect(await groupRow($ as never, [{ id: 'u1', tool: 42 as never }])).toEqual(ENGINE_ROW);
+});
+
 test('R45: the fullscreen layout opens the pane without holding toasts', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);

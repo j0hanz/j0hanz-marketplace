@@ -1285,6 +1285,44 @@ export const register: Register = (on, options) => {
     );
   }).catch(($, e, next) => next(e));
 
+  // R44, R46: a folded group of tool calls gets one dim line summing its completed counted
+  // calls the pane keeps. Expanded, its rows are ToolUse rows and the hook above draws theirs;
+  // while active, a call may still join it. Any fault leaves the engine's row.
+  on('ui.render', { component: 'ToolGroup' }, async ($, e, next) => {
+    let line: string | null = null;
+    try {
+      if (!e.props.isExpanded && !e.props.isActive) {
+        // A host that predates `tool_use_id` names no call, so its groups get no line.
+        const ids = new Set(
+          e.props.calls.flatMap((one) =>
+            one.tool_use_id !== undefined && !one.isRunning && mcpServer(one.tool) !== null
+              ? [one.tool_use_id]
+              : [],
+          ),
+        );
+        const found = ids.size > 0 ? (await read($, calls)).filter((one) => ids.has(one.id)) : [];
+        if (found.length > 0) {
+          const tokens = found.reduce((sum, one) => sum + estTokens(one.textChars), 0);
+          const errors = found.filter((one) => one.isError).length;
+          line = `${plural(found.length, 'MCP call')} · ~${formatTokens(tokens)} tok${
+            errors > 0 ? ` · ${plural(errors, 'error')}` : ''
+          }`;
+        }
+      }
+    } catch {
+      line = null;
+    }
+    const drawn = await next(e);
+    if (line === null) return drawn;
+    const { Box, Text } = $.ui.resolve(e);
+    return (
+      <Box flexDirection="column">
+        {drawn}
+        <Text dimColor>{line}</Text>
+      </Box>
+    );
+  }).catch(($, e, next) => next(e));
+
   // R9, R23, delta R6: `/telltale [calls|inventory]`.
   on('command.run', { command: 'telltale' }, async ($, e) => {
     await settled;
