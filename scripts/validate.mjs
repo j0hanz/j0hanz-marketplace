@@ -84,7 +84,8 @@ for (const { name, source } of catalog.plugins) {
 for (const source of sources) {
   const hooks = join(source, 'hooks', 'hooks.json');
   if (!existsSync(hooks) || !JSON.parse(readFileSync(hooks, 'utf8')).modules) continue;
-  if (hasClaude && run('claude', ['plugin', 'test', source]).status !== 0) fail(`${source}: claude plugin test`);
+  if (hasClaude && run('claude', ['plugin', 'test', source]).status !== 0)
+    fail(`${source}: claude plugin test`);
   if (!existsSync(join(source, '.claude-plugin', 'types'))) {
     fail(
       `${source}: no generated types; load it once with --plugin-dir so validate can typecheck it (CLAUDE.md, "Mods")`,
