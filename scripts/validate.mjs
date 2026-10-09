@@ -77,7 +77,9 @@ for (const source of sources) {
   if (!existsSync(hooks) || !JSON.parse(readFileSync(hooks, 'utf8')).modules) continue;
   if (run('claude', ['plugin', 'test', source]).status !== 0) fail(`${source}: claude plugin test`);
   if (!existsSync(join(source, '.claude-plugin', 'types'))) {
-    console.warn(`⚠ ${source}: no generated types; load it once with --plugin-dir to typecheck`);
+    fail(
+      `${source}: no generated types; load it once with --plugin-dir so validate can typecheck it (CLAUDE.md, "Mods")`,
+    );
   } else if (run('npx', ['tsc', '-p', source]).status !== 0) fail(`${source}: tsc`);
 }
 
