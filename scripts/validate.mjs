@@ -23,8 +23,17 @@ const run = (bin, args, env) =>
 const onPath = (bin) =>
   spawnSync(bin, ['--version'], { stdio: 'ignore', shell: true }).status === 0;
 
-for (const target of ['.', ...sources]) {
-  if (run('claude', ['plugin', 'validate', target, '--strict']).status !== 0) failed++;
+const hasClaude = onPath('claude');
+if (!hasClaude) {
+  fail(
+    'claude not on PATH: npm run check needs Claude Code to validate and test plugins (CLAUDE.md)',
+  );
+}
+
+if (hasClaude) {
+  for (const target of ['.', ...sources]) {
+    if (run('claude', ['plugin', 'validate', target, '--strict']).status !== 0) failed++;
+  }
 }
 
 // Copilot CLI has no `plugin validate`. What it rejects silently, checked here instead:
@@ -75,7 +84,7 @@ for (const { name, source } of catalog.plugins) {
 for (const source of sources) {
   const hooks = join(source, 'hooks', 'hooks.json');
   if (!existsSync(hooks) || !JSON.parse(readFileSync(hooks, 'utf8')).modules) continue;
-  if (run('claude', ['plugin', 'test', source]).status !== 0) fail(`${source}: claude plugin test`);
+  if (hasClaude && run('claude', ['plugin', 'test', source]).status !== 0) fail(`${source}: claude plugin test`);
   if (!existsSync(join(source, '.claude-plugin', 'types'))) {
     fail(
       `${source}: no generated types; load it once with --plugin-dir so validate can typecheck it (CLAUDE.md, "Mods")`,
