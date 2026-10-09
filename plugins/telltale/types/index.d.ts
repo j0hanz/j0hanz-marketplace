@@ -65,7 +65,8 @@ declare module 'claude-code' {
       tick: number; // R29: bumped each second while a call runs, so the band redraws
       turnNo: number; // R34: the last turn number this process took
       toastedTurn: number; // R28: the turn that already had its toast
-      deferred: { turn: number; text: string } | null; // R28: a large-result toast held for its turn's end
+      toastedNames: string[]; // R28: `<server>.<tool>:failed|large` already toasted since /telltale or /clear
+      deferred: { turn: number; text: string; key: string } | null; // R28: a large-result toast held for its turn's end
       message: string | null; // R39, R40: the detail view's last copy message
     };
   }

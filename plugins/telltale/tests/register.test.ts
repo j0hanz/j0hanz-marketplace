@@ -1592,6 +1592,136 @@ test('R28: /clear drops a held toast with the turn it belonged to', async ($, on
   expect(kept.get('deferred')).toEqual(null);
 });
 
+test('R28: a tool that fails every turn toasts once, another tool still toasts', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  for (const id of ['a', 'b', 'c']) {
+    await callOne($ as never, world, id, 'mcp__db__run_query', 'boom', true);
+    await endTurn($ as never, world);
+  }
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  await callOne($ as never, world, 'd', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search failed · /telltale',
+  ]);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed', 'github.search:failed']);
+});
+
+test('R28: a skipped repeat leaves the turn toast to a large result', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: opening /telltale lets a tool toast again', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await run($ as never);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'db.run_query failed · /telltale',
+  ]);
+});
+
+test('R28: /clear lets a tool toast again', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'db.run_query failed · /telltale',
+  ]);
+});
+
+test('R28: a tool that returns a large result every turn toasts once', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  for (const id of ['a', 'b']) {
+    await callOne($ as never, world, id, 'mcp__github__search', 'x'.repeat(60_000));
+    await endTurn($ as never, world);
+  }
+  expect(world.toasts).toEqual(['github.search returned ~15.0k tok']);
+  expect(kept.get('toastedNames')).toEqual(['github.search:large']);
+});
+
+test('R28: a failure and a large result from one tool each toast', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  await callOne($ as never, world, 'b', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'github.search failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: a failure that lost the turn toast is not remembered', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await callOne($ as never, world, 'b', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed']);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search failed · /telltale',
+  ]);
+});
+
+test('R28: a held large result an error displaced is not remembered', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed']);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: a /telltale pane left undrawn does not reset the toast memory', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  world.openAnswer = { value: { isPlaced: false, reason: 'narrow' } };
+  await run($ as never);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+});
+
 test('R28: a result under 40,000 characters raises no toast', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);

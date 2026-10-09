@@ -71,7 +71,7 @@ const warnedOnce = atom({ plugin: 'telltale', key: 'warned' } as const, false);
 const pendingIds = atom({ plugin: 'telltale', key: 'pending' } as const, {});
 // R36, R47: subagent names by id. Only added to: the engine drops a finished agent from its list.
 const agentNames = atom({ plugin: 'telltale', key: 'agents' } as const, {});
-// R47: what a hot reload keeps beyond the rows: totals, the turn counter, the turn's toast.
+// R47: what a hot reload keeps beyond the rows: totals, the turn counter, the turn's toast and the tools already toasted.
 const NO_TOTALS: Totals = { calls: 0, errors: 0, tokens: 0, skills: [], ctx: null, tools: {} };
 const totals = atom({ plugin: 'telltale', key: 'totals' } as const, NO_TOTALS);
 const running = atom({ plugin: 'telltale', key: 'running' } as const, {});
@@ -81,6 +81,9 @@ const toastedTurn = atom({ plugin: 'telltale', key: 'toastedTurn' } as const, -1
 // R28: a large result's toast waits for its turn to end, so an error that lands
 // later in the turn still takes the turn's one toast.
 const deferredToast = atom({ plugin: 'telltale', key: 'deferred' } as const, null);
+// R28: a tool toasts once per kind until the person opens /telltale or runs /clear, so a
+// flaky tool stops toasting every turn while another tool's first failure still does.
+const toastedNames = atom({ plugin: 'telltale', key: 'toastedNames' } as const, []);
 const message = atom({ plugin: 'telltale', key: 'message' } as const, null);
 
 type Captured = {
@@ -475,6 +478,9 @@ async function maybeToast($: EngineInterface, call: Captured) {
   const large = call.text.length >= 40_000;
   if (!call.isError && !large) return;
   const name = serverTool(call.tool);
+  const key = `${name}:${call.isError ? 'failed' : 'large'}`;
+  // R28: a repeat stays quiet and leaves the turn's toast to another tool.
+  if ((await read($, toastedNames)).includes(key)) return;
   if (!call.isError) {
     // R28: the error text wins, so the large-result toast is held for the turn's end.
     await update($, deferredToast, (held) =>
@@ -483,6 +489,7 @@ async function maybeToast($: EngineInterface, call: Captured) {
         : {
             turn: call.turn,
             text: `${name} returned ~${formatTokens(estTokens(call.text.length))} tok`,
+            key,
           },
     );
     return;
@@ -493,6 +500,7 @@ async function maybeToast($: EngineInterface, call: Captured) {
     return call.turn;
   });
   if (!fresh) return;
+  await update($, toastedNames, (keys) => [...keys, key]);
   $.ui.toast(`${name} failed · /telltale`);
 }
 
@@ -1078,6 +1086,7 @@ export const register: Register = (on, options) => {
         await update($, selected, () => null);
         await update($, totals, () => NO_TOTALS); // the old context's share goes too (R27)
         await update($, deferredToast, () => null); // a held toast belongs to the cleared turns (R28)
+        await update($, toastedNames, () => []);
         await showStatus($);
       });
     } else {
@@ -1231,13 +1240,18 @@ export const register: Register = (on, options) => {
     // R28: the turn's held large-result toast, when no error took the turn's toast.
     const held = await safe(() => read($, deferredToast));
     if (held && held.turn === n) {
-      await update($, deferredToast, () => null);
-      let took = false;
-      await update($, toastedTurn, (turn) => {
-        took = turn !== n;
-        return n;
+      await safe(async () => {
+        await update($, deferredToast, () => null);
+        let took = false;
+        await update($, toastedTurn, (turn) => {
+          took = turn !== n;
+          return n;
+        });
+        if (!took || !interactive) return;
+        $.ui.toast(held.text);
+        // A toast held before a hot reload has no key (the pre-013 shape); skip recording it.
+        if (held.key) await update($, toastedNames, (keys) => [...keys, held.key]);
       });
-      if (took && interactive) $.ui.toast(held.text);
     }
     // delta R6: a headless run shows nothing of its own. A line another hook set stays first.
     if (!interactive || line === null) return r;
@@ -1369,6 +1383,8 @@ export const register: Register = (on, options) => {
       // R9: a `ui.open` hook above telltale refused the pane with `{ deny }`.
       return { text: `pane not opened: ${error instanceof Error ? error.message : String(error)}` };
     }
+    // R28: the person looked; every tool may toast again. A pane left undrawn was not seen.
+    if (opened.isPlaced) await safe(() => update($, toastedNames, () => []));
     // R9: an undrawn pane has no rows to focus; the selection set above shows once it is seated.
     if (opened.isPlaced && next === 'calls') await focusRow($, newest);
     if (!known) return { text: `unknown view "${raw}"; views: calls, inventory` };
