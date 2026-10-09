@@ -26,6 +26,7 @@ type World = {
   status: (string | undefined)[];
   copied: string[];
   copyResult: unknown;
+  openAnswer: unknown; // what the ui.open stub answers: `{ value }` or `{ deny }`
   listHold: Promise<void>; // agent.list answers once this settles
   throws: Set<string>; // tool_use_ids whose call rejects
   usages: unknown[]; // usage each turn.step returns, in order; null when empty
@@ -64,6 +65,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     status: [],
     copied: [],
     copyResult: { isCopied: true },
+    openAnswer: { value: { isPlaced: true } },
     listHold: Promise.resolve(),
     throws: new Set(),
     usages: [],
@@ -113,8 +115,9 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   });
   on('ui.open', ($, e) => {
     world.opened.push({ id: e.id, focus: e.focus === true, holdToasts: e.holdToasts === true });
-    if (world.panes !== null && !world.panes.includes(e.id)) world.panes.push(e.id);
-    return { value: { isPlaced: true } } as never;
+    const refused = (world.openAnswer as { deny?: unknown } | null)?.deny !== undefined;
+    if (!refused && world.panes !== null && !world.panes.includes(e.id)) world.panes.push(e.id);
+    return world.openAnswer as never;
   });
   on('ui.panes', () =>
     world.panes === null
@@ -860,6 +863,33 @@ test('R9: reopening from a detail view shows Calls with the newest call selected
   await run($ as never);
   expect(focusOf((await draw($ as never)).buttons)).toBe('row:b');
   expect(world.opened).toHaveLength(2);
+});
+
+test('R9: a pane opened but not drawn says so with the reason', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  world.openAnswer = { value: { isPlaced: false, reason: 'no attached surface places panes' } };
+  expect((await run($ as never)).text).toBe(
+    'pane opened but not drawn: no attached surface places panes',
+  );
+  expect(world.opened).toHaveLength(1);
+});
+
+test('R9: an unknown view still names the views when the pane is not drawn', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.openAnswer = { value: { isPlaced: false, reason: 'narrow' } };
+  expect((await run($ as never, 'foo')).text).toBe('unknown view "foo"; views: calls, inventory');
+});
+
+test('R9: a pane a ui.open hook refuses is reported, not thrown', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.openAnswer = { deny: 'refused-by-test' };
+  const text = (await run($ as never)).text ?? '';
+  expect(text.startsWith('pane not opened: ')).toBe(true);
+  expect(text).toContain('refused-by-test');
 });
 
 test('R10: an empty list says so, and rows run newest first', async ($, on) => {

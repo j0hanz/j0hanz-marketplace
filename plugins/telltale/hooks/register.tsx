@@ -9,6 +9,7 @@ import type {
   RenderInput,
   RenderSurface,
   SessionUsage,
+  UiOpenResult,
 } from 'claude-code';
 
 import type { Call, CallDetail, Inventory, InventoryRow, NextAction, Totals, View } from '../types';
@@ -1353,17 +1354,26 @@ export const register: Register = (on, options) => {
     const newest = list.at(-1)?.id ?? null;
     await update($, selected, () => newest);
     await openView($, next);
-    await $.ui.open({
-      id: PANE,
-      title: 'telltale',
-      focus: true,
-      closeOnEscape: true,
-      // R45: docked beside the transcript in the fullscreen layout, the pane stays open while
-      // the person works, so toasts show; on the main screen it is a dialog and holds them.
-      ...(e.presentation?.isFullscreen ? {} : { holdToasts: true as const }),
-    });
-    if (next === 'calls') await focusRow($, newest);
-    return { text: known ? 'opened' : `unknown view "${raw}"; views: calls, inventory` };
+    let opened: UiOpenResult;
+    try {
+      opened = await $.ui.open({
+        id: PANE,
+        title: 'telltale',
+        focus: true,
+        closeOnEscape: true,
+        // R45: docked beside the transcript in the fullscreen layout, the pane stays open while
+        // the person works, so toasts show; on the main screen it is a dialog and holds them.
+        ...(e.presentation?.isFullscreen ? {} : { holdToasts: true as const }),
+      });
+    } catch (error) {
+      // R9: a `ui.open` hook above telltale refused the pane with `{ deny }`.
+      return { text: `pane not opened: ${error instanceof Error ? error.message : String(error)}` };
+    }
+    // R9: an undrawn pane has no rows to focus; the selection set above shows once it is seated.
+    if (opened.isPlaced && next === 'calls') await focusRow($, newest);
+    if (!known) return { text: `unknown view "${raw}"; views: calls, inventory` };
+    // R9: open but waiting undrawn, e.g. no attached surface places panes; it is not gone.
+    return { text: opened.isPlaced ? 'opened' : `pane opened but not drawn: ${opened.reason}` };
   });
 
   // delta R11: the selection follows the focus ring across the rows.
