@@ -88,23 +88,25 @@ A turn with no records writes no file.
 
 One JSON object per line.
 
-| field          | type           | meaning                                                                                                                                                      |
-| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `type`         | `"call"`       |                                                                                                                                                              |
-| `tool`         | string         | tool name, e.g. `mcp__orders__search` or `Read`                                                                                                              |
-| `server`       | string or null | the `<server>` in `mcp__<server>__<tool>`; null for built-in tools                                                                                           |
-| `agentId`      | string or null | subagent id, null on the main thread                                                                                                                         |
-| `ms`           | number         | wall time including any permission prompt                                                                                                                    |
-| `args`         | object         | the arguments, redacted; every string cut to 2,000 characters followed by `…[cut N chars]`                                                                   |
-| `chars`        | number         | characters of result text Claude read                                                                                                                        |
-| `estTokens`    | number         | `ceil(chars / 4)`                                                                                                                                            |
-| `isError`      | boolean        | result was an error or was denied                                                                                                                            |
-| `blocks`       | string[]       | content block kinds in the result (e.g. `["text"]`, `["image"]`)                                                                                             |
-| `head`, `tail` | string         | first / last 300 characters of the redacted result text                                                                                                      |
-| `next`         | string         | what Claude did next: `answered`, `retried` (same tool), `other-tool`, `asked-user`, `aborted`, `pending` (subagent still running when the file was written) |
-| `usedInAnswer` | string[]       | up to 5 values (at least 4 chars, with a digit) that appear in both the result and the final answer, in result order                                         |
-| `text`         | string         | the full redacted result text; only when `fullPayloads` is true                                                                                              |
-| `truncated`    | `true`         | only when a single record exceeded the part limit and its largest fields were replaced by `…[cut N chars]`                                                   |
+| field          | type                   | meaning                                                                                                                                                         |
+| -------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`         | `"call"`               |                                                                                                                                                                 |
+| `tool`         | string                 | tool name, e.g. `mcp__orders__search` or `Read`                                                                                                                 |
+| `server`       | string or null         | the `<server>` in `mcp__<server>__<tool>`; null for built-in tools                                                                                              |
+| `agentId`      | string or null         | subagent id, null on the main thread                                                                                                                            |
+| `model`        | string or null         | the model that answered the response that issued the call (the one the request named when no usage was reported); null when no model response streamed the call |
+| `effort`       | string, number or null | the thinking effort that response's request asked for; null for a model without effort                                                                          |
+| `ms`           | number                 | wall time including any permission prompt                                                                                                                       |
+| `args`         | object                 | the arguments, redacted; every string cut to 2,000 characters followed by `…[cut N chars]`                                                                      |
+| `chars`        | number                 | characters of result text Claude read                                                                                                                           |
+| `estTokens`    | number                 | `ceil(chars / 4)`                                                                                                                                               |
+| `isError`      | boolean                | result was an error or was denied                                                                                                                               |
+| `blocks`       | string[]               | content block kinds in the result (e.g. `["text"]`, `["image"]`)                                                                                                |
+| `head`, `tail` | string                 | first / last 300 characters of the redacted result text                                                                                                         |
+| `next`         | string                 | what Claude did next: `answered`, `retried` (same tool), `other-tool`, `asked-user`, `aborted`, `pending` (subagent still running when the file was written)    |
+| `usedInAnswer` | string[]               | up to 5 values (at least 4 chars, with a digit) that appear in both the result and the final answer, in result order                                            |
+| `text`         | string                 | the full redacted result text; only when `fullPayloads` is true                                                                                                 |
+| `truncated`    | `true`                 | only when a single record exceeded the part limit and its largest fields were replaced by `…[cut N chars]`                                                      |
 
 ### `skill` record
 
@@ -112,17 +114,26 @@ One JSON object per line.
 { "type": "skill", "skill": "<name>", "chars": 1200, "estTokens": 300 }
 ```
 
+### `apiTool` record
+
+```json
+{ "type": "apiTool", "id": "sv1", "name": "advisor", "agentId": null, "args": {}, "ms": 250 }
+```
+
+A tool the API ran itself inside a model response (the advisor is one). Claude Code runs no tool hooks for it, so it never counts in the receipt, the totals or the pane, and has no `chars` or `estTokens`: the API reports no result. `id` is the API's id for the use, one record per id in a turn. `args` are redacted and cut like a call's. `ms` is the time the API stamped from start to result, null when the response ended first.
+
 ### `context-<N>.json`
 
 ```json
 {
   "reason": "start",
+  "version": "2.1.300",
   "files": [{ "path": "CLAUDE.md", "kind": "...", "chars": 0 }],
   "tools": [{ "tool": "...", "server": "...", "chars": 0, "deferred": false }]
 }
 ```
 
-`reason` is `start`, `clear` or `compact`. `files` are the instruction files loaded (CLAUDE.md and imports). `tools` are the tool descriptions sent so far: `chars` is the length of the description text, and `deferred` is true for a deferred MCP tool listing.
+`reason` is `start`, `clear` or `compact`. `files` are the instruction files loaded (CLAUDE.md and imports). `tools` are the tool descriptions sent so far: `chars` is the length of the description text, and `deferred` is true for a deferred MCP tool listing. `version` is the Claude Code version the session ran on, as `claude --version` prints it; absent when Claude Code could not report it.
 
 ### Reading the logs
 
@@ -164,16 +175,16 @@ Under `claude -p` the mod writes the same files and prints nothing of its own to
 
 ## Requirements index
 
-The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar). Each line is the current wording. Update the matching line whenever behaviour changes.
+The source and tests cite these IDs (`R1` to `R49`, and "delta R12" and similar). Each line is the current wording. Update the matching line whenever behaviour changes.
 
 - **R1** After a main-thread turn in which Claude or a subagent called an MCP tool or expanded a skill, one receipt line `telltale: …` appears under the answer with MCP call count, error count, `~t tok` (chars ÷ 4, rounded up per call; `k` from 1,000 with one decimal) and `skills:` once each in first-expansion order; built-in tools never count; a call another plugin made via `$.tool.call` never counts (its id was never streamed by a model response), while a call Claude streamed counts whichever plugin's origin it carries; when another hook already set a line under the answer, the receipt follows it.
 - **R2** Subagent turns show no receipt; their calls count in the main turn that was running, or, between turns, in the next main turn that ends.
 - **R3** Everything that reaches Claude (tool calls, results, descriptions, skill text, system prompt) is byte-identical to a session without the mod; a fault inside the mod never alters or blocks a call.
-- **R4** Each completed call is recorded with tool, server, args, ms, chars, estTokens, isError, block kinds, 300-character head and tail, agentId, `next` and `usedInAnswer`.
+- **R4** Each completed call is recorded with tool, server, args, ms, chars, estTokens, isError, block kinds, 300-character head and tail, agentId, the model that answered the response that issued it (else the one requested) and the effort requested, `next` and `usedInAnswer`.
 - **R5** A main-thread turn with at least one record writes that turn's records, one JSON object per line, to its own file (or numbered parts under R15); a turn with no record writes nothing; records that belong to a turn still in flight when the session ends are written at session end, under the number they were captured for.
 - **R6** Under `claude -p` the same files are written; nothing of the mod's own goes to stdout or stderr; a write failure is reported only through Claude Code's debug log; `/telltale` replies `the pane needs an interactive session`.
 - **R7** Each skill expansion is recorded with skill name, chars and estTokens in the turn it belongs to.
-- **R8** When the first turn after a context build ends, a new `context-<N>.json` is written (N past the highest present) with reason `start`, `clear` or `compact`, the instruction files loaded and the tool descriptions sent; only a main-conversation compaction that went ahead counts as `compact`.
+- **R8** When the first turn after a context build ends, a new `context-<N>.json` is written (N past the highest present) with reason `start`, `clear` or `compact`, the instruction files loaded, the tool descriptions sent, and the Claude Code version; only a main-conversation compaction that went ahead counts as `compact`.
 - **R9** `/telltale` opens the pane at any width, or reuses and focuses it, showing the view R23 picks, with the newest row selected in Calls.
 - **R10** Calls lists the most recent calls since session start or the last `/clear`, up to the 200 R25 keeps, newest first, each row with tool, server, duration, estimated tokens, an error marker and the next action, laid out as R32 says (server and next left out below 50 columns); an empty list shows `No tool calls yet` and `logs: <folder>`, relative to the starting directory with `/` separators.
 - **R11** Up/Down move the selection, Enter opens the detail; new calls do not move an existing selection; the detail shows args and the text Claude read (pretty-printed only when the compact JSON round-trips losslessly and the indented form serializes (`JSON.stringify`) to at most 45,000 characters), size, error flag, next action and used-in-answer; `b` returns with the same row selected; Esc closes the pane; with nothing selected, or the selection evicted, the newest call is selected.
@@ -214,6 +225,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R46** A telltale drawing that fails leaves the band and transcript rows as Claude Code draws them, shows no status entry or toast, and keeps the pane open with its view row, `this view could not be drawn` and its key row.
 - **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast, fired or held, the measured Inventory figures and the subagent names; it drops the kept argument and result text of earlier calls.
 - **R48** No pane or band row is wider than the drawable width; a longer row is cut with `…`, except the detail's argument and result text, which scroll.
+- **R49** Each tool call the API ran itself inside a model response, on the main thread or in a subagent, is recorded once per id as an `apiTool` record in the turn it belongs to, with id, name, agentId, redacted and cut args, and ms (null when the response ended before its result); it counts in no receipt, total, status entry, toast, band or pane row.
 
 ## License
 

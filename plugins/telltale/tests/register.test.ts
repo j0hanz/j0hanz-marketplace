@@ -27,6 +27,8 @@ type World = {
   copyResult: unknown;
   listHold: Promise<void>; // agent.list answers once this settles
   throws: Set<string>; // tool_use_ids whose call rejects
+  usages: unknown[]; // usage each turn.step returns, in order; null when empty
+  serverToolUses: unknown[]; // serverToolUses each turn.step returns, in order; absent when empty
 };
 
 const ROOT = '.claude/telltale';
@@ -62,6 +64,8 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     copyResult: { isCopied: true },
     listHold: Promise.resolve(),
     throws: new Set(),
+    usages: [],
+    serverToolUses: [],
   };
   world.clock = mock.clock(on);
   on('session.start', ($, e) => ({ cwd: e.cwd }));
@@ -142,7 +146,8 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
       answer: '',
       toolUses: tools.map((tool) => ({ name: tool.name, input: {} })),
       stopReason: tools.length > 0 ? 'tool_use' : 'end_turn',
-      usage: null,
+      usage: world.usages.shift() ?? null,
+      serverToolUses: world.serverToolUses.shift(),
     } as never;
   });
   on('tool.call', async ($, e) => {
@@ -170,7 +175,13 @@ const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as co
 const HEADLESS = { cwd: '/work', surface: null, isInteractive: false } as const;
 
 /** One model response through the plugin: its tool chunks, then the result. */
-const respond = async ($: never, world: World, tools: Tool[], agentId?: string) => {
+const respond = async (
+  $: never,
+  world: World,
+  tools: Tool[],
+  agentId?: string,
+  input: Record<string, unknown> = {},
+) => {
   world.steps.push(tools);
   const stream = (
     $ as { turn: { step: (e: unknown) => AsyncGenerator & { result: Promise<unknown> } } }
@@ -180,6 +191,7 @@ const respond = async ($: never, world: World, tools: Tool[], agentId?: string) 
     model: 'm',
     messageCount: 1,
     agentId,
+    ...input,
   });
   for await (const chunk of stream) void chunk;
   return stream.result;
@@ -285,6 +297,28 @@ test('R4: a completed MCP call is recorded with its server, size and estimate', 
   expect(typeof record!.ms).toBe('number');
 });
 
+test('R4: a call record names the model that answered and the effort asked for', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push({
+    input_tokens: 1,
+    output_tokens: 1,
+    cache_read_input_tokens: 0,
+    cache_creation_input_tokens: 0,
+    model: 'claude-answered',
+  });
+  await respond($ as never, world, [{ id: 'a', name: 'mcp__o__s' }], undefined, { effort: 'high' });
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'a' } as never);
+  await respond($ as never, world, [{ id: 'b', name: 'mcp__o__s' }]);
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'b' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  const records = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(records[0]).toMatchObject({ model: 'claude-answered', effort: 'high' });
+  // No usage reported: the model the request named, and no effort.
+  expect(records[1]).toMatchObject({ model: 'm', effort: null });
+});
+
 test('R4: a result with no text lists the block kinds it received', async ($, on) => {
   const world = worldOf(on);
   world.results.u1 = { result: { content: [{ type: 'image', data: 'AAAA' }] } };
@@ -363,6 +397,72 @@ test('R8: context records for the start and after /clear, never overwritten', as
     tools: [{ tool: 'mcp__orders__search', server: 'orders', chars: 13, deferred: false }],
   });
   expect(JSON.parse(world.files.get(`${DIR}/context-2.json`)!).reason).toBe('clear');
+});
+
+test('R8: a context record names the Claude Code version', async ($, on) => {
+  const world = worldOf(on);
+  on('prompt.context', ($, e) => ({ blocks: e.blocks, instructionFiles: e.instructionFiles }));
+  on('session.version', () => ({ value: { version: '2.1.300' } }) as never);
+  await $.session.start(SESSION);
+  await $.prompt.context({ blocks: [], instructionFiles: [] } as never);
+  await complete($ as never);
+  expect(JSON.parse(world.files.get(`${DIR}/context-1.json`)!)).toMatchObject({
+    reason: 'start',
+    version: '2.1.300',
+  });
+});
+
+test('R49: a tool the API ran itself is logged redacted and counted nowhere', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push([
+    {
+      id: 'sv1',
+      name: 'advisor',
+      input: { q: 'x', token: 'abc123' },
+      startedAt: 100,
+      endedAt: 350,
+    },
+  ]);
+  await respond($ as never, world, []);
+  expect((await complete($ as never, 'the answer')).text).toBe('the answer'); // no receipt
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    {
+      type: 'apiTool',
+      id: 'sv1',
+      name: 'advisor',
+      agentId: null,
+      args: { q: 'x', token: '[redacted]' },
+      ms: 250,
+    },
+  ]);
+  expect(world.toasts).toEqual([]);
+});
+
+test('R49: a subagent’s cut-short server tool use joins the main turn with no ms', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push([{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100 }]);
+  await respond($ as never, world, [], 'agent-1');
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    { type: 'apiTool', id: 'sv1', name: 'advisor', agentId: 'agent-1', args: {}, ms: null },
+  ]);
+});
+
+test('R49: a server tool use listed again after a pause is logged once', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push(
+    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100 }],
+    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100, endedAt: 180 }],
+  );
+  await respond($ as never, world, []);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    { type: 'apiTool', id: 'sv1', name: 'advisor', agentId: null, args: {}, ms: 80 },
+  ]);
 });
 
 test('R8: a resumed session numbers its records after the ones already there', async ($, on) => {

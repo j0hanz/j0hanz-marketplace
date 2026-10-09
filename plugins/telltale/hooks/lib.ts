@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs (R1 to R48) are indexed in ../README.md, "Requirements index".
+// directly. Requirement IDs (R1 to R49) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
@@ -135,7 +135,12 @@ const mapStrings = (value: unknown, fn: (s: string) => string): unknown => {
 /** R24: every string inside the (already redacted) arguments cut to 2,000 characters. */
 export const cutArgs = (args: unknown): unknown => mapStrings(args, (s) => cut(s, 2000));
 
-export type Response = { toolNames: string[]; complete: boolean };
+export type Response = {
+  toolNames: string[];
+  complete: boolean;
+  model?: string; // R4: the model that answered, else the one the request named
+  effort?: string | number; // R4: as the request asked; absent for a model without effort
+};
 export type LabelCall = { id: string; tool: string; agent: string; response: number | null };
 
 /** R12: each call's next action, read from the next complete response of its agent. */

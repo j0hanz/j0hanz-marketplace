@@ -98,6 +98,13 @@ type Turn = {
   calls: Captured[];
   skills: { skill: string; chars: number }[];
   context: { reason: string; files: { path: string; kind: string; chars: number }[] } | null;
+  apiTools: {
+    id: string;
+    name: string;
+    agentId: string | null;
+    input: unknown;
+    ms: number | null;
+  }[];
 };
 
 const safe = async <T,>(work: () => Promise<T> | T): Promise<T | undefined> => {
@@ -128,7 +135,7 @@ let contextNo = 0;
 let rootReady = false;
 let warned = false;
 let pendingReason: 'clear' | 'compact' | null = null;
-let buffer: Turn = { calls: [], skills: [], context: null };
+let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
 // ponytail: responses and callResponse grow ~100 B per model request for the process life;
 // prune per agent if sessions ever run 100k+ requests.
 const responses: Record<string, Response[]> = {};
@@ -178,11 +185,15 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
   const records = [
     ...turn.calls.map((call) => {
       const text = redact(call.text) as string;
+      const from = callResponse.get(call.id);
+      const issued = from ? responses[from.agent]?.[from.index] : undefined;
       return JSON.stringify({
         type: 'call',
         tool: call.tool,
         server: call.server,
         agentId: call.agentId,
+        model: issued?.model ?? null,
+        effort: issued?.effort ?? null,
         ms: call.ms,
         args: cutArgs(redact(call.args)),
         chars: call.text.length,
@@ -199,6 +210,16 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
     ...turn.skills.map((skill) =>
       JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
     ),
+    ...turn.apiTools.map((use) =>
+      JSON.stringify({
+        type: 'apiTool',
+        id: use.id,
+        name: use.name,
+        agentId: use.agentId,
+        args: cutArgs(redact(use.input)),
+        ms: use.ms,
+      }),
+    ),
   ];
   if (records.length > 0) {
     const parts = toParts(records);
@@ -210,7 +231,13 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
   if (turn.context) {
     contextNo += 1;
     const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
-    await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
+    // R8: which Claude Code built this context, so logs compare across versions.
+    const version = (await safe(() => $.session.version()))?.version;
+    await write(
+      $,
+      `context-${contextNo}.json`,
+      JSON.stringify({ ...turn.context, version, tools }),
+    );
   }
 }
 
@@ -856,7 +883,8 @@ export const register: Register = (on, options) => {
   on('turn.step', async function* ($, e, next) {
     const agent = e.agentId ?? 'main';
     const list = (responses[agent] ??= []);
-    const index = list.push({ toolNames: [], complete: false }) - 1;
+    const index =
+      list.push({ toolNames: [], complete: false, model: e.model, effort: e.effort }) - 1;
     const stream = next(e);
     let step = await stream.next();
     try {
@@ -874,6 +902,26 @@ export const register: Register = (on, options) => {
       if (!step.done) await stream.return?.(undefined as never);
     }
     const r = step.value;
+    // R4: the model that answered (a fallback, or a model a hook above rewrote) beats the request's.
+    await safe(() => {
+      if (r?.usage?.model) list[index]!.model = r.usage.model;
+      // R49: tools the API ran itself raise no tool.call. Logged into the running turn (as R2
+      // does for subagent calls), never counted: the API exposes no result to size.
+      for (const use of r?.serverToolUses ?? []) {
+        const ms = use.endedAt === undefined ? null : use.endedAt - use.startedAt;
+        // A paused turn may list the same use again when it continues: one record per id.
+        const seen = buffer.apiTools.find((t) => t.id === use.id);
+        if (seen) seen.ms ??= ms;
+        else
+          buffer.apiTools.push({
+            id: use.id,
+            name: use.name,
+            agentId: e.agentId ?? null,
+            input: use.input,
+            ms,
+          });
+      }
+    });
     // A null stopReason is a request that failed or was cut off: not a response (delta R12).
     list[index]!.complete = r?.stopReason != null;
     if (list[index]!.complete) await safe(() => relabel($, agent, index));
@@ -1000,8 +1048,8 @@ export const register: Register = (on, options) => {
       // write its records here or they are lost with the process (README, Logs).
       await settled;
       const turn = buffer;
-      buffer = { calls: [], skills: [], context: null };
-      const hasRecords = turn.calls.length + turn.skills.length > 0;
+      buffer = { calls: [], skills: [], context: null, apiTools: [] };
+      const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
       const n = hasRecords ? ++turnNo : turnNo; // R34: taken with the swap, like turn.complete
       if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
       if (!hasRecords) return next(e);
@@ -1036,10 +1084,10 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     if (e.agentId !== undefined) return r;
     const turn = buffer;
-    buffer = { calls: [], skills: [], context: null };
+    buffer = { calls: [], skills: [], context: null, apiTools: [] };
     // R34: the number is taken with the swap, before any await, so a call that lands while this
     // turn ends is captured with the next number, matching the file it goes to.
-    const hasRecords = turn.calls.length + turn.skills.length > 0;
+    const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
     const n = hasRecords ? ++turnNo : turnNo;
     if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
     // R1: MCP calls only, subagent calls included (R2); skills once each.
