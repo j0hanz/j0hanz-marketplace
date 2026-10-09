@@ -1213,9 +1213,14 @@ export const register: Register = (on, options) => {
         }
       });
     }
-    // R43: an open Inventory reloads its estimate at each main-thread turn end, keeping its
-    // figures when the reload fails (R22 as modified).
-    if ((await safe(() => read($, view))) === 'inventory') {
+    // R43: an Inventory shown in the open pane reloads its estimate at each main-thread turn
+    // end, keeping its figures when the reload fails (R22 as modified). The `view` atom outlives
+    // a closed pane, so the engine's own pane record decides, which also survives a hot reload
+    // (R47); a record that cannot be read counts as open, so a lookup fault never skips a reload.
+    if (
+      (await safe(() => read($, view))) === 'inventory' &&
+      ((await safe(() => $.ui.panes()))?.some((pane) => pane.id === PANE) ?? true)
+    ) {
       await safe(() => loadInventory($, 'keep'));
     }
     // R26, R27: the context share Claude Code reports now, or none; the plain call is free.

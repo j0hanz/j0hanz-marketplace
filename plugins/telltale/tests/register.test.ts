@@ -12,6 +12,7 @@ type World = {
   toasts: string[];
   logs: string[];
   opened: { id: string; focus: boolean; holdToasts: boolean }[];
+  panes: string[] | null; // the engine's open-pane ids; null makes $.ui.panes() fail
   failWrites: boolean;
   failList: boolean;
   steps: Tool[][];
@@ -49,6 +50,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     toasts: [],
     logs: [],
     opened: [],
+    panes: [],
     failWrites: false,
     failList: false,
     steps: [],
@@ -111,8 +113,22 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   });
   on('ui.open', ($, e) => {
     world.opened.push({ id: e.id, focus: e.focus === true, holdToasts: e.holdToasts === true });
+    if (world.panes !== null && !world.panes.includes(e.id)) world.panes.push(e.id);
     return { value: { isPlaced: true } } as never;
   });
+  on('ui.panes', () =>
+    world.panes === null
+      ? { deny: 'no pane list' }
+      : ({
+          value: world.panes.map((id) => ({
+            id,
+            title: id,
+            isShown: true,
+            isFocused: true,
+            isPlaced: true,
+          })),
+        } as never),
+  );
   on('ui.focus', ($, e) => {
     return {};
   });
@@ -2163,6 +2179,29 @@ test('R43, R22: a failed turn-end reload keeps the figures shown', async ($, on)
   const lines = linesOf(await drawAt($ as never, 100));
   expect(lines).toContain('MCP tools  15.9k tok · 8.0% of 200.0k');
   expect(lines).not.toContain('Context usage unavailable');
+});
+
+test('R43: a closed Inventory does not reload at turn end', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  expect(world.usageCalls).toEqual(['summary']);
+  world.panes = []; // Esc: the engine drops the pane, the view atom stays 'inventory'
+  await endTurn($ as never, world);
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(1);
+  await run($ as never, 'inventory'); // reopening loads fresh figures through openView
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(2);
+});
+
+test('R43: an unreadable pane list still reloads the Inventory', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  world.panes = null;
+  await endTurn($ as never, world);
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(2);
 });
 
 test('R47: measured figures are kept in pane state', async ($, on) => {
