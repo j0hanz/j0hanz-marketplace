@@ -142,16 +142,19 @@ Before any cut, these patterns are replaced by `[redacted]` in argument values a
 
 - Anthropic keys (`sk-ant-` prefix) and other `sk-` keys of 20 or more characters
 - GitHub tokens (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`, 36 or more characters) and `github_pat_` tokens
-- AWS access key IDs (`AKIA` plus 16 characters)
+- GitLab personal access tokens (`glpat-` prefix, 20 or more characters)
+- Stripe live secret and restricted keys and webhook signing secrets (`sk_live_`, `rk_live_`, `whsec_`, 20 or more characters)
+- npm tokens (`npm_` prefix, 20 or more characters)
+- AWS access key IDs (`AKIA` or `ASIA` plus 16 characters)
 - Slack tokens (`xox` followed by `a`, `b`, `p` or `r`, then a dash)
 - Google API keys (`AIza` plus 35 characters)
-- bearer tokens (the token part)
+- bearer tokens (the token part; the word matches whatever its case)
 - JWTs (three dot-separated parts, starting `eyJ`)
 - private key blocks (`BEGIN ... PRIVATE KEY` to `END`)
 
 A match may not follow a letter, digit, `_` or `-`, unless that letter ends a JSON escape (`\n`, `\r`, `\t`).
 
-The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `x_api_key`, `authorization`, `access_token`, `refresh_token`, `id_token`, `auth_token`, `session_token`, `client_secret`, `private_key`, `aws_secret_access_key`, `cookie` or `set_cookie` is replaced too. Names match whatever the case, and with `_`, `-` or nothing between their words, so `accessToken`, `Access-Token` and `ACCESS_TOKEN` all match `access_token`. This also applies inside JSON text, such as a result that is a JSON document, when the value is a string. `usedInAnswer` values are checked one by one, outside their JSON, so only the patterns above apply to them.
+The whole value of any field named `password`, `passwd`, `secret`, `token`, `api_key`, `x_api_key`, `authorization`, `access_token`, `refresh_token`, `id_token`, `auth_token`, `session_token`, `client_secret`, `private_key`, `aws_secret_access_key`, `cookie`, `set_cookie`, `secret_key` or `passphrase` is replaced too. Names match whatever the case, and with `_`, `-` or nothing between their words, so `accessToken`, `Access-Token` and `ACCESS_TOKEN` all match `access_token`. This also applies inside JSON text, such as a result that is a JSON document, when the value is a string. Deeper JSON escaping (a JSON string inside a JSON string inside another) and non-string values inside JSON text are not matched. `usedInAnswer` values are checked one by one, outside their JSON, so only the patterns above apply to them.
 
 Tool, server and skill names, paths and field names are never redacted.
 

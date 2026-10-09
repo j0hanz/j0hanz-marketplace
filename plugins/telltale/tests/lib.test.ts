@@ -98,6 +98,16 @@ test('R14: secret patterns in strings are redacted', async () => {
   expect(redact('jwt eyJhbGci.eyJzdWIi.sig_1')).toBe('jwt [redacted]');
 });
 
+test('R14: the added token prefixes are redacted', async () => {
+  expect(redact('gitlab glpat-' + 'a'.repeat(20))).toBe('gitlab [redacted]');
+  expect(redact('stripe sk_live_' + 'b'.repeat(24))).toBe('stripe [redacted]');
+  expect(redact('stripe rk_live_' + 'b'.repeat(24))).toBe('stripe [redacted]');
+  expect(redact('webhook whsec_' + 'c'.repeat(24))).toBe('webhook [redacted]');
+  expect(redact('aws ASIA' + 'ABCDEFGHIJKLMNOP')).toBe('aws [redacted]');
+  expect(redact('npm npm_' + 'd'.repeat(30))).toBe('npm [redacted]');
+  expect(redact('authorization: bearer abcdefgh1234')).toBe('authorization: bearer [redacted]');
+});
+
 test('R14: a listed field inside JSON text has its string value redacted', async () => {
   expect(redact('{"access_token":"abc123","user":"ann"}')).toBe(
     '{"access_token":"[redacted]","user":"ann"}',
@@ -147,11 +157,19 @@ test('R14: the added credential field names are redacted', async () => {
     'aws_secret_access_key',
     'Cookie',
     'Set-Cookie',
+    'secret_key',
+    'passphrase',
   ];
   const input = Object.fromEntries(names.map((name) => [name, 'v']));
   const output = Object.fromEntries(names.map((name) => [name, '[redacted]']));
   expect(redact(input)).toEqual(output);
   expect(redact(JSON.stringify(input))).toBe(JSON.stringify(output));
+});
+
+test('R14: secrets inside arrays are redacted, and long array strings are cut', async () => {
+  expect(redact({ rows: [{ token: 'abc' }] })).toEqual({ rows: [{ token: '[redacted]' }] });
+  const out = cutArgs({ rows: ['a'.repeat(2500)] }) as { rows: string[] };
+  expect(out.rows[0]).toBe('a'.repeat(2000) + '…[cut 500 chars]');
 });
 
 test('R14: pagination and count fields stay unredacted', async () => {

@@ -54,6 +54,8 @@ const SECRET_FIELDS = [
   'aws_secret_access_key',
   'cookie',
   'set_cookie',
+  'secret_key',
+  'passphrase',
 ];
 const squash = (key: string) => key.toLowerCase().replace(/[_-]/g, '');
 const SECRET_KEYS = new Set(SECRET_FIELDS.map(squash));
@@ -68,12 +70,17 @@ const SECRET_PATTERNS = [
   /sk-[\w-]{20,}/,
   /(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}/,
   /github_pat_\w{22,}/,
-  /AKIA[0-9A-Z]{16}/,
+  /(?:AKIA|ASIA)[0-9A-Z]{16}/,
   /xox[abpr]-[A-Za-z0-9-]{10,}/,
   /AIza[\w-]{35}/,
   /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/,
+  /glpat-[\w-]{20,}/,
+  /sk_live_[A-Za-z0-9]{20,}/,
+  /rk_live_[A-Za-z0-9]{20,}/,
+  /whsec_[A-Za-z0-9]{20,}/,
+  /npm_[\w-]{20,}/,
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
-const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[\\w.~+/=-]{8,}`, 'g');
+const BEARER = new RegExp(`${NOT_AFTER}([Bb]earer )[\\w.~+/=-]{8,}`, 'g');
 // R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
 // string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
 // quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
