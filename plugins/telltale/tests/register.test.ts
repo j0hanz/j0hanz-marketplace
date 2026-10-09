@@ -1376,6 +1376,40 @@ test('R28: one toast per turn, and an errored call gets the error text', async (
   ]);
 });
 
+test('R28: a large result that lands first never hides a later error', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  expect(kept.get('deferred')).toEqual(null);
+});
+
+test('R28: two large results in one turn raise one toast, the first', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'y'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['github.search returned ~15.0k tok']);
+});
+
+test('R28: /clear drops a held toast with the turn it belonged to', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000)); // between turns
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(kept.get('deferred')).toEqual(null); // the clear itself dropped the held toast
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  expect(kept.get('deferred')).toEqual(null);
+});
+
 test('R28: a result under 40,000 characters raises no toast', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);

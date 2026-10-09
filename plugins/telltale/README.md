@@ -41,7 +41,7 @@ While you work, without opening anything:
   ```
 
 - **Transcript.** Each completed MCP call's row gets one dim line beneath its tool line: `812ms · ~1.9k tok`, plus `· error` when it failed.
-- **Toast.** At most one per turn, for an MCP call that failed (`db.run_query failed · /telltale`) or that returned 40,000 characters or more (`github.search returned ~15.0k tok`).
+- **Toast.** At most one per turn, for an MCP call that failed (`db.run_query failed · /telltale`) or that returned 40,000 characters or more (`github.search returned ~15.0k tok`). A failure toast shows as the call completes; a large-result toast waits for the turn to end, and shows only when no call failed that turn.
 
 Run `/telltale` to open the pane on the Calls view, with the newest call selected. Calls is a table (`TOOL`, `SERVER`, `TIME`, `TOK`, `NEXT`), grouped by turn under `turn <N>` separators whose numbers match the log files. Failures are marked `✗` in the error colour. `retried`, `aborted` and `pending` show in the warning colour.
 
@@ -193,7 +193,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R25** The pane keeps the first 20,000 characters of the args (compact JSON) and of the result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so (R47); older calls leave the list, which ends with `<n> older calls are in the logs`.
 - **R26** In an interactive session a status entry shows the session totals (counted MCP calls and distinct skills since start or the last `/clear`, kept across a hot reload): `telltale · <n> MCP · <e>✗ · ~<t> tok · <k> skills · ctx <p>%`, each segment only when non-zero or reported; it updates when a counted call completes, at turn end and at `/clear`; with no call and no skill there is no entry.
 - **R27** When Claude Code reports no context share (before the first response, or a failed usage report), the status entry drops only its `ctx` segment.
-- **R28** In an interactive session, at most one toast per main-thread turn, for a counted call that errored (`<server>.<tool> failed · /telltale`) or returned 40,000 characters or more (`<server>.<tool> returned ~<t> tok`); the error text wins; the R16 notice does not count toward the limit.
+- **R28** In an interactive session, at most one toast per main-thread turn: a failed counted call's toast (`<server>.<tool> failed · /telltale`) shows when the call completes, and a call that returned 40,000 characters or more holds its toast (`<server>.<tool> returned ~<t> tok`) until the turn ends and shows only when no error toast showed that turn; the R16 notice does not count toward the limit.
 - **R29** While a counted call runs, the band above the prompt shows `◐ <server>.<tool> <elapsed>` for the longest-running call, ` +<k> running`, then ` · turn: <n> MCP · ~<t> tok` and ` · <e>✗` over the turn's completed calls; elapsed is whole seconds (`<m>m<ss>s` from a minute), never more than 2 seconds behind; parts drop, then the name is cut, to fit.
 - **R30** With no counted call running, the band holds no telltale row.
 - **R31** While Claude Code shows its survey above the prompt, the band holds no telltale row.
@@ -212,7 +212,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R44** In an interactive session a completed counted call the pane keeps gets one dim line beneath its transcript tool line, `<dur> · ~<t> tok` (` · error` when it failed); the engine's row is drawn unchanged; running, built-in, folded and evicted calls get none.
 - **R45** `/telltale` in the fullscreen layout opens the pane without holding toasts; on the main screen it holds them until it closes.
 - **R46** A telltale drawing that fails leaves the band and transcript rows as Claude Code draws them, shows no status entry or toast, and keeps the pane open with its view row, `this view could not be drawn` and its key row.
-- **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast and the measured Inventory figures; it drops the kept argument and result text of earlier calls.
+- **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast, fired or held, and the measured Inventory figures; it drops the kept argument and result text of earlier calls.
 - **R48** No pane or band row is wider than the drawable width; a longer row is cut with `…`, except the detail's argument and result text, which scroll.
 
 ## License

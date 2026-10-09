@@ -73,6 +73,9 @@ const running = atom({ plugin: 'telltale', key: 'running' } as const, {});
 const tick = atom({ plugin: 'telltale', key: 'tick' } as const, 0);
 const turnCount = atom({ plugin: 'telltale', key: 'turnNo' } as const, 0);
 const toastedTurn = atom({ plugin: 'telltale', key: 'toastedTurn' } as const, -1);
+// R28: a large result's toast waits for its turn to end, so an error that lands
+// later in the turn still takes the turn's one toast.
+const deferredToast = atom({ plugin: 'telltale', key: 'deferred' } as const, null);
 const message = atom({ plugin: 'telltale', key: 'message' } as const, null);
 
 type Captured = {
@@ -430,18 +433,26 @@ async function maybeToast($: EngineInterface, call: Captured) {
   if (!interactive || call.server === null) return;
   const large = call.text.length >= 40_000;
   if (!call.isError && !large) return;
+  const name = serverTool(call.tool);
+  if (!call.isError) {
+    // R28: the error text wins, so the large-result toast is held for the turn's end.
+    await update($, deferredToast, (held) =>
+      held?.turn === call.turn
+        ? held
+        : {
+            turn: call.turn,
+            text: `${name} returned ~${formatTokens(estTokens(call.text.length))} tok`,
+          },
+    );
+    return;
+  }
   let fresh = false;
   await update($, toastedTurn, (turn) => {
     fresh = turn !== call.turn;
     return call.turn;
   });
   if (!fresh) return;
-  const name = serverTool(call.tool);
-  $.ui.toast(
-    call.isError
-      ? `${name} failed · /telltale`
-      : `${name} returned ~${formatTokens(estTokens(call.text.length))} tok`,
-  );
+  $.ui.toast(`${name} failed · /telltale`);
 }
 
 /** R26, R42, R47: a counted call joins the session totals, which outlive the 200 kept rows. */
@@ -977,6 +988,7 @@ export const register: Register = (on, options) => {
         await update($, view, () => 'calls');
         await update($, selected, () => null);
         await update($, totals, () => NO_TOTALS); // the old context's share goes too (R27)
+        await update($, deferredToast, () => null); // a held toast belongs to the cleared turns (R28)
         await showStatus($);
       });
     } else {
@@ -1108,6 +1120,17 @@ export const register: Register = (on, options) => {
     const usage = await safe(() => $.session.usage());
     await safe(() => update($, totals, (t) => ({ ...t, ctx: usage?.context?.percent ?? null })));
     await showStatus($);
+    // R28: the turn's held large-result toast, when no error took the turn's toast.
+    const held = await safe(() => read($, deferredToast));
+    if (held && held.turn === n) {
+      await update($, deferredToast, () => null);
+      let took = false;
+      await update($, toastedTurn, (turn) => {
+        took = turn !== n;
+        return n;
+      });
+      if (took && interactive) $.ui.toast(held.text);
+    }
     // delta R6: a headless run shows nothing of its own. A line another hook set stays first.
     if (!interactive || line === null) return r;
     return { ...r, text: r.text === e.answer ? line : `${r.text}\n${line}` };
