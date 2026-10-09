@@ -58,6 +58,7 @@ declare module 'claude-code' {
       start: string; // R10: the directory the session started in ('' until session start)
       warned: boolean; // R16: the write-failure notice was shown this session
       pending: Record<string, string>; // delta R12: pending call id -> agent id
+      agents: Record<string, string>; // R36: agent id -> `<task> (<type>)`, from the agent list
       totals: Totals;
       running: Running;
       tick: number; // R29: bumped each second while a call runs, so the band redraws

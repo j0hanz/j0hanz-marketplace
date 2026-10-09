@@ -66,6 +66,8 @@ const startedIn = atom({ plugin: 'telltale', key: 'start' } as const, '');
 // nor strands a `pending` row (delta R12).
 const warnedOnce = atom({ plugin: 'telltale', key: 'warned' } as const, false);
 const pendingIds = atom({ plugin: 'telltale', key: 'pending' } as const, {});
+// R36, R47: subagent names by id. Only added to: the engine drops a finished agent from its list.
+const agentNames = atom({ plugin: 'telltale', key: 'agents' } as const, {});
 // R47: what a hot reload keeps beyond the rows: totals, the turn counter, the turn's toast.
 const NO_TOTALS: Totals = { calls: 0, errors: 0, tokens: 0, skills: [], ctx: null, tools: {} };
 const totals = atom({ plugin: 'telltale', key: 'totals' } as const, NO_TOTALS);
@@ -506,6 +508,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
   const { Box, Text, Button, Code } = $.ui.resolve(e);
   const detail = details.get(call.id);
   const note = await read($, message);
+  const names = await read($, agentNames);
   // R37: JSON is drawn as json code; a cut or non-JSON field as plain text (R11, R20).
   const field = (key: string, label: string, raw: string, full: number) => {
     const shown = show(pretty(raw), raw, full);
@@ -558,6 +561,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
     tool: toolName(call.tool),
     server: call.server,
     agentId: call.agentId,
+    agentName: call.agentId ? names[call.agentId] : undefined,
     ms: call.ms,
     chars: call.textChars,
     tokens: estTokens(call.textChars),
@@ -1077,6 +1081,20 @@ export const register: Register = (on, options) => {
       // R5, R6: the logs are the durable output. They are written first, in their own `safe`,
       // so a refused pane-state write (below) can never cost a turn its file.
       await safe(() => writeLogs($, turn, done, n));
+      // R36: name each listed agent; merged, so an agent the engine has since dropped keeps its name.
+      if (listed && listed.length > 0) {
+        await safe(() =>
+          update($, agentNames, (known) => ({
+            ...known,
+            ...Object.fromEntries(
+              listed.map((agent) => [
+                agent.id,
+                agent.description ? `${agent.description} (${agent.type})` : agent.type,
+              ]),
+            ),
+          })),
+        );
+      }
       await settled;
       await safe(async () => {
         for (const [id, found] of done) {

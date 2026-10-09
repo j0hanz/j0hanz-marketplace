@@ -439,11 +439,12 @@ export const serverHeading = (h: {
   `${h.name.padEnd(h.pad)}  ${bar(h.tokens, h.max)}  ${formatTokens(h.tokens)} tok` +
   `${h.window ? ` · ${pct(h.tokens, h.window)}%` : ''} · ${h.usage}`;
 
-/** R36 (amended): `<tool> · <server> · agent <id> · <dur> · <c> chars · ~<tok> tok · <next>`. */
+/** R36 (amended): `<tool> · <server> · agent <name or id> · <dur> · <c> chars · ~<tok> tok · <next>`. */
 export const detailHeader = (c: {
   tool: string;
   server: string | null;
   agentId: string | null;
+  agentName?: string; // `<task> (<type>)` from the agent list, when telltale saw it listed
   ms: number;
   chars: number;
   tokens: number;
@@ -452,7 +453,8 @@ export const detailHeader = (c: {
   [
     c.tool,
     ...(c.server ? [c.server] : []),
-    ...(c.agentId ? [`agent ${c.agentId}`] : []),
+    // R48: the name is capped so the figures after it survive the row clip.
+    ...(c.agentId ? [`agent ${c.agentName ? clip(c.agentName, 24) : c.agentId}`] : []),
     formatDur(c.ms),
     `${c.chars} chars`,
     `~${formatTokens(c.tokens)} tok`,

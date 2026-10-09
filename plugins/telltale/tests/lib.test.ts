@@ -524,6 +524,18 @@ test('R36: the detail header, with the agent right after the server', async () =
     }),
   ).toBe('run_query · db · agent a1b2 · 2.1s · 120 chars · ~30 tok · retried');
   expect(
+    detailHeader({
+      tool: 'run_query',
+      server: 'db',
+      agentId: 'a1b2',
+      agentName: 'map the db layer (Explore)',
+      ms: 2100,
+      chars: 120,
+      tokens: 30,
+      next: 'retried',
+    }),
+  ).toBe('run_query · db · agent map the db layer (Explo… · 2.1s · 120 chars · ~30 tok · retried');
+  expect(
     detailHeader({ ...base, tool: 'Read', server: null, ms: 5, chars: 4, tokens: 1, next: null }),
   ).toBe('Read · 5ms · 4 chars · ~1 tok · …');
 });

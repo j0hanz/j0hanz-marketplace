@@ -1773,14 +1773,45 @@ test('R36: an errored subagent call puts the agent right after the server', asyn
   await done;
   await respond($ as never, world, [{ id: 'q2', name: 'mcp__db__run_query' }], 'a1b2');
   await endTurn($ as never, world);
-  const tree = await openDetail($ as never, 'q');
+  const tree = await openDetail($ as never, 'q', 100);
   expect(linesOf(tree)).toContain(
-    'run_query · db · agent a1b2 · 2.1s · 120 chars · ~30 tok · retried',
+    'run_query · db · agent a1b2 (general-purpose) · 2.1s · 120 chars · ~30 tok · retried',
   );
   const error = elementsOf(tree).find(
     (el) => el.type === 'Text' && stringsOf(el).join('').trim() === '· error',
   );
   expect(error?.props?.color).toBe('error');
+});
+
+test('R36: a subagent keeps its name after the agent list drops it', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.running = ['a1b2'];
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'q', name: 'mcp__db__run_query' }], 'a1b2');
+  world.results.q = { result: 'r', text: 'x'.repeat(120) };
+  await $.tool.call({ tool: 'mcp__db__run_query', tool_use_id: 'q', agentId: 'a1b2' } as never);
+  await endTurn($ as never, world);
+  // The engine has dropped the finished a1b2; the list is not empty, so the names are merged.
+  world.running = ['c3d4'];
+  await endTurn($ as never, world);
+  expect(kept.get('agents')).toEqual({
+    a1b2: 'a1b2 (general-purpose)',
+    c3d4: 'c3d4 (general-purpose)',
+  }); // R47
+  const lines = linesOf(await openDetail($ as never, 'q', 100));
+  expect(lines.some((line) => line.includes(' · agent a1b2 (general-purpose) · '))).toBe(true);
+});
+
+test('R36: an agent never listed shows its id', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION); // world.running is empty: the list names nobody
+  await respond($ as never, world, [{ id: 'q', name: 'mcp__db__run_query' }], 'a1b2');
+  world.results.q = { result: 'r', text: 'x'.repeat(120) };
+  await $.tool.call({ tool: 'mcp__db__run_query', tool_use_id: 'q', agentId: 'a1b2' } as never);
+  await endTurn($ as never, world);
+  const lines = linesOf(await openDetail($ as never, 'q', 100));
+  expect(lines.some((line) => line.includes(' · agent a1b2 · '))).toBe(true);
 });
 
 test('R37: JSON text is drawn as json code, and other text plain', async ($, on) => {

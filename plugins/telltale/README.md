@@ -45,7 +45,7 @@ While you work, without opening anything:
 
 Run `/telltale` to open the pane on the Calls view, with the newest call selected. Calls is a table (`TOOL`, `SERVER`, `TIME`, `TOK`, `NEXT`), grouped by turn under `turn <N>` separators whose numbers match the log files. Failures are marked `✗` in the error colour. `retried`, `aborted` and `pending` show in the warning colour.
 
-Press Enter to open a call's detail. Its header reads `tool · server · time · chars · tokens · next`. The arguments and the text Claude read follow, coloured as JSON when they are JSON, then the values from the result that showed up in the answer. Press `n` and `p` to step to the older and newer call, `c` and `y` to copy the arguments or the result, and `b` to go back to the list.
+Press Enter to open a call's detail. Its header reads `tool · server · agent · time · chars · tokens · next`; `agent` shows only on a subagent's call, as its task and type. The arguments and the text Claude read follow, coloured as JSON when they are JSON, then the values from the result that showed up in the answer. Press `n` and `p` to step to the older and newer call, `c` and `y` to copy the arguments or the result, and `b` to go back to the list.
 
 Press `2` for the Inventory, which shows what each MCP server, skill and memory file costs in context: totals and shares of the window, a bar per server, how often each server was called, and `never called` on tools loaded but not used. Press `m` there to measure exactly. In the fullscreen layout the pane docks beside the transcript and lets toasts show while it stays open.
 
@@ -201,7 +201,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R33** In Calls each `✗` is in the error colour and each `retried`, `aborted` or `pending` label in the warning colour.
 - **R34** Calls groups rows by turn, newest first, under `turn <N> · <k> calls · ~<t> tok`; `<N>` is the turn file's number, a failed write still uses its number, and a call between turns joins the next turn.
 - **R35** Each view ends with a dim key row: `↑↓ select · enter open · esc close`, `n/p older/newer · c copy args · y copy result · b back`, `m measure · esc close`; messages sit above it.
-- **R36** The detail header reads `<tool> · <server> · agent <id> · <dur> · <c> chars · ~<t> tok · <next>`, then ` · error` in the error colour; server and agent parts only where they apply.
+- **R36** The detail header reads `<tool> · <server> · agent <name> · <dur> · <c> chars · ~<t> tok · <next>`, then ` · error` in the error colour; server and agent parts only where they apply; `<name>` is the subagent's `<task> (<type>)` from the agent list, cut to 24 characters, or its id when telltale never saw it listed (a running subagent's calls show the id until a main turn ends).
 - **R37** The detail draws arguments and result as JSON code when the shown text parses as JSON, plain otherwise, changing no character.
 - **R38** In the detail `n` shows the next older call and `p` the next newer one; at the ends nothing changes; `b` returns with the call last shown selected.
 - **R39** In the detail `c` copies the arguments and `y` the result text the pane keeps (R25), and the view shows `copied <k> chars` or `copied <k> of <total> chars` until the next press, focus move or view change.
@@ -212,7 +212,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R44** In an interactive session a completed counted call the pane keeps gets one dim line beneath its transcript tool line, `<dur> · ~<t> tok` (` · error` when it failed); the engine's row is drawn unchanged; running, built-in, folded and evicted calls get none.
 - **R45** `/telltale` in the fullscreen layout opens the pane without holding toasts; on the main screen it holds them until it closes.
 - **R46** A telltale drawing that fails leaves the band and transcript rows as Claude Code draws them, shows no status entry or toast, and keeps the pane open with its view row, `this view could not be drawn` and its key row.
-- **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast, fired or held, and the measured Inventory figures; it drops the kept argument and result text of earlier calls.
+- **R47** A hot reload keeps the Calls rows and labels, the selection, the view, the session totals, the turn counter, the turn's toast, fired or held, the measured Inventory figures and the subagent names; it drops the kept argument and result text of earlier calls.
 - **R48** No pane or band row is wider than the drawable width; a longer row is cut with `…`, except the detail's argument and result text, which scroll.
 
 ## License
