@@ -28,6 +28,7 @@ import {
   logsPath,
   mcpServer,
   pct,
+  permissionNote,
   plural,
   pretty,
   receipt,
@@ -92,6 +93,8 @@ type Captured = {
   isError: boolean;
   blocks: string[];
   turn: number; // R34
+  permission?: 'allow' | 'ask' | 'deny'; // R50
+  rule?: string; // R50: the settings rule that decided, raw; logged redacted, never put in state
 };
 type Done = { next: NextAction; used: string[] };
 type Turn = {
@@ -151,6 +154,9 @@ const forget = (id: string) => {
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
+// R50: each real call's permission verdict from the tool.check tiers beneath telltale, by id.
+// The call's own tool.call hook takes the entry out once its `next` settles, so none outlive it.
+const verdicts = new Map<string, { decision: 'allow' | 'ask' | 'deny'; rule?: string }>();
 // R25: args, result text and used values of the calls the pane lists, by id. Kept here, not in
 // `$.state`, which every plugin can read and which refuses a value over 4 MiB.
 const details = new Map<string, CallDetail>();
@@ -195,6 +201,8 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
         model: issued?.model ?? null,
         effort: issued?.effort ?? null,
         ms: call.ms,
+        permission: call.permission ?? null, // R50: null when no verdict was seen
+        ...(call.rule ? { permissionRule: redact(call.rule) } : {}),
         args: cutArgs(redact(call.args)),
         chars: call.text.length,
         estTokens: estTokens(call.text.length),
@@ -244,7 +252,7 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
 /** R10, R11, R25: a call's pane row and detail, keeping the newest 200. */
 async function listCall($: EngineInterface, call: Captured) {
   const json = JSON.stringify(call.args);
-  const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
+  const { args: _args, text: _text, blocks: _blocks, rule: _rule, ...meta } = call;
   const shown: Call = { ...meta, argsChars: json.length, textChars: call.text.length, next: null };
   details.set(call.id, { args: json.slice(0, SHOWN), text: call.text.slice(0, SHOWN), used: [] });
   let gone: Call[] = [];
@@ -617,7 +625,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
       ) : (
         <Text dimColor>{clip('text not kept after a reload; see the logs', width)}</Text>
       )}
-      <Text dimColor>{clip('duration includes any permission prompt', width)}</Text>
+      <Text dimColor>{clip(permissionNote(call.permission), width)}</Text>
       <Text>{clip(`used in answer: ${used}`, width)}</Text>
       {note !== null && <Text>{clip(note, width)}</Text>}
       {keyRow(KEYS_DETAIL)}
@@ -928,6 +936,15 @@ export const register: Register = (on, options) => {
     return r;
   });
 
+  // R50: observe the verdict only; R3: the result goes back exactly as `next` returned it.
+  // A query (`$.tool.check`) carries no tool_use_id and records nothing.
+  on('tool.check', async ($, e, next) => {
+    const r = await next(e);
+    const id = e.tool_use_id;
+    if (id) await safe(() => verdicts.set(id, { decision: r.decision, rule: r.rule }));
+    return r;
+  });
+
   on('tool.call', async ($, e, next) => {
     const started = (await safe(() => $.clock.now())) ?? 0;
     // R29: a counted call is in flight from here. Queued, never awaited: the call must not wait
@@ -944,9 +961,13 @@ export const register: Register = (on, options) => {
       else next.signal.addEventListener('abort', stop, { once: true });
     }
     let r: Awaited<ReturnType<typeof next>>;
+    let verdict: { decision: 'allow' | 'ask' | 'deny'; rule?: string } | undefined;
     try {
       r = await next(e);
     } finally {
+      // R50: the tool.check beneath ran inside this `next`; get-and-delete, captured or not.
+      verdict = verdicts.get(e.tool_use_id);
+      verdicts.delete(e.tool_use_id);
       if (counted) void later(() => stopRunning($, e.tool_use_id));
     }
     // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's: it gets its
@@ -970,6 +991,8 @@ export const register: Register = (on, options) => {
         blocks: blockKinds(r.result),
         // R34: the number this call's turn file will get (a call between turns joins the next).
         turn: turnNo + 1,
+        permission: verdict?.decision,
+        rule: verdict?.rule,
       };
       // Before the return: the turn end reads `buffer` for its log.
       buffer.calls.push(call);

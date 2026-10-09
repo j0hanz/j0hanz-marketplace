@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs (R1 to R49) are indexed in ../README.md, "Requirements index".
+// directly. Requirement IDs (R1 to R50) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
@@ -465,6 +465,14 @@ export const detailHeader = (c: {
     `~${formatTokens(c.tokens)} tok`,
     c.next ?? '…',
   ].join(' · ');
+
+/** R50: the detail's line on what a call's duration includes, by its permission verdict. */
+export const permissionNote = (decision?: 'allow' | 'ask' | 'deny'): string => {
+  if (decision === undefined) return 'duration includes any permission prompt';
+  return decision === 'ask'
+    ? 'duration includes a permission decision (dialog or classifier)'
+    : 'no permission dialog or classifier in this time';
+};
 
 /** R19: a path that starts at a drive or a root, not at the session's directory. */
 export const isAbsolute = (path: string) => /^(?:[A-Z]:)?[\\/]/i.test(path);

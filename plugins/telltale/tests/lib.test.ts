@@ -14,6 +14,7 @@ import {
   formatElapsed,
   logsPath,
   pct,
+  permissionNote,
   serverHeading,
   statusLine,
   toolName,
@@ -538,6 +539,15 @@ test('R36: the detail header, with the agent right after the server', async () =
   expect(
     detailHeader({ ...base, tool: 'Read', server: null, ms: 5, chars: 4, tokens: 1, next: null }),
   ).toBe('Read · 5ms · 4 chars · ~1 tok · …');
+});
+
+test('R50: the permission note follows the verdict, and keeps the old caveat when unknown', async () => {
+  expect(permissionNote()).toBe('duration includes any permission prompt');
+  expect(permissionNote('ask')).toBe(
+    'duration includes a permission decision (dialog or classifier)',
+  );
+  expect(permissionNote('allow')).toBe('no permission dialog or classifier in this time');
+  expect(permissionNote('deny')).toBe('no permission dialog or classifier in this time');
 });
 
 test('R10: the log folder prints relative to the start directory, with / separators', async () => {

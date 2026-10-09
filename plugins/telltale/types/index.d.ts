@@ -13,6 +13,7 @@ export type Call = {
   isError: boolean;
   next: NextAction | null; // null until the turn ends
   turn: number; // R34: the number of the turn file the call's record goes to
+  permission?: 'allow' | 'ask' | 'deny'; // R50: the tool.check verdict beneath telltale; absent when unknown
 };
 // R25: a listed call's text, kept in the mod's memory rather than in `$.state`.
 export type CallDetail = {

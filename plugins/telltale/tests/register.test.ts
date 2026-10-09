@@ -2343,3 +2343,73 @@ test(
     expect(linesOf(await drawAt($ as never, 80))).toContain('logs: /out/s1');
   },
 );
+
+// R50: the permission verdict from the tool.check tiers beneath telltale.
+
+/** Raises the verdict a session's tool.check would give call `id`, as the engine does. */
+const checkCall = ($: never, id: string, tool = 'mcp__o__s') =>
+  ($ as { tool: { check: (e: unknown) => Promise<unknown> } }).tool.check({
+    tool,
+    input: {},
+    tool_use_id: id,
+  });
+
+test('R3, R50: a tool.check verdict passes through unchanged', async ($, on) => {
+  worldOf(on);
+  on('tool.check', () => ({ decision: 'ask', reason: 'a rule asks', rule: 'mcp__o__s' }));
+  await $.session.start(SESSION);
+  expect(await checkCall($ as never, 'u1')).toEqual({
+    decision: 'ask',
+    reason: 'a rule asks',
+    rule: 'mcp__o__s',
+  });
+  // A query: no tool_use_id.
+  expect(await $.tool.check({ tool: 'mcp__o__s', input: {} })).toEqual({
+    decision: 'ask',
+    reason: 'a rule asks',
+    rule: 'mcp__o__s',
+  });
+});
+
+test('R50: an asked call logs its verdict and redacted rule, and the detail says so', async ($, on) => {
+  const world = worldOf(on);
+  const state = stateOf(on);
+  const key = 'AKIA' + 'Q7ZX2P9LMN4RTV8W';
+  on('tool.check', () => ({ decision: 'ask', rule: `Bash(echo ${key}:*)` }));
+  await $.session.start(SESSION);
+  await checkCall($ as never, 'a');
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record).toMatchObject({ permission: 'ask', permissionRule: 'Bash(echo [redacted]:*)' });
+  expect(JSON.stringify(record)).not.toContain(key);
+  // The row reaches shared state with its verdict, and the raw rule never does.
+  expect(JSON.stringify(state.get('calls'))).toContain('"permission":"ask"');
+  expect(JSON.stringify(state.get('calls'))).not.toContain(key);
+  expect(linesOf(await openDetail($ as never, 'a'))).toContain(
+    'duration includes a permission decision (dialog or classifier)',
+  );
+});
+
+test('R50: an allowed call says its duration has no permission wait', async ($, on) => {
+  const world = worldOf(on);
+  on('tool.check', () => ({ decision: 'allow' }));
+  await $.session.start(SESSION);
+  await checkCall($ as never, 'a');
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record!.permission).toBe('allow');
+  expect(Object.keys(record!)).not.toContain('permissionRule');
+  expect(linesOf(await openDetail($ as never, 'a'))).toContain(
+    'no permission dialog or classifier in this time',
+  );
+});
+
+test('R50: a call with no verdict logs permission null', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]!.permission).toBeNull();
+});
