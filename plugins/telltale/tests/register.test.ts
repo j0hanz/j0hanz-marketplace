@@ -469,6 +469,38 @@ test('R5: the turn file is written even when a pane-state write is refused', asy
   expect(out.text).toContain('telltale: 1 MCP call');
 });
 
+test('R5: a call made after the last turn is written when the session ends', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await $.session.end({ reason: 'other', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(turnFiles(world)).toEqual([`${DIR}/turn-1.jsonl`]);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({
+    tool: 'mcp__db__run_query',
+    next: 'aborted',
+  });
+});
+
+test('R5: a between-turn call keeps the label of the response that followed it', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await respond($ as never, world, []); // a complete response names no tool
+  await $.session.end({ reason: 'other', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'answered' });
+});
+
+test('R5: /clear still writes no turn file', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(turnFiles(world)).toEqual([]);
+});
+
 test('R6: headless, a failing log folder goes to the debug log only', async ($, on) => {
   const world = worldOf(on);
   world.failWrites = true;

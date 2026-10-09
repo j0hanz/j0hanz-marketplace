@@ -979,6 +979,30 @@ export const register: Register = (on, options) => {
         await update($, totals, () => NO_TOTALS); // the old context's share goes too (R27)
         await showStatus($);
       });
+    } else {
+      // A call made after the last turn's end belongs to a turn that never completes;
+      // write its records here or they are lost with the process (README, Logs).
+      await settled;
+      const turn = buffer;
+      buffer = { calls: [], skills: [], context: null };
+      const hasRecords = turn.calls.length + turn.skills.length > 0;
+      const n = hasRecords ? ++turnNo : turnNo; // R34: taken with the swap, like turn.complete
+      if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
+      if (!hasRecords) return next(e);
+      const labels = labelCalls(
+        responses,
+        turn.calls.map((call) => ({
+          id: call.id,
+          tool: call.tool,
+          agent: call.agentId ?? 'main',
+          response: call.response,
+        })),
+        () => false, // the session is over: no agent is still running
+      );
+      const done = new Map(
+        turn.calls.map((call) => [call.id, { next: labels[call.id] ?? 'aborted', used: [] }]),
+      );
+      await safe(() => writeLogs($, turn, done, n));
     }
     return next(e);
   });

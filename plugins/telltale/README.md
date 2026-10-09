@@ -79,7 +79,7 @@ Set these in the plugin's settings in Claude Code.
 Files live under `logDir`, relative to the directory the session started in (a later `cd` does not move them):
 
 - `<logDir>/.gitignore` contains `*`. It is written before the first log file.
-- `<logDir>/<session-id>/turn-<N>.jsonl` holds one turn's records. When a turn's records exceed 1,000,000 characters they go to `turn-<N>-part<K>.jsonl` files, each under that size. No record is dropped. `N` continues from the highest number already in the folder, so a resumed session appends.
+- `<logDir>/<session-id>/turn-<N>.jsonl` holds one turn's records. When a turn's records exceed 1,000,000 characters they go to `turn-<N>-part<K>.jsonl` files, each under that size. No record is dropped. `N` continues from the highest number already in the folder, so a resumed session appends. Records captured after the last turn of a session, such as a subagent's call after the final answer, are written to that turn's file when the session ends.
 - `<logDir>/<session-id>/context-<N>.json` is written at the end of the first turn after the conversation's starting context is built or rebuilt: session start, resume, after `/clear`, after a compaction.
 
 A turn with no records writes no file.
@@ -170,7 +170,7 @@ The source and tests cite these IDs (`R1` to `R48`, and "delta R12" and similar)
 - **R2** Subagent turns show no receipt; their calls count in the main turn that was running, or, between turns, in the next main turn that ends.
 - **R3** Everything that reaches Claude (tool calls, results, descriptions, skill text, system prompt) is byte-identical to a session without the mod; a fault inside the mod never alters or blocks a call.
 - **R4** Each completed call is recorded with tool, server, args, ms, chars, estTokens, isError, block kinds, 300-character head and tail, agentId, `next` and `usedInAnswer`.
-- **R5** A main-thread turn with at least one record writes that turn's records, one JSON object per line, to its own file (or numbered parts under R15); a turn with no record writes nothing.
+- **R5** A main-thread turn with at least one record writes that turn's records, one JSON object per line, to its own file (or numbered parts under R15); a turn with no record writes nothing; records that belong to a turn still in flight when the session ends are written at session end, under the number they were captured for.
 - **R6** Under `claude -p` the same files are written; nothing of the mod's own goes to stdout or stderr; a write failure is reported only through Claude Code's debug log; `/telltale` replies `the pane needs an interactive session`.
 - **R7** Each skill expansion is recorded with skill name, chars and estTokens in the turn it belongs to.
 - **R8** When the first turn after a context build ends, a new `context-<N>.json` is written (N past the highest present) with reason `start`, `clear` or `compact`, the instruction files loaded and the tool descriptions sent; only a main-conversation compaction that went ahead counts as `compact`.
