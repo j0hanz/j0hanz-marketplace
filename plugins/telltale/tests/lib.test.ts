@@ -9,6 +9,7 @@ import {
   callTable,
   chunks,
   clip,
+  ctxDelta,
   detailHeader,
   formatDur,
   formatElapsed,
@@ -251,6 +252,33 @@ test('R12: a running subagent with no next response leaves its call pending', as
   const responses = { main: [resp([])], a1: [resp(['z'])] };
   const calls = [{ id: 'z1', tool: 'z', agent: 'a1', response: 0 }];
   expect(labelCalls(responses, calls, (agent) => agent === 'a1')).toEqual({ z1: 'pending' });
+});
+
+const used = (toolNames: string[], inTok: number, out: number, serverTools = 0) => ({
+  toolNames,
+  complete: true,
+  usage: { in: inTok, out, serverTools },
+});
+
+test('R51: growth after a single-tool response, net of its output', async () => {
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], 0)).toBe(350);
+});
+
+test('R51: the next response with usage counts, not a failed one', async () => {
+  const list = [
+    used(['x'], 1000, 50),
+    { toolNames: [], complete: false, usage: null },
+    used([], 1600, 9),
+  ];
+  expect(ctxDelta(list, 0)).toBe(550);
+});
+
+test('R51: no figure for parallel calls, server tools, no next usage or negative growth', async () => {
+  expect(ctxDelta([used(['x', 'Read'], 1000, 50), used([], 1400, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50, 1), used([], 1400, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 600, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], null)).toBeUndefined();
 });
 
 test('R13: values from the result that the answer names', async () => {

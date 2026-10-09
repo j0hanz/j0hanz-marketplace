@@ -17,6 +17,7 @@ import {
   callTable,
   chunks,
   clip,
+  ctxDelta,
   cutArgs,
   detailHeader,
   estTokens,
@@ -139,7 +140,7 @@ let rootReady = false;
 let warned = false;
 let pendingReason: 'clear' | 'compact' | null = null;
 let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
-// ponytail: responses and callResponse grow ~100 B per model request for the process life;
+// ponytail: responses and callResponse grow ~200 B per model request for the process life;
 // prune per agent if sessions ever run 100k+ requests.
 const responses: Record<string, Response[]> = {};
 const callResponse = new Map<string, { agent: string; index: number }>();
@@ -186,13 +187,14 @@ async function write($: EngineInterface, name: string, text: string) {
   }
 }
 
-/** R4, R5, R7, R8, R15: one turn's records, and its context record when it has one. */
+/** R4, R5, R7, R8, R15, R51: one turn's records, and its context record when it has one. */
 async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>, n: number) {
   const records = [
     ...turn.calls.map((call) => {
       const text = redact(call.text) as string;
       const from = callResponse.get(call.id);
       const issued = from ? responses[from.agent]?.[from.index] : undefined;
+      const delta = ctxDelta(responses[call.agentId ?? 'main'] ?? [], call.response);
       return JSON.stringify({
         type: 'call',
         tool: call.tool,
@@ -206,6 +208,7 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
         args: cutArgs(redact(call.args)),
         chars: call.text.length,
         estTokens: estTokens(call.text.length),
+        ...(delta === undefined ? {} : { ctxDelta: delta }), // R51
         isError: call.isError,
         blocks: call.blocks,
         head: text.slice(0, 300),
@@ -913,6 +916,16 @@ export const register: Register = (on, options) => {
     // R4: the model that answered (a fallback, or a model a hook above rewrote) beats the request's.
     await safe(() => {
       if (r?.usage?.model) list[index]!.model = r.usage.model;
+      // R51: what the request cost as the API reported it; read by `ctxDelta` at log time.
+      const usage = r?.usage;
+      if (usage) {
+        list[index]!.usage = {
+          in:
+            usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens,
+          out: usage.output_tokens,
+          serverTools: r?.serverToolUses?.length ?? 0,
+        };
+      }
       // R49: tools the API ran itself raise no tool.call. Logged into the running turn (as R2
       // does for subagent calls), never counted: the API exposes no result to size.
       for (const use of r?.serverToolUses ?? []) {

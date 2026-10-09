@@ -319,6 +319,42 @@ test('R4: a call record names the model that answered and the effort asked for',
   expect(records[1]).toMatchObject({ model: 'm', effort: null });
 });
 
+const U = (input: number, cacheRead: number, cacheWrite: number, output: number) => ({
+  model: 'm',
+  input_tokens: input,
+  cache_read_input_tokens: cacheRead,
+  cache_creation_input_tokens: cacheWrite,
+  output_tokens: output,
+});
+
+test('R51: a single-tool call records how much the context grew after it', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push(U(400, 500, 100, 50), U(100, 1200, 100, 20)); // in 1000 out 50, then in 1400
+  await respond($ as never, world, [{ id: 'a', name: 'mcp__orders__search' }]);
+  await $.tool.call({ tool: 'mcp__orders__search', tool_use_id: 'a' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ estTokens: 1, ctxDelta: 350 });
+});
+
+test('R51: calls from one response carry no ctxDelta', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push(U(1000, 0, 0, 50), U(1400, 0, 0, 20));
+  await respond($ as never, world, [
+    { id: 'a', name: 'mcp__orders__search' },
+    { id: 'b', name: 'Read' },
+  ]);
+  await $.tool.call({ tool: 'mcp__orders__search', tool_use_id: 'a' } as never);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'b' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  const records = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(records).toHaveLength(2);
+  expect(records.some((record) => 'ctxDelta' in record)).toBe(false);
+});
+
 test('R4: a result with no text lists the block kinds it received', async ($, on) => {
   const world = worldOf(on);
   world.results.u1 = { result: { content: [{ type: 'image', data: 'AAAA' }] } };

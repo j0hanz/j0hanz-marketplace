@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs (R1 to R50) are indexed in ../README.md, "Requirements index".
+// directly. Requirement IDs (R1 to R51) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
@@ -140,6 +140,8 @@ export type Response = {
   complete: boolean;
   model?: string; // R4: the model that answered, else the one the request named
   effort?: string | number; // R4: as the request asked; absent for a model without effort
+  /** R51: API-reported input (all three input counts summed) and output, and server tool uses. */
+  usage?: { in: number; out: number; serverTools: number } | null;
 };
 export type LabelCall = { id: string; tool: string; agent: string; response: number | null };
 
@@ -169,6 +171,23 @@ export const labelCalls = (
             : 'other-tool';
   }
   return labels;
+};
+
+/**
+ * R51: how much the agent's context grew after response `k`: the next response with usage, its
+ * input minus k's input and k's output. Only when k asked for exactly one tool (any tool, built-in
+ * included) and no server tool, and the growth is not negative (a compaction ran between them).
+ * Clearing old tool results in between shrinks the input without going negative: the figure is
+ * then understated, not dropped.
+ */
+// ponytail: no split for parallel or mixed calls; attribute by chars share if anyone asks.
+export const ctxDelta = (list: Response[], k: number | null): number | undefined => {
+  const at = k === null ? undefined : list[k];
+  if (!at?.usage || at.toolNames.length !== 1 || at.usage.serverTools > 0) return undefined;
+  const next = list.slice(k! + 1).find((response) => response.usage)?.usage;
+  if (!next) return undefined;
+  const delta = next.in - at.usage.in - at.usage.out;
+  return delta >= 0 ? delta : undefined;
 };
 
 const values = (text: string): string[] =>
