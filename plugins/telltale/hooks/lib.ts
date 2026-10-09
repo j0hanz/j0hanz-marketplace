@@ -1,5 +1,5 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
-// directly. Requirement IDs (R1 to R48) are indexed in ../README.md, "Requirements index".
+// directly. Requirement IDs (R1 to R51) are indexed in ../README.md, "Requirements index".
 
 import type { NextAction } from '../types';
 
@@ -54,26 +54,33 @@ const SECRET_FIELDS = [
   'aws_secret_access_key',
   'cookie',
   'set_cookie',
+  'secret_key',
+  'passphrase',
 ];
 const squash = (key: string) => key.toLowerCase().replace(/[_-]/g, '');
 const SECRET_KEYS = new Set(SECRET_FIELDS.map(squash));
 
 // R14. A match must not follow a letter, digit, `_` or `-`, unless that letter ends a JSON
 // escape (`\n`, `\r`, `\t`): MCP results are often JSON text. A private key block matches anywhere.
-const NOT_AFTER = String.raw`(?:(?<![A-Za-z0-9_-])|(?<=\\[nrt]))`;
+const NOT_AFTER = String.raw`(?:(?<![\w-])|(?<=\\[nrt]))`;
 const PRIVATE_KEY =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
 const SECRET_PATTERNS = [
-  /sk-ant-[A-Za-z0-9_-]{20,}/,
-  /sk-[A-Za-z0-9_-]{20,}/,
+  /sk-ant-[\w-]{20,}/,
+  /sk-[\w-]{20,}/,
   /(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}/,
-  /github_pat_[A-Za-z0-9_]{22,}/,
-  /AKIA[0-9A-Z]{16}/,
+  /github_pat_\w{22,}/,
+  /(?:AKIA|ASIA)[0-9A-Z]{16}/,
   /xox[abpr]-[A-Za-z0-9-]{10,}/,
-  /AIza[0-9A-Za-z_-]{35}/,
-  /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
+  /AIza[\w-]{35}/,
+  /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/,
+  /glpat-[\w-]{20,}/,
+  /sk_live_[A-Za-z0-9]{20,}/,
+  /rk_live_[A-Za-z0-9]{20,}/,
+  /whsec_[A-Za-z0-9]{20,}/,
+  /npm_[\w-]{20,}/,
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
-const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
+const BEARER = new RegExp(`${NOT_AFTER}([Bb]earer )[\\w.~+/=-]{8,}`, 'g');
 // R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
 // string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
 // quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
@@ -128,7 +135,14 @@ const mapStrings = (value: unknown, fn: (s: string) => string): unknown => {
 /** R24: every string inside the (already redacted) arguments cut to 2,000 characters. */
 export const cutArgs = (args: unknown): unknown => mapStrings(args, (s) => cut(s, 2000));
 
-export type Response = { toolNames: string[]; complete: boolean };
+export type Response = {
+  toolNames: string[];
+  complete: boolean;
+  model?: string; // R4: the model that answered, else the one the request named
+  effort?: string | number; // R4: as the request asked; absent for a model without effort
+  /** R51: API-reported input (all three input counts summed) and output, and server tool uses. */
+  usage?: { in: number; out: number; serverTools: number } | null;
+};
 export type LabelCall = { id: string; tool: string; agent: string; response: number | null };
 
 /** R12: each call's next action, read from the next complete response of its agent. */
@@ -159,9 +173,26 @@ export const labelCalls = (
   return labels;
 };
 
+/**
+ * R51: how much the agent's context grew after response `k`: the next response with usage, its
+ * input minus k's input and k's output. Only when k asked for exactly one tool (any tool, built-in
+ * included) and no server tool, and the growth is not negative (a compaction ran between them).
+ * Clearing old tool results in between shrinks the input without going negative: the figure is
+ * then understated, not dropped.
+ */
+// ponytail: no split for parallel or mixed calls; attribute by chars share if anyone asks.
+export const ctxDelta = (list: Response[], k: number | null): number | undefined => {
+  const at = k === null ? undefined : list[k];
+  if (!at?.usage || at.toolNames.length !== 1 || at.usage.serverTools > 0) return undefined;
+  const next = list.slice(k! + 1).find((response) => response.usage)?.usage;
+  if (!next) return undefined;
+  const delta = next.in - at.usage.in - at.usage.out;
+  return delta >= 0 ? delta : undefined;
+};
+
 const values = (text: string): string[] =>
   text
-    .split(/[^A-Za-z0-9_.:/-]+/)
+    .split(/[^\w.:/-]+/)
     .map((token) => token.replace(/[.:/-]+$/, ''))
     .filter((token) => token.length >= 4 && /\d/.test(token));
 
@@ -432,11 +463,12 @@ export const serverHeading = (h: {
   `${h.name.padEnd(h.pad)}  ${bar(h.tokens, h.max)}  ${formatTokens(h.tokens)} tok` +
   `${h.window ? ` · ${pct(h.tokens, h.window)}%` : ''} · ${h.usage}`;
 
-/** R36 (amended): `<tool> · <server> · agent <id> · <dur> · <c> chars · ~<tok> tok · <next>`. */
+/** R36 (amended): `<tool> · <server> · agent <name or id> · <dur> · <c> chars · ~<tok> tok · <next>`. */
 export const detailHeader = (c: {
   tool: string;
   server: string | null;
   agentId: string | null;
+  agentName?: string; // `<task> (<type>)` from the agent list, when telltale saw it listed
   ms: number;
   chars: number;
   tokens: number;
@@ -445,15 +477,24 @@ export const detailHeader = (c: {
   [
     c.tool,
     ...(c.server ? [c.server] : []),
-    ...(c.agentId ? [`agent ${c.agentId}`] : []),
+    // R48: the name is capped so the figures after it survive the row clip.
+    ...(c.agentId ? [`agent ${c.agentName ? clip(c.agentName, 24) : c.agentId}`] : []),
     formatDur(c.ms),
     `${c.chars} chars`,
     `~${formatTokens(c.tokens)} tok`,
     c.next ?? '…',
   ].join(' · ');
 
+/** R50: the detail's line on what a call's duration includes, by its permission verdict. */
+export const permissionNote = (decision?: 'allow' | 'ask' | 'deny'): string => {
+  if (decision === undefined) return 'duration includes any permission prompt';
+  return decision === 'ask'
+    ? 'duration includes a permission decision (dialog or classifier)'
+    : 'no permission dialog or classifier in this time';
+};
+
 /** R19: a path that starts at a drive or a root, not at the session's directory. */
-export const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
+export const isAbsolute = (path: string) => /^(?:[A-Z]:)?[\\/]/i.test(path);
 
 /** `path` with `/` separators and its `.` and `..` segments resolved. */
 const normalize = (path: string): string => {

@@ -13,6 +13,7 @@ export type Call = {
   isError: boolean;
   next: NextAction | null; // null until the turn ends
   turn: number; // R34: the number of the turn file the call's record goes to
+  permission?: 'allow' | 'ask' | 'deny'; // R50: the tool.check verdict beneath telltale; absent when unknown
 };
 // R25: a listed call's text, kept in the mod's memory rather than in `$.state`.
 export type CallDetail = {
@@ -58,11 +59,14 @@ declare module 'claude-code' {
       start: string; // R10: the directory the session started in ('' until session start)
       warned: boolean; // R16: the write-failure notice was shown this session
       pending: Record<string, string>; // delta R12: pending call id -> agent id
+      agents: Record<string, string>; // R36: agent id -> `<task> (<type>)`, from the agent list
       totals: Totals;
       running: Running;
       tick: number; // R29: bumped each second while a call runs, so the band redraws
       turnNo: number; // R34: the last turn number this process took
       toastedTurn: number; // R28: the turn that already had its toast
+      toastedNames: string[]; // R28: `<server>.<tool>:failed|large` already toasted since /telltale or /clear
+      deferred: { turn: number; text: string; key: string } | null; // R28: a large-result toast held for its turn's end
       message: string | null; // R39, R40: the detail view's last copy message
     };
   }

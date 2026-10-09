@@ -9,11 +9,13 @@ import {
   callTable,
   chunks,
   clip,
+  ctxDelta,
   detailHeader,
   formatDur,
   formatElapsed,
   logsPath,
   pct,
+  permissionNote,
   serverHeading,
   statusLine,
   toolName,
@@ -98,6 +100,16 @@ test('R14: secret patterns in strings are redacted', async () => {
   expect(redact('jwt eyJhbGci.eyJzdWIi.sig_1')).toBe('jwt [redacted]');
 });
 
+test('R14: the added token prefixes are redacted', async () => {
+  expect(redact('gitlab glpat-' + 'a'.repeat(20))).toBe('gitlab [redacted]');
+  expect(redact('stripe sk_live_' + 'b'.repeat(24))).toBe('stripe [redacted]');
+  expect(redact('stripe rk_live_' + 'b'.repeat(24))).toBe('stripe [redacted]');
+  expect(redact('webhook whsec_' + 'c'.repeat(24))).toBe('webhook [redacted]');
+  expect(redact('aws ASIA' + 'ABCDEFGHIJKLMNOP')).toBe('aws [redacted]');
+  expect(redact('npm npm_' + 'd'.repeat(30))).toBe('npm [redacted]');
+  expect(redact('authorization: bearer abcdefgh1234')).toBe('authorization: bearer [redacted]');
+});
+
 test('R14: a listed field inside JSON text has its string value redacted', async () => {
   expect(redact('{"access_token":"abc123","user":"ann"}')).toBe(
     '{"access_token":"[redacted]","user":"ann"}',
@@ -147,11 +159,19 @@ test('R14: the added credential field names are redacted', async () => {
     'aws_secret_access_key',
     'Cookie',
     'Set-Cookie',
+    'secret_key',
+    'passphrase',
   ];
   const input = Object.fromEntries(names.map((name) => [name, 'v']));
   const output = Object.fromEntries(names.map((name) => [name, '[redacted]']));
   expect(redact(input)).toEqual(output);
   expect(redact(JSON.stringify(input))).toBe(JSON.stringify(output));
+});
+
+test('R14: secrets inside arrays are redacted, and long array strings are cut', async () => {
+  expect(redact({ rows: [{ token: 'abc' }] })).toEqual({ rows: [{ token: '[redacted]' }] });
+  const out = cutArgs({ rows: ['a'.repeat(2500)] }) as { rows: string[] };
+  expect(out.rows[0]).toBe('a'.repeat(2000) + '…[cut 500 chars]');
 });
 
 test('R14: pagination and count fields stay unredacted', async () => {
@@ -232,6 +252,33 @@ test('R12: a running subagent with no next response leaves its call pending', as
   const responses = { main: [resp([])], a1: [resp(['z'])] };
   const calls = [{ id: 'z1', tool: 'z', agent: 'a1', response: 0 }];
   expect(labelCalls(responses, calls, (agent) => agent === 'a1')).toEqual({ z1: 'pending' });
+});
+
+const used = (toolNames: string[], inTok: number, out: number, serverTools = 0) => ({
+  toolNames,
+  complete: true,
+  usage: { in: inTok, out, serverTools },
+});
+
+test('R51: growth after a single-tool response, net of its output', async () => {
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], 0)).toBe(350);
+});
+
+test('R51: the next response with usage counts, not a failed one', async () => {
+  const list = [
+    used(['x'], 1000, 50),
+    { toolNames: [], complete: false, usage: null },
+    used([], 1600, 9),
+  ];
+  expect(ctxDelta(list, 0)).toBe(550);
+});
+
+test('R51: no figure for parallel calls, server tools, no next usage or negative growth', async () => {
+  expect(ctxDelta([used(['x', 'Read'], 1000, 50), used([], 1400, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50, 1), used([], 1400, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 600, 20)], 0)).toBeUndefined();
+  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], null)).toBeUndefined();
 });
 
 test('R13: values from the result that the answer names', async () => {
@@ -506,8 +553,29 @@ test('R36: the detail header, with the agent right after the server', async () =
     }),
   ).toBe('run_query · db · agent a1b2 · 2.1s · 120 chars · ~30 tok · retried');
   expect(
+    detailHeader({
+      tool: 'run_query',
+      server: 'db',
+      agentId: 'a1b2',
+      agentName: 'map the db layer (Explore)',
+      ms: 2100,
+      chars: 120,
+      tokens: 30,
+      next: 'retried',
+    }),
+  ).toBe('run_query · db · agent map the db layer (Explo… · 2.1s · 120 chars · ~30 tok · retried');
+  expect(
     detailHeader({ ...base, tool: 'Read', server: null, ms: 5, chars: 4, tokens: 1, next: null }),
   ).toBe('Read · 5ms · 4 chars · ~1 tok · …');
+});
+
+test('R50: the permission note follows the verdict, and keeps the old caveat when unknown', async () => {
+  expect(permissionNote()).toBe('duration includes any permission prompt');
+  expect(permissionNote('ask')).toBe(
+    'duration includes a permission decision (dialog or classifier)',
+  );
+  expect(permissionNote('allow')).toBe('no permission dialog or classifier in this time');
+  expect(permissionNote('deny')).toBe('no permission dialog or classifier in this time');
 });
 
 test('R10: the log folder prints relative to the start directory, with / separators', async () => {

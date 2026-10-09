@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "telltale",
   "displayName": "Telltale",
-  "version": "0.3.1",
+  "version": "0.3.12",
   "description": "See what your skills and MCP servers put in front of Claude, which tools it called, what it read back, and what it did next. Observe-only; writes local logs only.",
   "author": { "name": "j0hanz", "email": "l.johansson93@outlook.com" },
   "license": "MIT",

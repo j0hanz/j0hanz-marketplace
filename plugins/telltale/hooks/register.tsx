@@ -9,6 +9,7 @@ import type {
   RenderInput,
   RenderSurface,
   SessionUsage,
+  UiOpenResult,
 } from 'claude-code';
 
 import type { Call, CallDetail, Inventory, InventoryRow, NextAction, Totals, View } from '../types';
@@ -17,6 +18,7 @@ import {
   callTable,
   chunks,
   clip,
+  ctxDelta,
   cutArgs,
   detailHeader,
   estTokens,
@@ -28,6 +30,7 @@ import {
   logsPath,
   mcpServer,
   pct,
+  permissionNote,
   plural,
   pretty,
   receipt,
@@ -66,13 +69,21 @@ const startedIn = atom({ plugin: 'telltale', key: 'start' } as const, '');
 // nor strands a `pending` row (delta R12).
 const warnedOnce = atom({ plugin: 'telltale', key: 'warned' } as const, false);
 const pendingIds = atom({ plugin: 'telltale', key: 'pending' } as const, {});
-// R47: what a hot reload keeps beyond the rows: totals, the turn counter, the turn's toast.
+// R36, R47: subagent names by id. Only added to: the engine drops a finished agent from its list.
+const agentNames = atom({ plugin: 'telltale', key: 'agents' } as const, {});
+// R47: what a hot reload keeps beyond the rows: totals, the turn counter, the turn's toast and the tools already toasted.
 const NO_TOTALS: Totals = { calls: 0, errors: 0, tokens: 0, skills: [], ctx: null, tools: {} };
 const totals = atom({ plugin: 'telltale', key: 'totals' } as const, NO_TOTALS);
 const running = atom({ plugin: 'telltale', key: 'running' } as const, {});
 const tick = atom({ plugin: 'telltale', key: 'tick' } as const, 0);
 const turnCount = atom({ plugin: 'telltale', key: 'turnNo' } as const, 0);
 const toastedTurn = atom({ plugin: 'telltale', key: 'toastedTurn' } as const, -1);
+// R28: a large result's toast waits for its turn to end, so an error that lands
+// later in the turn still takes the turn's one toast.
+const deferredToast = atom({ plugin: 'telltale', key: 'deferred' } as const, null);
+// R28: a tool toasts once per kind until the person opens /telltale or runs /clear, so a
+// flaky tool stops toasting every turn while another tool's first failure still does.
+const toastedNames = atom({ plugin: 'telltale', key: 'toastedNames' } as const, []);
 const message = atom({ plugin: 'telltale', key: 'message' } as const, null);
 
 type Captured = {
@@ -87,12 +98,21 @@ type Captured = {
   isError: boolean;
   blocks: string[];
   turn: number; // R34
+  permission?: 'allow' | 'ask' | 'deny'; // R50
+  rule?: string; // R50: the settings rule that decided, raw; logged redacted, never put in state
 };
 type Done = { next: NextAction; used: string[] };
 type Turn = {
   calls: Captured[];
   skills: { skill: string; chars: number }[];
   context: { reason: string; files: { path: string; kind: string; chars: number }[] } | null;
+  apiTools: {
+    id: string;
+    name: string;
+    agentId: string | null;
+    input: unknown;
+    ms: number | null;
+  }[];
 };
 
 const safe = async <T,>(work: () => Promise<T> | T): Promise<T | undefined> => {
@@ -123,8 +143,8 @@ let contextNo = 0;
 let rootReady = false;
 let warned = false;
 let pendingReason: 'clear' | 'compact' | null = null;
-let buffer: Turn = { calls: [], skills: [], context: null };
-// ponytail: responses and callResponse grow ~100 B per model request for the process life;
+let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
+// ponytail: responses and callResponse grow ~200 B per model request for the process life;
 // prune per agent if sessions ever run 100k+ requests.
 const responses: Record<string, Response[]> = {};
 const callResponse = new Map<string, { agent: string; index: number }>();
@@ -139,6 +159,9 @@ const forget = (id: string) => {
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
+// R50: each real call's permission verdict from the tool.check tiers beneath telltale, by id.
+// The call's own tool.call hook takes the entry out once its `next` settles, so none outlive it.
+const verdicts = new Map<string, { decision: 'allow' | 'ask' | 'deny'; rule?: string }>();
 // R25: args, result text and used values of the calls the pane lists, by id. Kept here, not in
 // `$.state`, which every plugin can read and which refuses a value over 4 MiB.
 const details = new Map<string, CallDetail>();
@@ -168,20 +191,28 @@ async function write($: EngineInterface, name: string, text: string) {
   }
 }
 
-/** R4, R5, R7, R8, R15: one turn's records, and its context record when it has one. */
+/** R4, R5, R7, R8, R15, R51: one turn's records, and its context record when it has one. */
 async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>, n: number) {
   const records = [
     ...turn.calls.map((call) => {
       const text = redact(call.text) as string;
+      const from = callResponse.get(call.id);
+      const issued = from ? responses[from.agent]?.[from.index] : undefined;
+      const delta = ctxDelta(responses[call.agentId ?? 'main'] ?? [], call.response);
       return JSON.stringify({
         type: 'call',
         tool: call.tool,
         server: call.server,
         agentId: call.agentId,
+        model: issued?.model ?? null,
+        effort: issued?.effort ?? null,
         ms: call.ms,
+        permission: call.permission ?? null, // R50: null when no verdict was seen
+        ...(call.rule ? { permissionRule: redact(call.rule) } : {}),
         args: cutArgs(redact(call.args)),
         chars: call.text.length,
         estTokens: estTokens(call.text.length),
+        ...(delta === undefined ? {} : { ctxDelta: delta }), // R51
         isError: call.isError,
         blocks: call.blocks,
         head: text.slice(0, 300),
@@ -194,6 +225,16 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
     ...turn.skills.map((skill) =>
       JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
     ),
+    ...turn.apiTools.map((use) =>
+      JSON.stringify({
+        type: 'apiTool',
+        id: use.id,
+        name: use.name,
+        agentId: use.agentId,
+        args: cutArgs(redact(use.input)),
+        ms: use.ms,
+      }),
+    ),
   ];
   if (records.length > 0) {
     const parts = toParts(records);
@@ -205,14 +246,20 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
   if (turn.context) {
     contextNo += 1;
     const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
-    await write($, `context-${contextNo}.json`, JSON.stringify({ ...turn.context, tools }));
+    // R8: which Claude Code built this context, so logs compare across versions.
+    const version = (await safe(() => $.session.version()))?.version;
+    await write(
+      $,
+      `context-${contextNo}.json`,
+      JSON.stringify({ ...turn.context, version, tools }),
+    );
   }
 }
 
 /** R10, R11, R25: a call's pane row and detail, keeping the newest 200. */
 async function listCall($: EngineInterface, call: Captured) {
   const json = JSON.stringify(call.args);
-  const { args: _args, text: _text, blocks: _blocks, ...meta } = call;
+  const { args: _args, text: _text, blocks: _blocks, rule: _rule, ...meta } = call;
   const shown: Call = { ...meta, argsChars: json.length, textChars: call.text.length, next: null };
   details.set(call.id, { args: json.slice(0, SHOWN), text: call.text.slice(0, SHOWN), used: [] });
   let gone: Call[] = [];
@@ -430,18 +477,31 @@ async function maybeToast($: EngineInterface, call: Captured) {
   if (!interactive || call.server === null) return;
   const large = call.text.length >= 40_000;
   if (!call.isError && !large) return;
+  const name = serverTool(call.tool);
+  const key = `${name}:${call.isError ? 'failed' : 'large'}`;
+  // R28: a repeat stays quiet and leaves the turn's toast to another tool.
+  if ((await read($, toastedNames)).includes(key)) return;
+  if (!call.isError) {
+    // R28: the error text wins, so the large-result toast is held for the turn's end.
+    await update($, deferredToast, (held) =>
+      held?.turn === call.turn
+        ? held
+        : {
+            turn: call.turn,
+            text: `${name} returned ~${formatTokens(estTokens(call.text.length))} tok`,
+            key,
+          },
+    );
+    return;
+  }
   let fresh = false;
   await update($, toastedTurn, (turn) => {
     fresh = turn !== call.turn;
     return call.turn;
   });
   if (!fresh) return;
-  const name = serverTool(call.tool);
-  $.ui.toast(
-    call.isError
-      ? `${name} failed · /telltale`
-      : `${name} returned ~${formatTokens(estTokens(call.text.length))} tok`,
-  );
+  await update($, toastedNames, (keys) => [...keys, key]);
+  $.ui.toast(`${name} failed · /telltale`);
 }
 
 /** R26, R42, R47: a counted call joins the session totals, which outlive the 200 kept rows. */
@@ -495,6 +555,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
   const { Box, Text, Button, Code } = $.ui.resolve(e);
   const detail = details.get(call.id);
   const note = await read($, message);
+  const names = await read($, agentNames);
   // R37: JSON is drawn as json code; a cut or non-JSON field as plain text (R11, R20).
   const field = (key: string, label: string, raw: string, full: number) => {
     const shown = show(pretty(raw), raw, full);
@@ -547,6 +608,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
     tool: toolName(call.tool),
     server: call.server,
     agentId: call.agentId,
+    agentName: call.agentId ? names[call.agentId] : undefined,
     ms: call.ms,
     chars: call.textChars,
     tokens: estTokens(call.textChars),
@@ -575,7 +637,7 @@ async function drawDetail($: EngineInterface, frame: Frame, list: Call[], call: 
       ) : (
         <Text dimColor>{clip('text not kept after a reload; see the logs', width)}</Text>
       )}
-      <Text dimColor>{clip('duration includes any permission prompt', width)}</Text>
+      <Text dimColor>{clip(permissionNote(call.permission), width)}</Text>
       <Text>{clip(`used in answer: ${used}`, width)}</Text>
       {note !== null && <Text>{clip(note, width)}</Text>}
       {keyRow(KEYS_DETAIL)}
@@ -841,7 +903,8 @@ export const register: Register = (on, options) => {
   on('turn.step', async function* ($, e, next) {
     const agent = e.agentId ?? 'main';
     const list = (responses[agent] ??= []);
-    const index = list.push({ toolNames: [], complete: false }) - 1;
+    const index =
+      list.push({ toolNames: [], complete: false, model: e.model, effort: e.effort }) - 1;
     const stream = next(e);
     let step = await stream.next();
     try {
@@ -859,9 +922,48 @@ export const register: Register = (on, options) => {
       if (!step.done) await stream.return?.(undefined as never);
     }
     const r = step.value;
+    // R4: the model that answered (a fallback, or a model a hook above rewrote) beats the request's.
+    await safe(() => {
+      if (r?.usage?.model) list[index]!.model = r.usage.model;
+      // R51: what the request cost as the API reported it; read by `ctxDelta` at log time.
+      const usage = r?.usage;
+      if (usage) {
+        list[index]!.usage = {
+          in:
+            usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens,
+          out: usage.output_tokens,
+          serverTools: r?.serverToolUses?.length ?? 0,
+        };
+      }
+      // R49: tools the API ran itself raise no tool.call. Logged into the running turn (as R2
+      // does for subagent calls), never counted: the API exposes no result to size.
+      for (const use of r?.serverToolUses ?? []) {
+        const ms = use.endedAt === undefined ? null : use.endedAt - use.startedAt;
+        // A paused turn may list the same use again when it continues: one record per id.
+        const seen = buffer.apiTools.find((t) => t.id === use.id);
+        if (seen) seen.ms ??= ms;
+        else
+          buffer.apiTools.push({
+            id: use.id,
+            name: use.name,
+            agentId: e.agentId ?? null,
+            input: use.input,
+            ms,
+          });
+      }
+    });
     // A null stopReason is a request that failed or was cut off: not a response (delta R12).
     list[index]!.complete = r?.stopReason != null;
     if (list[index]!.complete) await safe(() => relabel($, agent, index));
+    return r;
+  });
+
+  // R50: observe the verdict only; R3: the result goes back exactly as `next` returned it.
+  // A query (`$.tool.check`) carries no tool_use_id and records nothing.
+  on('tool.check', async ($, e, next) => {
+    const r = await next(e);
+    const id = e.tool_use_id;
+    if (id) await safe(() => verdicts.set(id, { decision: r.decision, rule: r.rule }));
     return r;
   });
 
@@ -881,9 +983,13 @@ export const register: Register = (on, options) => {
       else next.signal.addEventListener('abort', stop, { once: true });
     }
     let r: Awaited<ReturnType<typeof next>>;
+    let verdict: { decision: 'allow' | 'ask' | 'deny'; rule?: string } | undefined;
     try {
       r = await next(e);
     } finally {
+      // R50: the tool.check beneath ran inside this `next`; get-and-delete, captured or not.
+      verdict = verdicts.get(e.tool_use_id);
+      verdicts.delete(e.tool_use_id);
       if (counted) void later(() => stopRunning($, e.tool_use_id));
     }
     // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's: it gets its
@@ -907,6 +1013,8 @@ export const register: Register = (on, options) => {
         blocks: blockKinds(r.result),
         // R34: the number this call's turn file will get (a call between turns joins the next).
         turn: turnNo + 1,
+        permission: verdict?.decision,
+        rule: verdict?.rule,
       };
       // Before the return: the turn end reads `buffer` for its log.
       buffer.calls.push(call);
@@ -977,8 +1085,34 @@ export const register: Register = (on, options) => {
         await update($, view, () => 'calls');
         await update($, selected, () => null);
         await update($, totals, () => NO_TOTALS); // the old context's share goes too (R27)
+        await update($, deferredToast, () => null); // a held toast belongs to the cleared turns (R28)
+        await update($, toastedNames, () => []);
         await showStatus($);
       });
+    } else {
+      // A call made after the last turn's end belongs to a turn that never completes;
+      // write its records here or they are lost with the process (README, Logs).
+      await settled;
+      const turn = buffer;
+      buffer = { calls: [], skills: [], context: null, apiTools: [] };
+      const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
+      const n = hasRecords ? ++turnNo : turnNo; // R34: taken with the swap, like turn.complete
+      if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
+      if (!hasRecords) return next(e);
+      const labels = labelCalls(
+        responses,
+        turn.calls.map((call) => ({
+          id: call.id,
+          tool: call.tool,
+          agent: call.agentId ?? 'main',
+          response: call.response,
+        })),
+        () => false, // the session is over: no agent is still running
+      );
+      const done = new Map(
+        turn.calls.map((call) => [call.id, { next: labels[call.id] ?? 'aborted', used: [] }]),
+      );
+      await safe(() => writeLogs($, turn, done, n));
     }
     return next(e);
   });
@@ -986,7 +1120,7 @@ export const register: Register = (on, options) => {
   on('session.compact', async ($, e, next) => {
     const r = await next(e);
     // Only a main-conversation compaction that went ahead rebuilds the main context (R8).
-    if (e.agentId === undefined && e.trigger !== 'precompute' && !('skip' in r && r.skip)) {
+    if (e.agentId === undefined && e.trigger !== 'precompute' && (!('skip' in r) || !r.skip)) {
       pendingReason = 'compact';
     }
     return r;
@@ -996,10 +1130,10 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     if (e.agentId !== undefined) return r;
     const turn = buffer;
-    buffer = { calls: [], skills: [], context: null };
+    buffer = { calls: [], skills: [], context: null, apiTools: [] };
     // R34: the number is taken with the swap, before any await, so a call that lands while this
     // turn ends is captured with the next number, matching the file it goes to.
-    const hasRecords = turn.calls.length + turn.skills.length > 0;
+    const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
     const n = hasRecords ? ++turnNo : turnNo;
     if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
     // R1: MCP calls only, subagent calls included (R2); skills once each.
@@ -1041,6 +1175,20 @@ export const register: Register = (on, options) => {
       // R5, R6: the logs are the durable output. They are written first, in their own `safe`,
       // so a refused pane-state write (below) can never cost a turn its file.
       await safe(() => writeLogs($, turn, done, n));
+      // R36: name each listed agent; merged, so an agent the engine has since dropped keeps its name.
+      if (listed && listed.length > 0) {
+        await safe(() =>
+          update($, agentNames, (known) => ({
+            ...known,
+            ...Object.fromEntries(
+              listed.map((agent) => [
+                agent.id,
+                agent.description ? `${agent.description} (${agent.type})` : agent.type,
+              ]),
+            ),
+          })),
+        );
+      }
       await settled;
       await safe(async () => {
         for (const [id, found] of done) {
@@ -1075,15 +1223,36 @@ export const register: Register = (on, options) => {
         }
       });
     }
-    // R43: an open Inventory reloads its estimate at each main-thread turn end, keeping its
-    // figures when the reload fails (R22 as modified).
-    if ((await safe(() => read($, view))) === 'inventory') {
+    // R43: an Inventory shown in the open pane reloads its estimate at each main-thread turn
+    // end, keeping its figures when the reload fails (R22 as modified). The `view` atom outlives
+    // a closed pane, so the engine's own pane record decides, which also survives a hot reload
+    // (R47); a record that cannot be read counts as open, so a lookup fault never skips a reload.
+    if (
+      (await safe(() => read($, view))) === 'inventory' &&
+      ((await safe(() => $.ui.panes()))?.some((pane) => pane.id === PANE) ?? true)
+    ) {
       await safe(() => loadInventory($, 'keep'));
     }
     // R26, R27: the context share Claude Code reports now, or none; the plain call is free.
     const usage = await safe(() => $.session.usage());
     await safe(() => update($, totals, (t) => ({ ...t, ctx: usage?.context?.percent ?? null })));
     await showStatus($);
+    // R28: the turn's held large-result toast, when no error took the turn's toast.
+    const held = await safe(() => read($, deferredToast));
+    if (held && held.turn === n) {
+      await safe(async () => {
+        await update($, deferredToast, () => null);
+        let took = false;
+        await update($, toastedTurn, (turn) => {
+          took = turn !== n;
+          return n;
+        });
+        if (!took || !interactive) return;
+        $.ui.toast(held.text);
+        // A toast held before a hot reload has no key (the pre-013 shape); skip recording it.
+        if (held.key) await update($, toastedNames, (keys) => [...keys, held.key]);
+      });
+    }
     // delta R6: a headless run shows nothing of its own. A line another hook set stays first.
     if (!interactive || line === null) return r;
     return { ...r, text: r.text === e.answer ? line : `${r.text}\n${line}` };
@@ -1149,6 +1318,44 @@ export const register: Register = (on, options) => {
     );
   }).catch(($, e, next) => next(e));
 
+  // R44, R46: a folded group of tool calls gets one dim line summing its completed counted
+  // calls the pane keeps. Expanded, its rows are ToolUse rows and the hook above draws theirs;
+  // while active, a call may still join it. Any fault leaves the engine's row.
+  on('ui.render', { component: 'ToolGroup' }, async ($, e, next) => {
+    let line: string | null = null;
+    try {
+      if (!e.props.isExpanded && !e.props.isActive) {
+        // A host that predates `tool_use_id` names no call, so its groups get no line.
+        const ids = new Set(
+          e.props.calls.flatMap((one) =>
+            one.tool_use_id !== undefined && !one.isRunning && mcpServer(one.tool) !== null
+              ? [one.tool_use_id]
+              : [],
+          ),
+        );
+        const found = ids.size > 0 ? (await read($, calls)).filter((one) => ids.has(one.id)) : [];
+        if (found.length > 0) {
+          const tokens = found.reduce((sum, one) => sum + estTokens(one.textChars), 0);
+          const errors = found.filter((one) => one.isError).length;
+          line = `${plural(found.length, 'MCP call')} · ~${formatTokens(tokens)} tok${
+            errors > 0 ? ` · ${plural(errors, 'error')}` : ''
+          }`;
+        }
+      }
+    } catch {
+      line = null;
+    }
+    const drawn = await next(e);
+    if (line === null) return drawn;
+    const { Box, Text } = $.ui.resolve(e);
+    return (
+      <Box flexDirection="column">
+        {drawn}
+        <Text dimColor>{line}</Text>
+      </Box>
+    );
+  }).catch(($, e, next) => next(e));
+
   // R9, R23, delta R6: `/telltale [calls|inventory]`.
   on('command.run', { command: 'telltale' }, async ($, e) => {
     await settled;
@@ -1161,17 +1368,28 @@ export const register: Register = (on, options) => {
     const newest = list.at(-1)?.id ?? null;
     await update($, selected, () => newest);
     await openView($, next);
-    await $.ui.open({
-      id: PANE,
-      title: 'telltale',
-      focus: true,
-      closeOnEscape: true,
-      // R45: docked beside the transcript in the fullscreen layout, the pane stays open while
-      // the person works, so toasts show; on the main screen it is a dialog and holds them.
-      ...(e.presentation?.isFullscreen ? {} : { holdToasts: true as const }),
-    });
-    if (next === 'calls') await focusRow($, newest);
-    return { text: known ? 'opened' : `unknown view "${raw}"; views: calls, inventory` };
+    let opened: UiOpenResult;
+    try {
+      opened = await $.ui.open({
+        id: PANE,
+        title: 'telltale',
+        focus: true,
+        closeOnEscape: true,
+        // R45: docked beside the transcript in the fullscreen layout, the pane stays open while
+        // the person works, so toasts show; on the main screen it is a dialog and holds them.
+        ...(e.presentation?.isFullscreen ? {} : { holdToasts: true as const }),
+      });
+    } catch (error) {
+      // R9: a `ui.open` hook above telltale refused the pane with `{ deny }`.
+      return { text: `pane not opened: ${error instanceof Error ? error.message : String(error)}` };
+    }
+    // R28: the person looked; every tool may toast again. A pane left undrawn was not seen.
+    if (opened.isPlaced) await safe(() => update($, toastedNames, () => []));
+    // R9: an undrawn pane has no rows to focus; the selection set above shows once it is seated.
+    if (opened.isPlaced && next === 'calls') await focusRow($, newest);
+    if (!known) return { text: `unknown view "${raw}"; views: calls, inventory` };
+    // R9: open but waiting undrawn, e.g. no attached surface places panes; it is not gone.
+    return { text: opened.isPlaced ? 'opened' : `pane opened but not drawn: ${opened.reason}` };
   });
 
   // delta R11: the selection follows the focus ring across the rows.

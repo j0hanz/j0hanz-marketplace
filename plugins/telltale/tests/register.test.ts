@@ -12,6 +12,7 @@ type World = {
   toasts: string[];
   logs: string[];
   opened: { id: string; focus: boolean; holdToasts: boolean }[];
+  panes: string[] | null; // the engine's open-pane ids; null makes $.ui.panes() fail
   failWrites: boolean;
   failList: boolean;
   steps: Tool[][];
@@ -25,8 +26,11 @@ type World = {
   status: (string | undefined)[];
   copied: string[];
   copyResult: unknown;
+  openAnswer: unknown; // what the ui.open stub answers: `{ value }` or `{ deny }`
   listHold: Promise<void>; // agent.list answers once this settles
   throws: Set<string>; // tool_use_ids whose call rejects
+  usages: unknown[]; // usage each turn.step returns, in order; null when empty
+  serverToolUses: unknown[]; // serverToolUses each turn.step returns, in order; absent when empty
 };
 
 const ROOT = '.claude/telltale';
@@ -47,6 +51,7 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     toasts: [],
     logs: [],
     opened: [],
+    panes: [],
     failWrites: false,
     failList: false,
     steps: [],
@@ -60,8 +65,11 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     status: [],
     copied: [],
     copyResult: { isCopied: true },
+    openAnswer: { value: { isPlaced: true } },
     listHold: Promise.resolve(),
     throws: new Set(),
+    usages: [],
+    serverToolUses: [],
   };
   world.clock = mock.clock(on);
   on('session.start', ($, e) => ({ cwd: e.cwd }));
@@ -107,8 +115,23 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
   });
   on('ui.open', ($, e) => {
     world.opened.push({ id: e.id, focus: e.focus === true, holdToasts: e.holdToasts === true });
-    return { value: { isPlaced: true } } as never;
+    const refused = (world.openAnswer as { deny?: unknown } | null)?.deny !== undefined;
+    if (!refused && world.panes !== null && !world.panes.includes(e.id)) world.panes.push(e.id);
+    return world.openAnswer as never;
   });
+  on('ui.panes', () =>
+    world.panes === null
+      ? { deny: 'no pane list' }
+      : ({
+          value: world.panes.map((id) => ({
+            id,
+            title: id,
+            isShown: true,
+            isFocused: true,
+            isPlaced: true,
+          })),
+        } as never),
+  );
   on('ui.focus', ($, e) => {
     return {};
   });
@@ -142,7 +165,8 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
       answer: '',
       toolUses: tools.map((tool) => ({ name: tool.name, input: {} })),
       stopReason: tools.length > 0 ? 'tool_use' : 'end_turn',
-      usage: null,
+      usage: world.usages.shift() ?? null,
+      serverToolUses: world.serverToolUses.shift(),
     } as never;
   });
   on('tool.call', async ($, e) => {
@@ -170,7 +194,13 @@ const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as co
 const HEADLESS = { cwd: '/work', surface: null, isInteractive: false } as const;
 
 /** One model response through the plugin: its tool chunks, then the result. */
-const respond = async ($: never, world: World, tools: Tool[], agentId?: string) => {
+const respond = async (
+  $: never,
+  world: World,
+  tools: Tool[],
+  agentId?: string,
+  input: Record<string, unknown> = {},
+) => {
   world.steps.push(tools);
   const stream = (
     $ as { turn: { step: (e: unknown) => AsyncGenerator & { result: Promise<unknown> } } }
@@ -180,6 +210,7 @@ const respond = async ($: never, world: World, tools: Tool[], agentId?: string) 
     model: 'm',
     messageCount: 1,
     agentId,
+    ...input,
   });
   for await (const chunk of stream) void chunk;
   return stream.result;
@@ -203,7 +234,7 @@ const lines = (world: World, path: string) =>
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 
 const turnFiles = (world: World) =>
-  [...world.files.keys()].filter((path) => /\/turn-\d+(-part\d+)?\.jsonl$/.test(path)).sort();
+  [...world.files.keys()].filter((path) => /\/turn-\d+(?:-part\d+)?\.jsonl$/.test(path)).sort();
 
 test('R3: a tool result reaches Claude unchanged', async ($, on) => {
   on('tool.call', () => ({ result: 'order_1182: refunded', text: 'order_1182: refunded' }));
@@ -285,6 +316,64 @@ test('R4: a completed MCP call is recorded with its server, size and estimate', 
   expect(typeof record!.ms).toBe('number');
 });
 
+test('R4: a call record names the model that answered and the effort asked for', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push({
+    input_tokens: 1,
+    output_tokens: 1,
+    cache_read_input_tokens: 0,
+    cache_creation_input_tokens: 0,
+    model: 'claude-answered',
+  });
+  await respond($ as never, world, [{ id: 'a', name: 'mcp__o__s' }], undefined, { effort: 'high' });
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'a' } as never);
+  await respond($ as never, world, [{ id: 'b', name: 'mcp__o__s' }]);
+  await $.tool.call({ tool: 'mcp__o__s', tool_use_id: 'b' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  const records = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(records[0]).toMatchObject({ model: 'claude-answered', effort: 'high' });
+  // No usage reported: the model the request named, and no effort.
+  expect(records[1]).toMatchObject({ model: 'm', effort: null });
+});
+
+const U = (input: number, cacheRead: number, cacheWrite: number, output: number) => ({
+  model: 'm',
+  input_tokens: input,
+  cache_read_input_tokens: cacheRead,
+  cache_creation_input_tokens: cacheWrite,
+  output_tokens: output,
+});
+
+test('R51: a single-tool call records how much the context grew after it', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push(U(400, 500, 100, 50), U(100, 1200, 100, 20)); // in 1000 out 50, then in 1400
+  await respond($ as never, world, [{ id: 'a', name: 'mcp__orders__search' }]);
+  await $.tool.call({ tool: 'mcp__orders__search', tool_use_id: 'a' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ estTokens: 1, ctxDelta: 350 });
+});
+
+test('R51: calls from one response carry no ctxDelta', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.usages.push(U(1000, 0, 0, 50), U(1400, 0, 0, 20));
+  await respond($ as never, world, [
+    { id: 'a', name: 'mcp__orders__search' },
+    { id: 'b', name: 'Read' },
+  ]);
+  await $.tool.call({ tool: 'mcp__orders__search', tool_use_id: 'a' } as never);
+  await $.tool.call({ tool: 'Read', tool_use_id: 'b' } as never);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  const records = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(records).toHaveLength(2);
+  expect(records.some((record) => 'ctxDelta' in record)).toBe(false);
+});
+
 test('R4: a result with no text lists the block kinds it received', async ($, on) => {
   const world = worldOf(on);
   world.results.u1 = { result: { content: [{ type: 'image', data: 'AAAA' }] } };
@@ -363,6 +452,72 @@ test('R8: context records for the start and after /clear, never overwritten', as
     tools: [{ tool: 'mcp__orders__search', server: 'orders', chars: 13, deferred: false }],
   });
   expect(JSON.parse(world.files.get(`${DIR}/context-2.json`)!).reason).toBe('clear');
+});
+
+test('R8: a context record names the Claude Code version', async ($, on) => {
+  const world = worldOf(on);
+  on('prompt.context', ($, e) => ({ blocks: e.blocks, instructionFiles: e.instructionFiles }));
+  on('session.version', () => ({ value: { version: '2.1.300' } }) as never);
+  await $.session.start(SESSION);
+  await $.prompt.context({ blocks: [], instructionFiles: [] } as never);
+  await complete($ as never);
+  expect(JSON.parse(world.files.get(`${DIR}/context-1.json`)!)).toMatchObject({
+    reason: 'start',
+    version: '2.1.300',
+  });
+});
+
+test('R49: a tool the API ran itself is logged redacted and counted nowhere', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push([
+    {
+      id: 'sv1',
+      name: 'advisor',
+      input: { q: 'x', token: 'abc123' },
+      startedAt: 100,
+      endedAt: 350,
+    },
+  ]);
+  await respond($ as never, world, []);
+  expect((await complete($ as never, 'the answer')).text).toBe('the answer'); // no receipt
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    {
+      type: 'apiTool',
+      id: 'sv1',
+      name: 'advisor',
+      agentId: null,
+      args: { q: 'x', token: '[redacted]' },
+      ms: 250,
+    },
+  ]);
+  expect(world.toasts).toEqual([]);
+});
+
+test('R49: a subagent’s cut-short server tool use joins the main turn with no ms', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push([{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100 }]);
+  await respond($ as never, world, [], 'agent-1');
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    { type: 'apiTool', id: 'sv1', name: 'advisor', agentId: 'agent-1', args: {}, ms: null },
+  ]);
+});
+
+test('R49: a server tool use listed again after a pause is logged once', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.serverToolUses.push(
+    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100 }],
+    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100, endedAt: 180 }],
+  );
+  await respond($ as never, world, []);
+  await respond($ as never, world, []);
+  await complete($ as never);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
+    { type: 'apiTool', id: 'sv1', name: 'advisor', agentId: null, args: {}, ms: 80 },
+  ]);
 });
 
 test('R8: a resumed session numbers its records after the ones already there', async ($, on) => {
@@ -469,6 +624,38 @@ test('R5: the turn file is written even when a pane-state write is refused', asy
   expect(out.text).toContain('telltale: 1 MCP call');
 });
 
+test('R5: a call made after the last turn is written when the session ends', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await $.session.end({ reason: 'other', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(turnFiles(world)).toEqual([`${DIR}/turn-1.jsonl`]);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({
+    tool: 'mcp__db__run_query',
+    next: 'aborted',
+  });
+});
+
+test('R5: a between-turn call keeps the label of the response that followed it', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await respond($ as never, world, []); // a complete response names no tool
+  await $.session.end({ reason: 'other', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]).toMatchObject({ next: 'answered' });
+});
+
+test('R5: /clear still writes no turn file', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'late');
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(turnFiles(world)).toEqual([]);
+});
+
 test('R6: headless, a failing log folder goes to the debug log only', async ($, on) => {
   const world = worldOf(on);
   world.failWrites = true;
@@ -501,7 +688,7 @@ test('R19: logs stay under the starting directory after the session moves', asyn
   expect(world.raw.length).toBeGreaterThan(0);
   // On Windows the engine hands `/work` back with a drive letter.
   for (const path of world.raw) {
-    expect(path.replace(/^[A-Za-z]:/, '').startsWith('/work/.claude/telltale/')).toBe(true);
+    expect(path.replace(/^[A-Z]:/i, '').startsWith('/work/.claude/telltale/')).toBe(true);
   }
 });
 
@@ -676,6 +863,33 @@ test('R9: reopening from a detail view shows Calls with the newest call selected
   await run($ as never);
   expect(focusOf((await draw($ as never)).buttons)).toBe('row:b');
   expect(world.opened).toHaveLength(2);
+});
+
+test('R9: a pane opened but not drawn says so with the reason', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  world.openAnswer = { value: { isPlaced: false, reason: 'no attached surface places panes' } };
+  expect((await run($ as never)).text).toBe(
+    'pane opened but not drawn: no attached surface places panes',
+  );
+  expect(world.opened).toHaveLength(1);
+});
+
+test('R9: an unknown view still names the views when the pane is not drawn', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.openAnswer = { value: { isPlaced: false, reason: 'narrow' } };
+  expect((await run($ as never, 'foo')).text).toBe('unknown view "foo"; views: calls, inventory');
+});
+
+test('R9: a pane a ui.open hook refuses is reported, not thrown', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  world.openAnswer = { deny: 'refused-by-test' };
+  const text = (await run($ as never)).text ?? '';
+  expect(text.startsWith('pane not opened: ')).toBe(true);
+  expect(text).toContain('refused-by-test');
 });
 
 test('R10: an empty list says so, and rows run newest first', async ($, on) => {
@@ -1344,6 +1558,170 @@ test('R28: one toast per turn, and an errored call gets the error text', async (
   ]);
 });
 
+test('R28: a large result that lands first never hides a later error', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  expect(kept.get('deferred')).toEqual(null);
+});
+
+test('R28: two large results in one turn raise one toast, the first', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'y'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['github.search returned ~15.0k tok']);
+});
+
+test('R28: /clear drops a held toast with the turn it belonged to', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000)); // between turns
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  expect(kept.get('deferred')).toEqual(null); // the clear itself dropped the held toast
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  expect(kept.get('deferred')).toEqual(null);
+});
+
+test('R28: a tool that fails every turn toasts once, another tool still toasts', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  for (const id of ['a', 'b', 'c']) {
+    await callOne($ as never, world, id, 'mcp__db__run_query', 'boom', true);
+    await endTurn($ as never, world);
+  }
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+  await callOne($ as never, world, 'd', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search failed · /telltale',
+  ]);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed', 'github.search:failed']);
+});
+
+test('R28: a skipped repeat leaves the turn toast to a large result', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: opening /telltale lets a tool toast again', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await run($ as never);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'db.run_query failed · /telltale',
+  ]);
+});
+
+test('R28: /clear lets a tool toast again', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
+  await world.clock.settle();
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'db.run_query failed · /telltale',
+  ]);
+});
+
+test('R28: a tool that returns a large result every turn toasts once', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  for (const id of ['a', 'b']) {
+    await callOne($ as never, world, id, 'mcp__github__search', 'x'.repeat(60_000));
+    await endTurn($ as never, world);
+  }
+  expect(world.toasts).toEqual(['github.search returned ~15.0k tok']);
+  expect(kept.get('toastedNames')).toEqual(['github.search:large']);
+});
+
+test('R28: a failure and a large result from one tool each toast', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  await callOne($ as never, world, 'b', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'github.search failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: a failure that lost the turn toast is not remembered', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await callOne($ as never, world, 'b', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed']);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'nope', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search failed · /telltale',
+  ]);
+});
+
+test('R28: a held large result an error displaced is not remembered', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__github__search', 'x'.repeat(60_000));
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(kept.get('toastedNames')).toEqual(['db.run_query:failed']);
+  await callOne($ as never, world, 'c', 'mcp__github__search', 'x'.repeat(60_000));
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual([
+    'db.run_query failed · /telltale',
+    'github.search returned ~15.0k tok',
+  ]);
+});
+
+test('R28: a /telltale pane left undrawn does not reset the toast memory', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'a', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  world.openAnswer = { value: { isPlaced: false, reason: 'narrow' } };
+  await run($ as never);
+  await callOne($ as never, world, 'b', 'mcp__db__run_query', 'boom', true);
+  await endTurn($ as never, world);
+  expect(world.toasts).toEqual(['db.run_query failed · /telltale']);
+});
+
 test('R28: a result under 40,000 characters raises no toast', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);
@@ -1707,14 +2085,45 @@ test('R36: an errored subagent call puts the agent right after the server', asyn
   await done;
   await respond($ as never, world, [{ id: 'q2', name: 'mcp__db__run_query' }], 'a1b2');
   await endTurn($ as never, world);
-  const tree = await openDetail($ as never, 'q');
+  const tree = await openDetail($ as never, 'q', 100);
   expect(linesOf(tree)).toContain(
-    'run_query · db · agent a1b2 · 2.1s · 120 chars · ~30 tok · retried',
+    'run_query · db · agent a1b2 (general-purpose) · 2.1s · 120 chars · ~30 tok · retried',
   );
   const error = elementsOf(tree).find(
     (el) => el.type === 'Text' && stringsOf(el).join('').trim() === '· error',
   );
   expect(error?.props?.color).toBe('error');
+});
+
+test('R36: a subagent keeps its name after the agent list drops it', async ($, on) => {
+  const world = worldOf(on);
+  const kept = stateOf(on);
+  world.running = ['a1b2'];
+  await $.session.start(SESSION);
+  await respond($ as never, world, [{ id: 'q', name: 'mcp__db__run_query' }], 'a1b2');
+  world.results.q = { result: 'r', text: 'x'.repeat(120) };
+  await $.tool.call({ tool: 'mcp__db__run_query', tool_use_id: 'q', agentId: 'a1b2' } as never);
+  await endTurn($ as never, world);
+  // The engine has dropped the finished a1b2; the list is not empty, so the names are merged.
+  world.running = ['c3d4'];
+  await endTurn($ as never, world);
+  expect(kept.get('agents')).toEqual({
+    a1b2: 'a1b2 (general-purpose)',
+    c3d4: 'c3d4 (general-purpose)',
+  }); // R47
+  const lines = linesOf(await openDetail($ as never, 'q', 100));
+  expect(lines.some((line) => line.includes(' · agent a1b2 (general-purpose) · '))).toBe(true);
+});
+
+test('R36: an agent never listed shows its id', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION); // world.running is empty: the list names nobody
+  await respond($ as never, world, [{ id: 'q', name: 'mcp__db__run_query' }], 'a1b2');
+  world.results.q = { result: 'r', text: 'x'.repeat(120) };
+  await $.tool.call({ tool: 'mcp__db__run_query', tool_use_id: 'q', agentId: 'a1b2' } as never);
+  await endTurn($ as never, world);
+  const lines = linesOf(await openDetail($ as never, 'q', 100));
+  expect(lines.some((line) => line.includes(' · agent a1b2 · '))).toBe(true);
 });
 
 test('R37: JSON text is drawn as json code, and other text plain', async ($, on) => {
@@ -1932,6 +2341,29 @@ test('R43, R22: a failed turn-end reload keeps the figures shown', async ($, on)
   expect(lines).not.toContain('Context usage unavailable');
 });
 
+test('R43: a closed Inventory does not reload at turn end', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  expect(world.usageCalls).toEqual(['summary']);
+  world.panes = []; // Esc: the engine drops the pane, the view atom stays 'inventory'
+  await endTurn($ as never, world);
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(1);
+  await run($ as never, 'inventory'); // reopening loads fresh figures through openView
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(2);
+});
+
+test('R43: an unreadable pane list still reloads the Inventory', async ($, on) => {
+  const world = worldOf(on);
+  world.usage = githubDb();
+  await $.session.start(SESSION);
+  await run($ as never, 'inventory');
+  world.panes = null;
+  await endTurn($ as never, world);
+  expect(world.usageCalls.filter((call) => call === 'summary')).toHaveLength(2);
+});
+
 test('R47: measured figures are kept in pane state', async ($, on) => {
   const world = worldOf(on);
   const kept = stateOf(on);
@@ -1995,6 +2427,78 @@ test('R44: running, built-in and unknown calls keep the engine row alone', async
   expect(await toolRow($ as never, 'r', 'Read')).toEqual(ENGINE_ROW);
   expect(await toolRow($ as never, 'm', 'mcp__o__s', true)).toEqual(ENGINE_ROW);
   expect(await toolRow($ as never, 'nope', 'mcp__o__s')).toEqual(ENGINE_ROW);
+});
+
+const groupRow = async (
+  $: never,
+  members: { id?: string; tool: string; isRunning?: boolean }[],
+  state = { isActive: false, isExpanded: false },
+) =>
+  ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render({
+    component: 'ToolGroup',
+    surface: 'terminal',
+    requestId: 'g1',
+    viewport: { columns: 100, rows: 40, isFullscreen: false },
+    props: {
+      calls: members.map(({ id, tool, isRunning = false }) => ({
+        ...(id === undefined ? {} : { tool_use_id: id }),
+        tool,
+        input: {},
+        isRunning,
+        isErrored: false,
+        isInterrupted: false,
+      })),
+      ...state,
+    },
+  });
+
+test('R44: a folded group sums its completed MCP calls on one line', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callBatch($ as never, world, [
+    { id: 'u1', tool: 'mcp__github__search_issues', text: 'x'.repeat(4000) },
+    { id: 'u2', tool: 'mcp__db__q', text: 'y'.repeat(400) },
+  ]);
+  await callOne($ as never, world, 'u3', 'mcp__db__q', 'x'.repeat(40), true);
+  await callOne($ as never, world, 'r', 'Read', 'ok');
+  const tree = (await groupRow($ as never, [
+    { id: 'u1', tool: 'mcp__github__search_issues' },
+    { id: 'u2', tool: 'mcp__db__q' },
+    { id: 'u3', tool: 'mcp__db__q' },
+    { id: 'r', tool: 'Read' },
+  ])) as Element;
+  expect(tree.type).toBe('Box');
+  expect(tree.props?.flexDirection).toBe('column');
+  expect(tree.children?.[0]).toEqual(ENGINE_ROW);
+  const line = tree.children?.[1] as Element;
+  expect(line.props?.dimColor).toBe(true);
+  expect(stringsOf(line).join('').trim()).toBe('3 MCP calls · ~1.1k tok · 1 error');
+});
+
+test('R44: an expanded, active or unmatched group keeps the engine row alone', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__o__s', 'ok');
+  const one = [{ id: 'u1', tool: 'mcp__o__s' }];
+  expect(await groupRow($ as never, one, { isActive: false, isExpanded: true })).toEqual(
+    ENGINE_ROW,
+  );
+  expect(await groupRow($ as never, one, { isActive: true, isExpanded: false })).toEqual(
+    ENGINE_ROW,
+  );
+  expect(await groupRow($ as never, [{ tool: 'mcp__o__s' }])).toEqual(ENGINE_ROW);
+  expect(await groupRow($ as never, [{ id: 'nope', tool: 'mcp__o__s' }])).toEqual(ENGINE_ROW);
+  expect(await groupRow($ as never, [{ id: 'u1', tool: 'mcp__o__s', isRunning: true }])).toEqual(
+    ENGINE_ROW,
+  );
+});
+
+test('R46: a group line that fails to draw leaves the engine row', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callOne($ as never, world, 'u1', 'mcp__o__s', 'ok');
+  // A non-string tool name makes `mcpServer` throw inside the hook's `try`.
+  expect(await groupRow($ as never, [{ id: 'u1', tool: 42 as never }])).toEqual(ENGINE_ROW);
 });
 
 test('R45: the fullscreen layout opens the pane without holding toasts', async ($, on) => {
@@ -2146,3 +2650,73 @@ test(
     expect(linesOf(await drawAt($ as never, 80))).toContain('logs: /out/s1');
   },
 );
+
+// R50: the permission verdict from the tool.check tiers beneath telltale.
+
+/** Raises the verdict a session's tool.check would give call `id`, as the engine does. */
+const checkCall = ($: never, id: string, tool = 'mcp__o__s') =>
+  ($ as { tool: { check: (e: unknown) => Promise<unknown> } }).tool.check({
+    tool,
+    input: {},
+    tool_use_id: id,
+  });
+
+test('R3, R50: a tool.check verdict passes through unchanged', async ($, on) => {
+  worldOf(on);
+  on('tool.check', () => ({ decision: 'ask', reason: 'a rule asks', rule: 'mcp__o__s' }));
+  await $.session.start(SESSION);
+  expect(await checkCall($ as never, 'u1')).toEqual({
+    decision: 'ask',
+    reason: 'a rule asks',
+    rule: 'mcp__o__s',
+  });
+  // A query: no tool_use_id.
+  expect(await $.tool.check({ tool: 'mcp__o__s', input: {} })).toEqual({
+    decision: 'ask',
+    reason: 'a rule asks',
+    rule: 'mcp__o__s',
+  });
+});
+
+test('R50: an asked call logs its verdict and redacted rule, and the detail says so', async ($, on) => {
+  const world = worldOf(on);
+  const state = stateOf(on);
+  const key = 'AKIA' + 'Q7ZX2P9LMN4RTV8W';
+  on('tool.check', () => ({ decision: 'ask', rule: `Bash(echo ${key}:*)` }));
+  await $.session.start(SESSION);
+  await checkCall($ as never, 'a');
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record).toMatchObject({ permission: 'ask', permissionRule: 'Bash(echo [redacted]:*)' });
+  expect(JSON.stringify(record)).not.toContain(key);
+  // The row reaches shared state with its verdict, and the raw rule never does.
+  expect(JSON.stringify(state.get('calls'))).toContain('"permission":"ask"');
+  expect(JSON.stringify(state.get('calls'))).not.toContain(key);
+  expect(linesOf(await openDetail($ as never, 'a'))).toContain(
+    'duration includes a permission decision (dialog or classifier)',
+  );
+});
+
+test('R50: an allowed call says its duration has no permission wait', async ($, on) => {
+  const world = worldOf(on);
+  on('tool.check', () => ({ decision: 'allow' }));
+  await $.session.start(SESSION);
+  await checkCall($ as never, 'a');
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record!.permission).toBe('allow');
+  expect(Object.keys(record!)).not.toContain('permissionRule');
+  expect(linesOf(await openDetail($ as never, 'a'))).toContain(
+    'no permission dialog or classifier in this time',
+  );
+});
+
+test('R50: a call with no verdict logs permission null', async ($, on) => {
+  const world = worldOf(on);
+  await $.session.start(SESSION);
+  await callThrough($ as never, world, 'a');
+  await endTurn($ as never, world);
+  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]!.permission).toBeNull();
+});
