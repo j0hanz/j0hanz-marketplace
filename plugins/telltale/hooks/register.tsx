@@ -986,7 +986,7 @@ export const register: Register = (on, options) => {
   on('session.compact', async ($, e, next) => {
     const r = await next(e);
     // Only a main-conversation compaction that went ahead rebuilds the main context (R8).
-    if (e.agentId === undefined && e.trigger !== 'precompute' && !('skip' in r && r.skip)) {
+    if (e.agentId === undefined && e.trigger !== 'precompute' && (!('skip' in r) || !r.skip)) {
       pendingReason = 'compact';
     }
     return r;

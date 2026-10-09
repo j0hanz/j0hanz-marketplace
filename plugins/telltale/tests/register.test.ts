@@ -203,7 +203,7 @@ const lines = (world: World, path: string) =>
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 
 const turnFiles = (world: World) =>
-  [...world.files.keys()].filter((path) => /\/turn-\d+(-part\d+)?\.jsonl$/.test(path)).sort();
+  [...world.files.keys()].filter((path) => /\/turn-\d+(?:-part\d+)?\.jsonl$/.test(path)).sort();
 
 test('R3: a tool result reaches Claude unchanged', async ($, on) => {
   on('tool.call', () => ({ result: 'order_1182: refunded', text: 'order_1182: refunded' }));
@@ -501,7 +501,7 @@ test('R19: logs stay under the starting directory after the session moves', asyn
   expect(world.raw.length).toBeGreaterThan(0);
   // On Windows the engine hands `/work` back with a drive letter.
   for (const path of world.raw) {
-    expect(path.replace(/^[A-Za-z]:/, '').startsWith('/work/.claude/telltale/')).toBe(true);
+    expect(path.replace(/^[A-Z]:/i, '').startsWith('/work/.claude/telltale/')).toBe(true);
   }
 });
 

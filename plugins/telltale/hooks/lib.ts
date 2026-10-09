@@ -60,20 +60,20 @@ const SECRET_KEYS = new Set(SECRET_FIELDS.map(squash));
 
 // R14. A match must not follow a letter, digit, `_` or `-`, unless that letter ends a JSON
 // escape (`\n`, `\r`, `\t`): MCP results are often JSON text. A private key block matches anywhere.
-const NOT_AFTER = String.raw`(?:(?<![A-Za-z0-9_-])|(?<=\\[nrt]))`;
+const NOT_AFTER = String.raw`(?:(?<![\w-])|(?<=\\[nrt]))`;
 const PRIVATE_KEY =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
 const SECRET_PATTERNS = [
-  /sk-ant-[A-Za-z0-9_-]{20,}/,
-  /sk-[A-Za-z0-9_-]{20,}/,
+  /sk-ant-[\w-]{20,}/,
+  /sk-[\w-]{20,}/,
   /(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}/,
-  /github_pat_[A-Za-z0-9_]{22,}/,
+  /github_pat_\w{22,}/,
   /AKIA[0-9A-Z]{16}/,
   /xox[abpr]-[A-Za-z0-9-]{10,}/,
-  /AIza[0-9A-Za-z_-]{35}/,
-  /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
+  /AIza[\w-]{35}/,
+  /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/,
 ].map((pattern) => new RegExp(NOT_AFTER + pattern.source, 'g'));
-const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[A-Za-z0-9._~+/=-]{8,}`, 'g');
+const BEARER = new RegExp(`${NOT_AFTER}(Bearer )[\\w.~+/=-]{8,}`, 'g');
 // R14: a listed field's string value inside JSON text, and inside JSON escaped once more (a JSON
 // string holding JSON; an inner escape is an escaped backslash plus one escape unit, so an escaped
 // quote inside the value does not end it). ponytail: deeper escaping and non-string values are not
@@ -161,7 +161,7 @@ export const labelCalls = (
 
 const values = (text: string): string[] =>
   text
-    .split(/[^A-Za-z0-9_.:/-]+/)
+    .split(/[^\w.:/-]+/)
     .map((token) => token.replace(/[.:/-]+$/, ''))
     .filter((token) => token.length >= 4 && /\d/.test(token));
 
@@ -453,7 +453,7 @@ export const detailHeader = (c: {
   ].join(' · ');
 
 /** R19: a path that starts at a drive or a root, not at the session's directory. */
-export const isAbsolute = (path: string) => /^(?:[A-Za-z]:)?[\\/]/.test(path);
+export const isAbsolute = (path: string) => /^(?:[A-Z]:)?[\\/]/i.test(path);
 
 /** `path` with `/` separators and its `.` and `..` segments resolved. */
 const normalize = (path: string): string => {
