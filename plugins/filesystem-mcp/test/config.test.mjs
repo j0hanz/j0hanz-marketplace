@@ -18,8 +18,10 @@ test('filesystem plugin pins the server to the plugin version with project-scope
     type: 'stdio',
     command: 'npx',
     // Literal args only: the directory validator blocks any variable but
-    // ${CLAUDE_PLUGIN_ROOT}. Claude Code starts the server in the project
-    // directory, so the working directory is the root and the boundary.
+    // ${CLAUDE_PLUGIN_ROOT}. The working directory is the root and the
+    // boundary. Claude Code starts the server in the project directory;
+    // Copilot CLI defaults a plugin's stdio server to the plugin root, so
+    // cwd "." (the session directory in both clients) pins the project.
     // --prefix keeps npx from resolving the spec against the project: inside
     // the server's own checkout it matches and npx finds no bin to run.
     args: [
@@ -31,6 +33,7 @@ test('filesystem plugin pins the server to the plugin version with project-scope
       '--root-boundary',
       '.',
     ],
+    cwd: '.',
     env: {
       FS_PORT: '',
       FS_ALLOWED_DIRS: '',

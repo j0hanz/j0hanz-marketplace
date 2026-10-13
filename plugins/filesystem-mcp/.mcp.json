@@ -12,6 +12,7 @@
         "--root-boundary",
         "."
       ],
+      "cwd": ".",
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",
