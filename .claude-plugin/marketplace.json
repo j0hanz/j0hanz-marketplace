@@ -80,6 +80,12 @@
       "category": "productivity"
     },
     {
+      "name": "groundwork",
+      "source": "./plugins/groundwork",
+      "description": "The thinking before the code: grill a plan, keep the domain model in GLOSSARY.md and ADRs, design deep modules, surface deepening opportunities, research primary sources",
+      "category": "development"
+    },
+    {
       "name": "telltale",
       "source": "./plugins/telltale",
       "description": "See how Claude uses your skills and MCP servers: a receipt under each answer, a pane of every tool call with what Claude read back and did next, context cost per server and skill, per-turn JSONL logs. Observe-only, local files only (Claude Code only)",

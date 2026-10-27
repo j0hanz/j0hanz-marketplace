@@ -31,6 +31,7 @@ Plugins for Claude Code and GitHub Copilot CLI: skills, agents, and MCP servers 
 /plugin install nodejs@j0hanz-marketplace
 /plugin install typescript-pro@j0hanz-marketplace
 /plugin install writeup@j0hanz-marketplace
+/plugin install groundwork@j0hanz-marketplace
 /plugin install telltale@j0hanz-marketplace
 ```
 
@@ -69,6 +70,7 @@ copilot plugin install workbench@j0hanz-marketplace
 copilot plugin install nodejs@j0hanz-marketplace
 copilot plugin install typescript-pro@j0hanz-marketplace
 copilot plugin install writeup@j0hanz-marketplace
+copilot plugin install groundwork@j0hanz-marketplace
 ```
 
 <!-- copilot:end -->
@@ -176,6 +178,12 @@ PR descriptions and commit messages written for people: plain prose, structural 
 
 - Commands: `/writeup:commit`, `/writeup:pr`, `/writeup:show-me`, `/writeup:unslop`
 - Hooks: `PostToolUse`
+
+### groundwork
+
+The thinking before the code: grill a plan, keep the domain model in GLOSSARY.md and ADRs, design deep modules, surface deepening opportunities, research primary sources
+
+- Commands: `/groundwork:codebase-design`, `/groundwork:domain-modeling`, `/groundwork:grill-with-docs`, `/groundwork:grilling`, `/groundwork:improve-codebase-architecture`, `/groundwork:research`
 
 ### telltale
 

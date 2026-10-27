@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "groundwork",
+  "displayName": "Groundwork",
+  "version": "0.1.0",
+  "description": "The thinking before the code: relentless grilling of a plan, a domain model kept in GLOSSARY.md and ADRs, deep-module design vocabulary, architecture reviews that surface deepening opportunities, and research against primary sources.",
+  "author": {
+    "name": "j0hanz",
+    "email": "l.johansson93@outlook.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "architecture",
+    "deep-modules",
+    "domain-modeling",
+    "adr",
+    "glossary",
+    "grilling",
+    "research"
+  ]
+}
