@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review: REPO</title>
+    <style>
+      /* Survey-drawing look. Sections follow the report top to bottom; HTML-REPORT.md has the markup. */
+
+      /* 1. Tokens: theme colours, fonts, and the scales every rule draws from */
+      :root {
+        color-scheme: light dark;
+        --surface-page: #e9ede6;
+        --surface-raised: #f6f8f4;
+        --surface-sunken: #dce2d8;
+        --text: #18211d;
+        --text-muted: #46534c;
+        --border: #a9b4ab;
+        --accent: #234a9c; /* interface, links, focus: nothing else */
+        --leak: #a8231b;
+        --caution: #7a5200; /* ADR callout */
+        --font-display:
+          Bahnschrift, 'DIN Alternate', 'Roboto Condensed', 'Arial Narrow', sans-serif;
+        --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+        --small: 0.8rem;
+        --space-xs: 0.25rem;
+        --space-s: 0.5rem;
+        --space-m: 1rem;
+        --space-l: 2rem;
+        --radius: 2px;
+        --rule: 1px solid var(--border);
+        --heavy: 3px; /* heavy line = deep module, leak, title block */
+        --hatch: repeating-linear-gradient(
+          135deg,
+          var(--text-muted) 0 1px,
+          transparent 1px 6px
+        ); /* = implementation */
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --surface-page: #121815;
+          --surface-raised: #1a221e;
+          --surface-sunken: #0d120f;
+          --text: #e3e9e4;
+          --text-muted: #a3b0a8;
+          --border: #3a4741;
+          --accent: #8fb0f0;
+          --leak: #f08a80;
+          --caution: #e0b860;
+        }
+      }
+
+      /* 2. Base, then the shared roles: label, quiet, mono, row, list, frame */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--surface-page);
+        color: var(--text);
+        font: 1rem / 1.5 var(--font-body);
+        overflow-wrap: break-word;
+      }
+      :is(h1, h2, h3, p, ul, ol, dl, dd, figure, pre) {
+        margin: 0;
+      }
+      :is(h1, h2) {
+        font-family: var(--font-display);
+        font-weight: 600;
+        line-height: 1.15;
+      }
+      h1 {
+        font-size: clamp(1.953rem, 5vw, 2.441rem);
+      }
+      h2 {
+        font-size: 1.563rem;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.2em;
+      }
+      a:hover {
+        color: var(--text);
+      }
+      :focus-visible {
+        outline: var(--heavy) solid var(--accent);
+        outline-offset: 2px;
+        border-radius: var(--radius);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        html {
+          scroll-behavior: smooth;
+        }
+        a {
+          transition: color 150ms;
+        }
+      }
+      .caps,
+      dt,
+      figure h3,
+      [data-strength] {
+        font: 600 var(--small) / 1.4 var(--font-display);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .caps,
+      dt,
+      figure h3,
+      main > header .row,
+      .files,
+      figcaption,
+      .row > code {
+        color: var(--text-muted);
+      }
+      main > header .row,
+      .files,
+      figcaption,
+      .row > code,
+      .core,
+      .box,
+      figure ol {
+        font-size: var(--small);
+      }
+      code,
+      pre,
+      .files,
+      .box,
+      figure ol {
+        font-family: var(--font-mono);
+        overflow-wrap: anywhere; /* long identifiers break instead of widening the page */
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-s) var(--space-m);
+      }
+      main > header ul,
+      .files,
+      figure ol {
+        list-style: none;
+        padding: 0;
+      }
+      article,
+      .row > code,
+      figure > section {
+        border: var(--rule);
+        border-radius: var(--radius);
+      }
+
+      /* 3. Page and title block: four cells, ruled by a 1px gap over the border colour */
+      main {
+        max-width: 72rem;
+        margin-inline: auto;
+        padding: clamp(var(--space-m), 4vw, 3rem);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-l);
+      }
+      main > header {
+        display: grid;
+        gap: 1px;
+        background: var(--border);
+        border: var(--heavy) solid var(--text);
+        border-radius: var(--radius);
+      }
+      main > header > * {
+        display: grid;
+        gap: var(--space-s);
+        align-content: start;
+        padding: var(--space-m);
+        background: var(--surface-raised);
+      }
+      nav ul {
+        display: grid;
+        gap: var(--space-s);
+      }
+      #top-recommendation {
+        background: var(--surface-sunken);
+      }
+      #top-recommendation h2 {
+        font-size: 1.25rem;
+      }
+      @media (min-width: 48rem) {
+        /* from here the four cells hold their content two by two */
+        main > header {
+          grid-template-columns: 3fr 2fr;
+        }
+      }
+
+      /* 4. Candidate card */
+      article {
+        container-type: inline-size;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-m);
+        padding: clamp(var(--space-m), 3vw, var(--space-l));
+        background: var(--surface-raised);
+        scroll-margin-top: var(--space-m);
+      }
+      article > :is(dl, ul, aside),
+      figcaption {
+        max-width: 65ch;
+      }
+      .row > code {
+        padding: 0 var(--space-s);
+      }
+      .files {
+        line-height: 1.6;
+      }
+      dl {
+        display: grid;
+        gap: var(--space-m);
+      }
+      aside {
+        padding: var(--space-s) var(--space-m);
+        border-left: var(--heavy) solid var(--caution);
+        background: var(--surface-sunken);
+      }
+      aside strong {
+        color: var(--caution);
+      }
+
+      /* 5. Before / after: panes stack, then sit side by side once the card is 36rem */
+      figure {
+        display: grid;
+        gap: var(--space-m);
+      }
+      figure > section {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: var(--space-s);
+        padding: var(--space-m);
+        background: var(--surface-page);
+        overflow-x: auto;
+      }
+      @container (min-width: 36rem) {
+        figure {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        figure > section {
+          min-height: 20rem;
+        }
+        figcaption {
+          grid-column: 1 / -1;
+        }
+      }
+      /* Mermaid draws at full size; a wide diagram scrolls inside its pane */
+      pre.mermaid {
+        display: grid;
+        place-items: safe center;
+        color: var(--text-muted);
+      }
+      /* core sample: the column is interface (accent) over implementation (hatch) */
+      .cores {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: end;
+        gap: var(--space-m) var(--space-l);
+      }
+      .core {
+        display: grid;
+        justify-items: center;
+        gap: var(--space-s);
+        max-inline-size: 8rem;
+        text-align: center;
+      }
+      .core::before {
+        --split: calc(var(--iface) / (var(--iface) + var(--impl)) * 100%);
+        content: '';
+        inline-size: 4rem;
+        block-size: calc(min(var(--iface) + var(--impl), 14) * 1rem);
+        border: 1px solid var(--text);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(
+            var(--accent) var(--split),
+            var(--text) 0 calc(var(--split) + 1px),
+            transparent 0
+          ),
+          var(--hatch);
+      }
+      /* cross-section: one band per layer a call passes through */
+      figure ol {
+        display: grid;
+        gap: var(--space-xs);
+        align-content: start;
+      }
+      figure ol > li {
+        padding: var(--space-xs) var(--space-s);
+        border-left: var(--heavy) solid var(--text-muted);
+        background: var(--surface-raised);
+      }
+      /* collapse: one deep box, its now-internal calls inside */
+      .box {
+        display: grid;
+        gap: var(--space-s);
+        align-content: start;
+        align-self: start;
+        padding: var(--space-s);
+        border: 1px solid var(--text);
+        border-radius: var(--radius);
+        background: var(--surface-raised);
+      }
+
+      /* 6. Marks: data-kind on the thing it marks. Each mark lives in one rule.
+         outline = module, heavy = deep, hatch = implementation, dashed = internal, red = leak */
+      [data-strength],
+      main > header li[data-kind] {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-s);
+      }
+      [data-strength]::before,
+      main > header li[data-kind]::before {
+        content: '';
+        flex: none;
+        inline-size: 0.75rem;
+        block-size: 0.75rem;
+        border: 1px solid var(--text);
+      }
+      [data-strength='strong']::before {
+        background: var(--text);
+      }
+      [data-strength='worth']::before {
+        background: linear-gradient(90deg, var(--text) 50%, transparent 0);
+      }
+      [data-strength='speculative']::before {
+        border-style: dashed;
+      }
+      main > header li[data-kind]::before {
+        inline-size: 1.5rem;
+      }
+      main > header li[data-kind='deep']::before {
+        border: var(--heavy) solid var(--text);
+        background: var(--hatch);
+      }
+      main > header li[data-kind='interface']::before {
+        border: 0;
+        background: var(--accent);
+      }
+      main > header li[data-kind='seam']::before {
+        block-size: 0;
+        border: 0;
+        border-top: var(--heavy) dashed var(--text-muted);
+      }
+      main > header li[data-kind='leak']::before {
+        block-size: 0;
+        border: 0;
+        border-top: var(--heavy) solid var(--leak);
+      }
+      .core[data-kind='deep']::before,
+      .box[data-kind='deep'] {
+        border-width: var(--heavy);
+      }
+      .box[data-kind='leak'] {
+        border: var(--heavy) solid var(--leak);
+      }
+      .box[data-kind='internal'] {
+        border: 1px dashed var(--text-muted);
+        background: none;
+        color: var(--text-muted);
+      }
+      figure ol > [data-kind='deep'] {
+        padding-block: var(--space-l);
+        border: var(--heavy) solid var(--text);
+        background: var(--hatch), var(--surface-raised);
+        font: 600 1rem / 1.4 var(--font-display);
+      }
+      figure ol > [data-kind='deep'] span {
+        padding: 0 var(--space-s);
+        background: var(--surface-raised);
+      }
+    </style>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+      const css = getComputedStyle(document.documentElement);
+      const token = (name) => css.getPropertyValue(name).trim();
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        flowchart: { useMaxWidth: false },
+        sequence: { useMaxWidth: false, mirrorActors: false },
+        themeVariables: {
+          background: token('--surface-page'),
+          primaryColor: token('--surface-raised'),
+          primaryTextColor: token('--text'),
+          primaryBorderColor: token('--text'),
+          lineColor: token('--text-muted'),
+          textColor: token('--text'),
+          noteBkgColor: token('--surface-sunken'),
+          noteTextColor: token('--text'),
+          noteBorderColor: token('--border'),
+          clusterBkg: token('--surface-sunken'),
+          clusterBorder: token('--border'),
+          edgeLabelBackground: token('--surface-page'),
+          fontFamily: token('--font-body'),
+          fontSize: '12.8px', // = --small
+        },
+      });
+      // Mermaid's parser rejects var(); swap tokens in so diagrams follow the theme
+      for (const pre of document.querySelectorAll('pre.mermaid')) {
+        pre.textContent = pre.textContent.replace(/var\((--[\w-]+)\)/g, (_, name) => token(name));
+      }
+      await mermaid.run();
+    </script>
+  </head>
+  <body>
+    <main>
+      <!-- REPORT: title block, then one article per candidate -->
+    </main>
+  </body>
+</html>

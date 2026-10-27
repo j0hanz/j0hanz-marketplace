@@ -1,113 +1,225 @@
 # HTML Report Format
 
-The architectural review is rendered as a single self-contained HTML file in the OS temp directory. Tailwind and Mermaid both come from CDNs. Mermaid handles graph-shaped diagrams reliably; hand-built divs and inline SVG handle the more editorial visuals (mass diagrams, cross-sections). Mix the two: don't lean on Mermaid for everything, it'll start to look generic.
+The architectural review is one HTML file in the OS temp directory, self-contained except for the pinned Mermaid import. Its look lives in [report.html](report.html): the stylesheet, the Mermaid script, and an empty `<main>`. You write only what goes inside `<main>`.
 
-## Scaffold
+## Direction
+
+The glossary is already geological: **depth**, **seam**, **layer**, **leak**. The report borrows the look of a survey drawing to match. A title block names the drawing. Each module is drawn as a **core sample**: a solid interface band over a hatched implementation band, so a shallow module reads as a stubby core and a deep one as a tall core with a thin cap.
+
+Blue marks the interface. Red marks a leak. Hatching marks implementation. A heavy outline marks a deep module. Dark mode follows the reader's system setting.
+
+## Build
+
+1. Copy `report.html` from this skill's directory to `<tmpdir>/architecture-review-<timestamp>.html` with a shell command (`cp`, or `Copy-Item` on Windows). Don't retype it.
+2. Replace `REPO` in its `<title>`.
+3. Replace the `<!-- REPORT: … -->` comment inside `<main>` with the title block, then one `<article>` per candidate.
+
+The one network request is Mermaid, pinned to an exact version. Without it, each diagram shows its readable source text.
+
+## Vocabulary
+
+These are all the classes and `data-` attributes the stylesheet knows. Use no others, and no inline styles except a core's counts. The `id`, `href` and `aria-` attributes in the examples are plain HTML.
+
+| Markup                    | Means                             |
+| :------------------------ | :-------------------------------- |
+| `class="caps"`            | Small uppercase label             |
+| `class="row"`             | Items in a wrapping line          |
+| `class="files"`           | File path list                    |
+| `class="cores"`           | Holds core samples                |
+| `class="core"`            | One core sample                   |
+| `class="box"`             | One module in a collapse diagram  |
+| `class="mermaid"`         | Mermaid source, on a `<pre>`      |
+| `data-strength`           | `strong`, `worth`, `speculative`  |
+| `data-kind`               | A mark; see the next table        |
+| `id="top-recommendation"` | The title block's start-here cell |
+
+| `data-kind` | Valid on                                                          |
+| :---------- | :---------------------------------------------------------------- |
+| `deep`      | Key item, core, box, cross-section band                           |
+| `internal`  | Box                                                               |
+| `leak`      | Key item, box                                                     |
+| `module`    | Key item only (an unmarked core, box or band is already a module) |
+| `interface` | Key item only                                                     |
+| `seam`      | Key item only                                                     |
+
+Plain elements carry the rest. In a card, `<dt>` is a label, `<code>` in the badge row is the dependency tag, and `<aside>` is the ADR callout. In a figure, each `<section>` is one pane, its `<h3>` is the pane label, and an `<ol>` is a cross-section.
+
+## Title block
+
+The first screen answers "which one do I explore?" The title block holds four cells, in this order: identity, the top recommendation, the candidate index, and the key. No introduction paragraph.
 
 ```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Architecture review for {{repo name}}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
-    </script>
-    <style>
-      /* small custom layer for things Tailwind doesn't cover cleanly:
-         dashed seam lines, hand-drawn-feeling arrow heads, etc. */
-      .seam {
-        stroke-dasharray: 4 4;
-      }
-      .leak {
-        stroke: #dc2626;
-      }
-      .deep {
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-      }
-    </style>
-  </head>
-  <body class="bg-stone-50 text-slate-900 font-sans">
-    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
-      <header>...</header>
-      <section id="candidates" class="space-y-10">...</section>
-      <section id="top-recommendation">...</section>
-    </main>
-  </body>
-</html>
+<header>
+  <div>
+    <p class="caps">Architecture review</p>
+    <h1>{{repo name}}</h1>
+    <p class="row">
+      <span>2026-10-27</span><span>Scope: src/orders, src/pricing</span><span>3 candidates</span>
+    </p>
+  </div>
+  <section id="top-recommendation" aria-labelledby="top-title">
+    <p class="caps">Start with</p>
+    <h2 id="top-title"><a href="#order-intake">Collapse the Order intake pipeline</a></h2>
+    <p>Pricing leaks across four seams; one deep module ends it.</p>
+  </section>
+  <nav aria-label="Candidates">
+    <p class="caps">Candidates</p>
+    <ul>
+      <li class="row">
+        <a href="#order-intake">Collapse the Order intake pipeline</a>
+        <span data-strength="strong">Strong</span>
+      </li>
+    </ul>
+  </nav>
+  <div>
+    <p class="caps">Key</p>
+    <ul class="row">
+      <li data-kind="module">module</li>
+      <li data-kind="deep">deep module</li>
+      <li data-kind="interface">interface</li>
+      <li data-kind="seam">seam</li>
+      <li data-kind="leak">leak</li>
+    </ul>
+  </div>
+</header>
 ```
 
-## Header
-
-Repo name, date, and a compact legend: solid box = module, dashed line = seam, red arrow = leakage, thick dark box = deep module. No introduction paragraph. Straight into the candidates.
+The top recommendation holds the candidate's linked name and one sentence on why. That is all it holds.
 
 ## Candidate card
 
 The diagrams carry the weight. Prose is sparse, plain, and uses the glossary terms (from the `groundwork:codebase-design` skill) without ceremony.
 
-Each candidate is one `<article>`:
+Each candidate is one `<article>` with the `id` the title block links to. Keep its parts in this order:
 
-- **Title**: short, names the deepening (e.g. "Collapse the Order intake pipeline").
-- **Badge row**: recommendation strength (`Strong` = emerald, `Worth exploring` = amber, `Speculative` = slate), plus a tag for the dependency category (`in-process`, `local-substitutable`, `ports & adapters`, `mock`).
-- **Files**: monospaced list, `font-mono text-sm`.
-- **Before / After diagram**: the centrepiece. Two columns, side by side. See patterns below.
-- **Problem**: one sentence. What hurts.
-- **Solution**: one sentence. What changes.
-- **Wins**: bullets, ≤6 words each. e.g. "Tests hit one interface", "Pricing logic stops leaking", "Delete 4 shallow wrappers".
-- **ADR callout** (if applicable): one line in an amber-tinted box.
+- **Title**: an `<h2>` that names the deepening (e.g. "Collapse the Order intake pipeline").
+- **Badge row**: the strength mark, then the dependency category as `<code>`: `in-process`, `local-substitutable`, `ports &amp; adapters`, or `mock`. Strength text is `Strong`, `Worth exploring` or `Speculative`.
+- **Files**: a `<ul class="files">`, one path per item.
+- **Before / After**: a `<figure>` with two `<section>` panes and a `<figcaption>`. See the diagram patterns below.
+- **Problem** and **Solution**: one sentence each, in a `<dl>` with one `<div>` per term.
+- **Wins**: a plain `<ul>`, at most 6 words per bullet.
+- **ADR callout**, if one applies.
 
-No paragraphs of explanation. If the diagram needs a paragraph to be understood, redraw the diagram.
+```html
+<article id="order-intake" aria-labelledby="order-intake-title">
+  <h2 id="order-intake-title">Collapse the Order intake pipeline</h2>
+  <p class="row"><span data-strength="strong">Strong</span><code>in-process</code></p>
+  <ul class="files">
+    <li>src/orders/handler.ts</li>
+    <li>src/orders/validator.ts</li>
+  </ul>
+  <figure>
+    <section>
+      <h3>Before</h3>
+      …diagram…
+    </section>
+    <section>
+      <h3>After</h3>
+      …diagram…
+    </section>
+    <figcaption>
+      One sentence on what the two diagrams show, with the counts behind them.
+    </figcaption>
+  </figure>
+  <dl>
+    <div>
+      <dt>Problem</dt>
+      <dd>Order intake module is shallow: interface nearly matches the implementation.</dd>
+    </div>
+    <div>
+      <dt>Solution</dt>
+      <dd>Deepen: one interface, one place to test.</dd>
+    </div>
+  </dl>
+  <ul>
+    <li>Locality: bugs concentrate in one module</li>
+  </ul>
+  <aside><strong>Contradicts ADR-0007</strong>, but worth reopening: …</aside>
+</article>
+```
+
+The `<figcaption>` is the diagram's text alternative. Write it so a reader who cannot see the panes gets the same point. No paragraphs of explanation beyond it. If the diagram needs a paragraph to be understood, redraw the diagram.
+
+## Escaping
+
+File names and identifiers come from the code, so they can contain `<`, `>` and `&`.
+
+- In HTML, write `&lt;`, `&gt;` and `&amp;`.
+- In a Mermaid label, quote the label and write `#lt;`, `#gt;` and `#amp;`. Mermaid strips an HTML entity such as `&lt;`: `Repo&lt;Order&gt;` renders as `Repo`.
+- Outside Mermaid labels, write arrows raw (`-->`, `->>`).
 
 ## Diagram patterns
 
-Pick the pattern that fits the candidate. Mix them. Don't make every diagram look the same. Variety is part of the point.
+Pick the pattern that fits each candidate, and vary them across the report. The panes stack on a phone and sit side by side on a wide screen.
 
-### Mermaid graph (the workhorse for dependencies / call flow)
+### Core sample (shallow vs deep)
 
-Use a Mermaid `flowchart` or `graph` when the point is "X calls Y calls Z, and look at the mess." Wrap it in a Tailwind-styled card so it doesn't feel parachuted in. Style with classDef to colour leakage edges red and the deep module dark. Sequence diagrams work well for "before: 6 round-trips; after: 1."
+Use this when the point is "interface as wide as implementation". Count the module's names:
+
+- `--iface` is the number of exported names.
+- `--impl` is the number of internal names: non-exported functions and methods.
+  The column is `--iface + --impl` rem tall, capped at 14. If any module in the figure passes 14, divide every count in that figure by the same factor, so the heights still compare. Both bands use the same unit, so the proportion tells the truth. The text inside the core is its label.
 
 ```html
-<div class="rounded-lg border border-slate-200 bg-white p-4">
-  <pre class="mermaid">
-    flowchart LR
-      A[OrderHandler] --> B[OrderValidator]
-      B --> C[OrderRepo]
-      C -.leak.-> D[PricingClient]
-      classDef leak stroke:#dc2626,stroke-width:2px;
-      class C,D leak
-  </pre>
+<div class="cores">
+  <div class="core" style="--iface: 5; --impl: 4">OrderHandler</div>
 </div>
 ```
 
-### Hand-built boxes-and-arrows (when Mermaid's layout fights you)
+In the before pane, put one core per shallow module. In the after pane, put the single deep core with `data-kind="deep"`. State the real counts in the `<figcaption>`.
 
-Modules as `<div>`s with borders and labels. Arrows as inline SVG `<line>` or `<path>` elements positioned absolutely over a relative container. Reach for this when you want the "after" diagram to feel like one thick-bordered deep module with greyed-out internals, since Mermaid won't render that with the right weight.
+### Mermaid graph (dependencies and call flow)
 
-### Cross-section (good for layered shallowness)
+Use a `flowchart` when the point is "X calls Y calls Z, and look at the mess". Prefer `flowchart TD`: a wide `LR` graph scrolls sideways in its pane. Use a `sequenceDiagram` for "before: 6 round-trips; after: 1"; it carries no leak or seam marks, so the caption names them. Start each diagram with `accTitle` and `accDescr` so screen readers get a name.
 
-Stack horizontal bands (`h-12 border-l-4`) to show layers a call passes through. Before: 6 thin layers each doing nothing. After: 1 thick band labelled with the consolidated responsibility.
+In a flowchart:
 
-### Mass diagram (good for "interface as wide as implementation")
+- A leaking edge gets the label `leak` (`A -- leak --> B`). Then colour it with `linkStyle`. Edge indexes count from 0 in source order, so count them again before you write the index.
+- A dashed edge (`-.->`) is a seam.
+- A deep module gets `classDef deep stroke-width:3px` and `class <node> deep`.
 
-Two rectangles per module: one for interface surface area, one for implementation. Before: interface rectangle is nearly as tall as the implementation rectangle (shallow). After: interface rectangle is short, implementation rectangle is tall (deep).
+Write colours as `var(--token)`. The template swaps in the theme value before Mermaid parses the diagram.
 
-### Call-graph collapse
+```html
+<pre class="mermaid">
+flowchart LR
+  accTitle: Order intake before
+  accDescr: The handler reaches pricing through the repo, past the seam
+  A["OrderHandler"] --> B["OrderValidator"]
+  B --> C["OrderRepo#lt;Order#gt;"]
+  C -- leak --> D["PricingClient"]
+  classDef leak stroke:var(--leak),stroke-width:3px,color:var(--leak)
+  class D leak
+  linkStyle 2 stroke:var(--leak),stroke-width:3px
+</pre>
+```
 
-Before: a tree of function calls rendered as nested boxes. After: the same tree collapsed into one box, with the now-internal calls shown faded inside it.
+### Cross-section (layered shallowness)
 
-## Style guidance
+Use one `<ol>` per pane, right after the `<h3>`, with one `<li>` per layer a call passes through. A thin band is plain text. In the after pane, the consolidated responsibility is one deep band, its label wrapped in a `<span>`. A cross-section has no leak mark.
 
-- Lean editorial, not corporate-dashboard. Generous whitespace. Serif optional for headings (`font-serif` works well with stone/slate).
-- Colour sparingly: one accent (emerald or indigo) plus red for leakage and amber for warnings.
-- Keep diagrams ~320px tall so before/after sits comfortably side by side without scrolling.
-- Use `text-xs uppercase tracking-wider` for module labels inside diagrams, so they read as schematic, not as UI.
-- The only scripts are the Tailwind CDN and the Mermaid ESM import. The report is otherwise static: no app code, no interactivity beyond Mermaid's own rendering.
+```html
+<ol>
+  <li>OrderHandler</li>
+  <li data-kind="deep"><span>Order intake: validate, price, store</span></li>
+</ol>
+```
 
-## Top recommendation section
+### Collapse (call graph folds into one module)
 
-One larger card. Candidate name, one sentence on why, anchor link to its card. That's it.
+A box contains the boxes it calls. Each box opens with its name: plain text, or a `<span class="caps">` on the deep box. Before: mark a module that leaks with `data-kind="leak"`. After: one deep box, with the now-internal calls inside it.
+
+```html
+<div class="box">
+  OrderHandler
+  <div class="box" data-kind="leak">PricingClient</div>
+</div>
+
+<div class="box" data-kind="deep">
+  <span class="caps">Order intake</span>
+  <div class="box" data-kind="internal">PricingClient</div>
+</div>
+```
 
 ## Tone
 
