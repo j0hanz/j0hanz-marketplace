@@ -5,27 +5,27 @@ description: Use when designing deep modules, improving a module's interface, fi
 
 # Codebase Design
 
-Design **deep modules**: a lot of behaviour behind a small interface, placed at a clean seam, testable through that interface. Use this language and these principles wherever code is being designed or restructured. The aim is leverage for callers, locality for maintainers, and testability for everyone.
+Design **deep modules**: much behaviour behind small interface, at clean seam, testable through that interface. Use this language + principles wherever code designed or restructured. Aim: leverage for callers, locality for maintainers, testability for all.
 
 ## Glossary
 
-Use these terms exactly: don't substitute "component," "service," "API," or "boundary." Consistent language is the whole point.
+Use terms exactly: no "component," "service," "API," "boundary." Consistent language = whole point.
 
-**Module**: anything with an interface and an implementation. Deliberately scale-agnostic: a function, class, package, or tier-spanning slice. _Avoid_: unit, component, service.
+**Module**: anything with interface + implementation. Scale-agnostic on purpose: function, class, package, or tier-spanning slice. _Avoid_: unit, component, service.
 
-**Interface**: everything a caller must know to use the module correctly: the type signature, but also invariants, ordering constraints, error modes, required configuration, and performance characteristics. _Avoid_: API, signature (too narrow, they refer only to the type-level surface).
+**Interface**: everything caller must know to use module correctly: type signature, plus invariants, ordering constraints, error modes, required config, performance characteristics. _Avoid_: API, signature (too narrow, only type-level surface).
 
-**Implementation**: what's inside a module, its body of code. Distinct from **Adapter**: a thing can be a small adapter with a large implementation (a Postgres repo) or a large adapter with a small implementation (an in-memory fake). Reach for "adapter" when the seam is the topic; "implementation" otherwise.
+**Implementation**: module's inside, its body of code. Distinct from **Adapter**: thing can be small adapter with large implementation (Postgres repo) or large adapter with small implementation (in-memory fake). Say "adapter" when seam is topic; "implementation" otherwise.
 
-**Depth**: leverage at the interface. The amount of behaviour a caller (or test) can exercise per unit of interface they have to learn. A module is **deep** when a large amount of behaviour sits behind a small interface, **shallow** when the interface is nearly as complex as the implementation.
+**Depth**: leverage at interface. Behaviour caller (or test) can exercise per unit of interface learned. Module **deep** when much behaviour behind small interface, **shallow** when interface nearly as complex as implementation.
 
-**Seam** _(Michael Feathers)_: a place where you can alter behaviour without editing in that place; the _location_ at which a module's interface lives. Where to put the seam is its own design decision, distinct from what goes behind it. _Avoid_: boundary (overloaded with DDD's bounded context).
+**Seam** _(Michael Feathers)_: place where behaviour can change without editing that place; the _location_ where module's interface lives. Seam placement = own design decision, separate from what goes behind it. _Avoid_: boundary (overloaded with DDD's bounded context).
 
-**Adapter**: a concrete thing that satisfies an interface at a seam. Describes _role_ (what slot it fills), not substance (what's inside).
+**Adapter**: concrete thing satisfying interface at seam. Describes _role_ (slot filled), not substance (what's inside).
 
-**Leverage**: what callers get from depth. More capability per unit of interface they learn. One implementation pays back across N call sites and M tests.
+**Leverage**: what callers get from depth. More capability per unit of interface learned. One implementation pays back across N call sites, M tests.
 
-**Locality**: what maintainers get from depth. Change, bugs, knowledge, and verification concentrate in one place rather than spreading across callers. Fix once, fixed everywhere.
+**Locality**: what maintainers get from depth. Change, bugs, knowledge, verification concentrate in one place, not spread across callers. Fix once, fixed everywhere.
 
 ## Deep vs shallow
 
@@ -51,18 +51,18 @@ Use these terms exactly: don't substitute "component," "service," "API," or "bou
 └─────────────────────────────────┘
 ```
 
-When designing an interface, ask:
+When designing interface, ask:
 
-- Can I reduce the number of methods?
-- Can I simplify the parameters?
-- Can I hide more complexity inside?
+- Fewer methods?
+- Simpler params?
+- Hide more complexity inside?
 
 ## Principles
 
-- **Depth is a property of the interface, not the implementation.** A deep module can be internally composed of small, mockable, swappable parts; they just aren't part of the interface. A module can have **internal seams** (private to its implementation, used by its own tests) as well as the **external seam** at its interface.
-- **The deletion test.** Imagine deleting the module. If complexity vanishes, it was a pass-through. If complexity reappears across N callers, it was earning its keep.
-- **The interface is the test surface.** Callers and tests cross the same seam. If you want to test _past_ the interface, the module is probably the wrong shape.
-- **One adapter means a hypothetical seam. Two adapters means a real one.** Don't introduce a seam unless something actually varies across it.
+- **Depth is a property of the interface, not the implementation.** Deep module can be built from small, mockable, swappable parts internally; they're just not in interface. Module can have **internal seams** (private to implementation, used by own tests) plus **external seam** at interface.
+- **The deletion test.** Imagine deleting module. Complexity vanishes → was pass-through. Complexity reappears across N callers → earned its keep.
+- **The interface is the test surface.** Callers + tests cross same seam. Want to test _past_ interface → module probably wrong shape.
+- **One adapter means a hypothetical seam. Two adapters means a real one.** No seam unless something actually varies across it.
 
 ## Designing for testability
 
@@ -92,23 +92,23 @@ Good interfaces make testing natural:
    }
    ```
 
-3. **Small surface area.** Fewer methods = fewer tests needed. Fewer params = simpler test setup.
+3. **Small surface area.** Fewer methods = fewer tests. Fewer params = simpler test setup.
 
 ## Relationships
 
-- A **Module** has exactly one **Interface** (the surface it presents to callers and tests).
-- **Depth** is a property of a **Module**, measured against its **Interface**.
-- A **Seam** is where a **Module**'s **Interface** lives.
-- An **Adapter** sits at a **Seam** and satisfies the **Interface**.
-- **Depth** produces **Leverage** for callers and **Locality** for maintainers.
+- **Module** has exactly one **Interface** (surface shown to callers + tests).
+- **Depth** = property of **Module**, measured against its **Interface**.
+- **Seam** = where **Module**'s **Interface** lives.
+- **Adapter** sits at **Seam**, satisfies **Interface**.
+- **Depth** yields **Leverage** for callers, **Locality** for maintainers.
 
 ## Rejected framings
 
-- **Depth as ratio of implementation-lines to interface-lines** (Ousterhout): rewards padding the implementation. We use depth-as-leverage instead.
-- **"Interface" as the TypeScript `interface` keyword or a class's public methods**: too narrow: interface here includes every fact a caller must know.
+- **Depth as ratio of implementation-lines to interface-lines** (Ousterhout): rewards padding implementation. Use depth-as-leverage instead.
+- **"Interface" as the TypeScript `interface` keyword or a class's public methods**: too narrow: interface here = every fact caller must know.
 - **"Boundary"**: overloaded with DDD's bounded context. Say **seam** or **interface**.
 
 ## Going deeper
 
-- **Deepening a cluster given its dependencies**, see [DEEPENING.md](DEEPENING.md): dependency categories, seam discipline, and replace-don't-layer testing.
-- **Exploring alternative interfaces**, see [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md): spin up parallel sub-agents to design the interface several radically different ways, then compare on depth, locality, and seam placement.
+- **Deepening a cluster given its dependencies**, see [DEEPENING.md](DEEPENING.md): dependency categories, seam discipline, replace-don't-layer testing.
+- **Exploring alternative interfaces**, see [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md): spin up parallel sub-agents to design interface several radically different ways, compare on depth, locality, seam placement.

@@ -3,13 +3,13 @@ name: grilling
 description: Use when the user wants a plan, decision, or idea stress-tested, asks to be grilled or interviewed about it, or uses any 'grill' trigger phrase.
 ---
 
-Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
+Interview user relentlessly until shared understanding. Map as **design tree**: every decision branches into decisions hanging off it.
 
-Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
+Work tree in **rounds**. **Frontier** = every decision whose prerequisites already settled: questions askable _now_ without guessing unheard answers. Ask whole frontier in one round: number each question, give recommended answer. Then wait for user answers before next round.
 
-Ask each round through the **AskUserQuestion** tool (Copilot: `ask_user`): one question per decision, two to four short options, your recommended option first with `(Recommended)` at the end of its label and your reasoning in its `description`. The tool takes four questions per call; send a bigger round as consecutive calls.
+Ask each round via **AskUserQuestion** tool (Copilot: `ask_user`): one question per decision, two to four short options, recommended option first with `(Recommended)` at end of label and reasoning in its `description`. Tool takes four questions per call; send bigger round as consecutive calls.
 
-Use markdown instead when the tool is unavailable or a question has no short options to offer. Format a markdown round like so:
+Use markdown when tool unavailable or question has no short options. Format markdown round like so:
 
 ```
 ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
@@ -23,10 +23,10 @@ Use markdown instead when the tool is unavailable or a question has no short opt
 ➡️ <your recommended answer>
 ```
 
-In markdown, word each question so "yes" accepts your recommended answer.
+In markdown, word each question so "yes" accepts recommended answer.
 
-Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
+Each answered round reshapes tree: settled decisions push frontier outward, unblock dependent questions. Recompute frontier, ask next round. Question depending on another still-open question in this round belongs to _later_ round, not this one.
 
-Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
+Finding _facts_ is your job, never user's. When frontier question needs fact from environment (filesystem, tools, etc.), dispatch sub-agent to find it; don't ask user for anything you could look up. Don't block: running exploration = unsettled prerequisite, so only questions downstream of it wait for sub-agent report; ask rest of frontier now. _Decisions_ are user's: put each to them, wait.
 
-The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
+Session done when frontier empty: every branch of design tree visited, nothing silently assumed. Don't act until user confirms shared understanding reached.

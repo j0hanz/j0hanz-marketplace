@@ -6,66 +6,66 @@ disable-model-invocation: true
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose **deepening opportunities**: refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
+Surface architectural friction, propose **deepening opportunities**: refactors turning shallow modules into deep ones. Aim: testability and AI-navigability.
 
-This command is _informed_ by the project's domain model and built on a shared design vocabulary:
+Command _informed_ by project domain model, built on shared design vocabulary:
 
-- Call the Skill tool with `groundwork:codebase-design` for the architecture vocabulary (**module**, **interface**, **depth**, **seam**, **adapter**, **leverage**, **locality**) and its principles (the deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two = real"). Use these terms exactly in every suggestion, and don't drift into "component," "service," "API," or "boundary."
-- The domain language in `GLOSSARY.md` gives names to good seams; ADRs in `docs/adr/` record decisions this command should not re-litigate.
+- Call Skill tool with `groundwork:codebase-design` for architecture vocabulary (**module**, **interface**, **depth**, **seam**, **adapter**, **leverage**, **locality**) and principles (deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two = real"). Use these terms exactly in every suggestion. No drift into "component," "service," "API," "boundary."
+- Domain language in `GLOSSARY.md` names good seams. ADRs in `docs/adr/` record decisions this command must not re-litigate.
 
 ## Process
 
 ### 1. Explore
 
-**Scope before you scan: YAGNI.** Deepening a module pays off by making future changes to it easier, so put extra weight on the parts of the codebase that have recently changed. Decide _where_ to look before you look:
+**Scope before scan: YAGNI.** Deepening module pays off by easing future changes, so weight recently changed parts extra. Decide _where_ to look before looking:
 
-- If the user named a direction (a module, a subsystem, a pain point), take it, and skip the inference below.
-- Otherwise, walk back a good stretch of the commit history (`git log --oneline`) to find the codebase's hot spots, the files and areas that keep coming up, and let those paths pull your attention first. If the changes are scattered with no clear hot spot, widen the net.
+- User named direction (module, subsystem, pain point)? Take it, skip inference below.
+- Else walk back good stretch of commit history (`git log --oneline`) to find hot spots: files/areas that keep coming up. Let those paths pull attention first. Changes scattered, no clear hot spot? Widen net.
 
-Read the project's domain glossary (`GLOSSARY.md`) and any ADRs in the area you're touching first.
+Read domain glossary (`GLOSSARY.md`) and any ADRs in touched area first.
 
-Then spawn a sub-agent to walk the codebase. Don't follow rigid heuristics; explore organically and note where you experience friction:
+Then spawn sub-agent to walk codebase. No rigid heuristics; explore organically, note where friction felt:
 
 - Where does understanding one concept require bouncing between many small modules?
-- Where are modules **shallow**, with an interface nearly as complex as the implementation?
-- Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
-- Where do tightly-coupled modules leak across their seams?
-- Which parts of the codebase are untested, or hard to test through their current interface?
+- Where are modules **shallow**, interface nearly as complex as implementation?
+- Where were pure functions extracted just for testability, but real bugs hide in how they're called (no **locality**)?
+- Where do tightly-coupled modules leak across seams?
+- Which parts untested, or hard to test through current interface?
 
-Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
+Apply **deletion test** to suspected shallow things: would deleting concentrate complexity, or just move it? "Yes, concentrates" = wanted signal.
 
 ### 2. Present candidates as an HTML report
 
-Write a self-contained HTML file to the OS temp directory so nothing lands in the repo. Resolve the temp dir from `$TMPDIR`, falling back to `/tmp` (or `%TEMP%` on Windows), and write to `<tmpdir>/architecture-review-<timestamp>.html` so each run gets a fresh file. Open it for the user (`xdg-open <path>` on Linux, `open <path>` on macOS, `start <path>` on Windows) and tell them the absolute path.
+Write self-contained HTML file to OS temp dir so nothing lands in repo. Resolve temp dir from `$TMPDIR`, fallback `/tmp` (or `%TEMP%` on Windows), write to `<tmpdir>/architecture-review-<timestamp>.html` so each run gets fresh file. Open for user (`xdg-open <path>` on Linux, `open <path>` on macOS, `start <path>` on Windows), tell them absolute path.
 
-The report starts as a copy of [report.html](report.html): a fixed stylesheet that sets the look, plus **Mermaid** pinned from a CDN for diagrams where a graph, flow or sequence shows the structure. You write only the body. Mix Mermaid with the scaffold's hand-built visuals: use Mermaid when relationships are graph-shaped (call graphs, dependencies, sequences), and core samples, cross-sections or collapse boxes when the point is depth. Each candidate gets a **before/after visualisation**. Be visual.
+Report starts as copy of [report.html](report.html): fixed stylesheet setting look, plus **Mermaid** pinned from CDN for diagrams where graph, flow or sequence shows structure. Write only body. Mix Mermaid with scaffold's hand-built visuals: Mermaid when relationships graph-shaped (call graphs, dependencies, sequences); core samples, cross-sections or collapse boxes when point is depth. Each candidate gets **before/after visualisation**. Be visual.
 
-For each candidate, render a card with:
+Per candidate, render card with:
 
-- **Files**: which files/modules are involved
-- **Problem**: why the current architecture is causing friction
-- **Solution**: plain English description of what would change
-- **Benefits**: explained in terms of locality and leverage, and how tests would improve
-- **Before / After diagram**: side-by-side, custom-drawn, illustrating the shallowness and the deepening
-- **Recommendation strength**: one of `Strong`, `Worth exploring`, `Speculative`, rendered as a badge
+- **Files**: files/modules involved
+- **Problem**: why current architecture causes friction
+- **Solution**: plain English description of change
+- **Benefits**: in terms of locality and leverage, plus how tests improve
+- **Before / After diagram**: side-by-side, custom-drawn, showing shallowness and deepening
+- **Recommendation strength**: one of `Strong`, `Worth exploring`, `Speculative`, rendered as badge
 
-Open the report with a **Top recommendation** in its title block: which candidate you'd tackle first and why.
+Open report with **Top recommendation** in title block: which candidate to tackle first and why.
 
-**Use GLOSSARY.md vocabulary for the domain, and the `groundwork:codebase-design` vocabulary for the architecture.** If `GLOSSARY.md` defines "Order," talk about "the Order intake module," not "the FooBarHandler," and not "the Order service."
+**Use GLOSSARY.md vocabulary for the domain, and the `groundwork:codebase-design` vocabulary for the architecture.** If `GLOSSARY.md` defines "Order," say "the Order intake module," not "the FooBarHandler," not "the Order service."
 
-**ADR conflicts**: if a candidate contradicts an existing ADR, only surface it when the friction is real enough to warrant revisiting the ADR. Mark it clearly in the card (e.g. a warning callout: _"contradicts ADR-0007, but worth reopening because…"_). Don't list every theoretical refactor an ADR forbids.
+**ADR conflicts**: candidate contradicts existing ADR? Surface only when friction real enough to warrant revisiting ADR. Mark clearly in card (e.g. warning callout: _"contradicts ADR-0007, but worth reopening because…"_). Don't list every theoretical refactor ADR forbids.
 
-See [HTML-REPORT.md](HTML-REPORT.md) for how to fill the template, its markup vocabulary, and the diagram patterns.
+See [HTML-REPORT.md](HTML-REPORT.md) for filling template, markup vocabulary, diagram patterns.
 
-Do NOT propose interfaces yet. After the file is written, ask the user: "Which of these would you like to explore?"
+Do NOT propose interfaces yet. After file written, ask user: "Which of these would you like to explore?"
 
 ### 3. Grilling loop
 
-Once the user picks a candidate, call the Skill tool with `groundwork:grilling` to walk the decision tree with them: constraints, dependencies, the shape of the deepened module, what sits behind the seam, what tests survive.
+User picks candidate → call Skill tool with `groundwork:grilling` to walk decision tree together: constraints, dependencies, shape of deepened module, what sits behind seam, what tests survive.
 
-Side effects happen inline as decisions crystallize; call the Skill tool with `groundwork:domain-modeling` to keep the domain model current as you go:
+Side effects happen inline as decisions crystallize. Call Skill tool with `groundwork:domain-modeling` to keep domain model current:
 
-- **Naming a deepened module after a concept not in `GLOSSARY.md`?** Add the term to `GLOSSARY.md`. Create the file lazily if it doesn't exist.
+- **Naming a deepened module after a concept not in `GLOSSARY.md`?** Add term to `GLOSSARY.md`. Create file lazily if missing.
 - **Sharpening a fuzzy term during the conversation?** Update `GLOSSARY.md` right there.
-- **User rejects the candidate with a load-bearing reason?** Offer an ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Only offer when the reason would actually be needed by a future explorer to avoid re-suggesting the same thing; skip ephemeral reasons ("not worth it right now") and self-evident ones.
-- **Want to explore alternative interfaces for the deepened module?** Call the Skill tool with `groundwork:codebase-design` and use its design-it-twice parallel sub-agent pattern.
+- **User rejects the candidate with a load-bearing reason?** Offer ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Offer only when future explorer would actually need reason to avoid re-suggesting. Skip ephemeral reasons ("not worth it right now") and self-evident ones.
+- **Want to explore alternative interfaces for the deepened module?** Call Skill tool with `groundwork:codebase-design`, use its design-it-twice parallel sub-agent pattern.

@@ -1,52 +1,52 @@
 # HTML Report Format
 
-The architectural review is one HTML file in the OS temp directory, self-contained except for the pinned Mermaid import. Its look lives in [report.html](report.html): the stylesheet, the Mermaid script, and an empty `<main>`. You write only what goes inside `<main>`.
+Architectural review = one HTML file in OS temp dir, self-contained except pinned Mermaid import. Look lives in [report.html](report.html): stylesheet, Mermaid script, empty `<main>`. Write only what goes inside `<main>`.
 
 ## Direction
 
-The glossary is already geological: **depth**, **seam**, **layer**, **leak**. The report borrows the look of a survey drawing to match. A title block names the drawing. Each module is drawn as a **core sample**: a solid interface band over a hatched implementation band, so a shallow module reads as a stubby core and a deep one as a tall core with a thin cap.
+Glossary already geological: **depth**, **seam**, **layer**, **leak**. Report borrows survey-drawing look to match. Title block names drawing. Each module drawn as **core sample**: solid interface band over hatched implementation band, so shallow module reads as stubby core, deep one as tall core with thin cap.
 
-Blue marks the interface. Red marks a leak. Hatching marks implementation. A heavy outline marks a deep module. Dark mode follows the reader's system setting.
+Blue = interface. Red = leak. Hatching = implementation. Heavy outline = deep module. Dark mode follows reader's system setting.
 
 ## Build
 
-1. Copy `report.html` from this skill's directory to `<tmpdir>/architecture-review-<timestamp>.html` with a shell command (`cp`, or `Copy-Item` on Windows). Don't retype it.
+1. Copy `report.html` from this skill's dir to `<tmpdir>/architecture-review-<timestamp>.html` with shell command (`cp`, or `Copy-Item` on Windows). Don't retype.
 2. Replace `REPO` in its `<title>`.
-3. Replace the `<!-- REPORT: … -->` comment inside `<main>` with the title block, then one `<article>` per candidate.
+3. Replace `<!-- REPORT: … -->` comment inside `<main>` with title block, then one `<article>` per candidate.
 
-The one network request is Mermaid, pinned to an exact version. Without it, each diagram shows its readable source text.
+Only network request = Mermaid, pinned to exact version. Without it, each diagram shows readable source text.
 
 ## Vocabulary
 
-These are all the classes and `data-` attributes the stylesheet knows. Use no others, and no inline styles except a core's counts. The `id`, `href` and `aria-` attributes in the examples are plain HTML.
+All classes and `data-` attributes stylesheet knows. Use no others, no inline styles except core's counts. `id`, `href` and `aria-` attributes in examples are plain HTML.
 
-| Markup                    | Means                             |
-| :------------------------ | :-------------------------------- |
-| `class="caps"`            | Small uppercase label             |
-| `class="row"`             | Items in a wrapping line          |
-| `class="files"`           | File path list                    |
-| `class="cores"`           | Holds core samples                |
-| `class="core"`            | One core sample                   |
-| `class="box"`             | One module in a collapse diagram  |
-| `class="mermaid"`         | Mermaid source, on a `<pre>`      |
-| `data-strength`           | `strong`, `worth`, `speculative`  |
-| `data-kind`               | A mark; see the next table        |
-| `id="top-recommendation"` | The title block's start-here cell |
+| Markup                    | Means                            |
+| :------------------------ | :------------------------------- |
+| `class="caps"`            | Small uppercase label            |
+| `class="row"`             | Items in wrapping line           |
+| `class="files"`           | File path list                   |
+| `class="cores"`           | Holds core samples               |
+| `class="core"`            | One core sample                  |
+| `class="box"`             | One module in collapse diagram   |
+| `class="mermaid"`         | Mermaid source, on `<pre>`       |
+| `data-strength`           | `strong`, `worth`, `speculative` |
+| `data-kind`               | Mark; see next table             |
+| `id="top-recommendation"` | Title block's start-here cell    |
 
-| `data-kind` | Valid on                                                          |
-| :---------- | :---------------------------------------------------------------- |
-| `deep`      | Key item, core, box, cross-section band                           |
-| `internal`  | Box                                                               |
-| `leak`      | Key item, box                                                     |
-| `module`    | Key item only (an unmarked core, box or band is already a module) |
-| `interface` | Key item only                                                     |
-| `seam`      | Key item only                                                     |
+| `data-kind` | Valid on                                                    |
+| :---------- | :---------------------------------------------------------- |
+| `deep`      | Key item, core, box, cross-section band                     |
+| `internal`  | Box                                                         |
+| `leak`      | Key item, box                                               |
+| `module`    | Key item only (unmarked core, box or band already = module) |
+| `interface` | Key item only                                               |
+| `seam`      | Key item only                                               |
 
-Plain elements carry the rest. In a card, `<dt>` is a label, `<code>` in the badge row is the dependency tag, and `<aside>` is the ADR callout. In a figure, each `<section>` is one pane, its `<h3>` is the pane label, and an `<ol>` is a cross-section.
+Plain elements carry rest. In card: `<dt>` = label, `<code>` in badge row = dependency tag, `<aside>` = ADR callout. In figure: each `<section>` = one pane, its `<h3>` = pane label, `<ol>` = cross-section.
 
 ## Title block
 
-The first screen answers "which one do I explore?" The title block holds four cells, in this order: identity, the top recommendation, the candidate index, and the key. No introduction paragraph.
+First screen answers "which one do I explore?" Title block holds four cells, in order: identity, top recommendation, candidate index, key. No intro paragraph.
 
 ```html
 <header>
@@ -84,21 +84,21 @@ The first screen answers "which one do I explore?" The title block holds four ce
 </header>
 ```
 
-The top recommendation holds the candidate's linked name and one sentence on why. That is all it holds.
+Top recommendation holds candidate's linked name + one sentence on why. Nothing else.
 
 ## Candidate card
 
-The diagrams carry the weight. Prose is sparse, plain, and uses the glossary terms (from the `groundwork:codebase-design` skill) without ceremony.
+Diagrams carry weight. Prose sparse, plain, uses glossary terms (from `groundwork:codebase-design` skill) without ceremony.
 
-Each candidate is one `<article>` with the `id` the title block links to. Keep its parts in this order:
+Each candidate = one `<article>` with `id` title block links to. Keep parts in order:
 
-- **Title**: an `<h2>` that names the deepening (e.g. "Collapse the Order intake pipeline").
-- **Badge row**: the strength mark, then the dependency category as `<code>`: `in-process`, `local-substitutable`, `ports &amp; adapters`, or `mock`. Strength text is `Strong`, `Worth exploring` or `Speculative`.
-- **Files**: a `<ul class="files">`, one path per item.
-- **Before / After**: a `<figure>` with two `<section>` panes and a `<figcaption>`. See the diagram patterns below.
-- **Problem** and **Solution**: one sentence each, in a `<dl>` with one `<div>` per term.
-- **Wins**: a plain `<ul>`, at most 6 words per bullet.
-- **ADR callout**, if one applies.
+- **Title**: `<h2>` naming deepening (e.g. "Collapse the Order intake pipeline").
+- **Badge row**: strength mark, then dependency category as `<code>`: `in-process`, `local-substitutable`, `ports &amp; adapters`, or `mock`. Strength text: `Strong`, `Worth exploring` or `Speculative`.
+- **Files**: `<ul class="files">`, one path per item.
+- **Before / After**: `<figure>` with two `<section>` panes + `<figcaption>`. See diagram patterns below.
+- **Problem** and **Solution**: one sentence each, in `<dl>` with one `<div>` per term.
+- **Wins**: plain `<ul>`, max 6 words per bullet.
+- **ADR callout**, if applies.
 
 ```html
 <article id="order-intake" aria-labelledby="order-intake-title">
@@ -138,27 +138,27 @@ Each candidate is one `<article>` with the `id` the title block links to. Keep i
 </article>
 ```
 
-The `<figcaption>` is the diagram's text alternative. Write it so a reader who cannot see the panes gets the same point. No paragraphs of explanation beyond it. If the diagram needs a paragraph to be understood, redraw the diagram.
+`<figcaption>` = diagram's text alternative. Write so reader who can't see panes gets same point. No explanation paragraphs beyond it. If diagram needs paragraph to be understood, redraw diagram.
 
 ## Escaping
 
-File names and identifiers come from the code, so they can contain `<`, `>` and `&`.
+File names and identifiers come from code, may contain `<`, `>`, `&`.
 
-- In HTML, write `&lt;`, `&gt;` and `&amp;`.
-- In a Mermaid label, quote the label and write `#lt;`, `#gt;` and `#amp;`. Mermaid strips an HTML entity such as `&lt;`: `Repo&lt;Order&gt;` renders as `Repo`.
+- In HTML, write `&lt;`, `&gt;`, `&amp;`.
+- In Mermaid label, quote label and write `#lt;`, `#gt;`, `#amp;`. Mermaid strips HTML entity like `&lt;`: `Repo&lt;Order&gt;` renders as `Repo`.
 - Outside Mermaid labels, write arrows raw (`-->`, `->>`).
 
 ## Diagram patterns
 
-Pick the pattern that fits each candidate, and vary them across the report. The panes stack on a phone and sit side by side on a wide screen.
+Pick pattern fitting each candidate, vary across report. Panes stack on phone, sit side by side on wide screen.
 
 ### Core sample (shallow vs deep)
 
-Use this when the point is "interface as wide as implementation". Count the module's names:
+Use when point is "interface as wide as implementation". Count module's names:
 
-- `--iface` is the number of exported names.
-- `--impl` is the number of internal names: non-exported functions and methods.
-  The column is `--iface + --impl` rem tall, capped at 14. If any module in the figure passes 14, divide every count in that figure by the same factor, so the heights still compare. Both bands use the same unit, so the proportion tells the truth. The text inside the core is its label.
+- `--iface` = number of exported names.
+- `--impl` = number of internal names: non-exported functions and methods.
+  Column is `--iface + --impl` rem tall, capped at 14. If any module in figure passes 14, divide every count in that figure by same factor so heights still compare. Both bands use same unit, so proportion tells truth. Text inside core = its label.
 
 ```html
 <div class="cores">
@@ -166,19 +166,19 @@ Use this when the point is "interface as wide as implementation". Count the modu
 </div>
 ```
 
-In the before pane, put one core per shallow module. In the after pane, put the single deep core with `data-kind="deep"`. State the real counts in the `<figcaption>`.
+Before pane: one core per shallow module. After pane: single deep core with `data-kind="deep"`. State real counts in `<figcaption>`.
 
 ### Mermaid graph (dependencies and call flow)
 
-Use a `flowchart` when the point is "X calls Y calls Z, and look at the mess". Prefer `flowchart TD`: a wide `LR` graph scrolls sideways in its pane. Use a `sequenceDiagram` for "before: 6 round-trips; after: 1"; it carries no leak or seam marks, so the caption names them. Start each diagram with `accTitle` and `accDescr` so screen readers get a name.
+Use `flowchart` when point is "X calls Y calls Z, look at mess". Prefer `flowchart TD`: wide `LR` graph scrolls sideways in pane. Use `sequenceDiagram` for "before: 6 round-trips; after: 1"; carries no leak or seam marks, so caption names them. Start each diagram with `accTitle` and `accDescr` so screen readers get name.
 
-In a flowchart:
+In flowchart:
 
-- A leaking edge gets the label `leak` (`A -- leak --> B`). Then colour it with `linkStyle`. Edge indexes count from 0 in source order, so count them again before you write the index.
-- A dashed edge (`-.->`) is a seam.
-- A deep module gets `classDef deep stroke-width:3px` and `class <node> deep`.
+- Leaking edge gets label `leak` (`A -- leak --> B`). Then colour with `linkStyle`. Edge indexes count from 0 in source order, so recount before writing index.
+- Dashed edge (`-.->`) = seam.
+- Deep module gets `classDef deep stroke-width:3px` and `class <node> deep`.
 
-Write colours as `var(--token)`. The template swaps in the theme value before Mermaid parses the diagram.
+Write colours as `var(--token)`. Template swaps in theme value before Mermaid parses diagram.
 
 ```html
 <pre class="mermaid">
@@ -196,7 +196,7 @@ flowchart LR
 
 ### Cross-section (layered shallowness)
 
-Use one `<ol>` per pane, right after the `<h3>`, with one `<li>` per layer a call passes through. A thin band is plain text. In the after pane, the consolidated responsibility is one deep band, its label wrapped in a `<span>`. A cross-section has no leak mark.
+One `<ol>` per pane, right after `<h3>`, one `<li>` per layer call passes through. Thin band = plain text. After pane: consolidated responsibility = one deep band, label wrapped in `<span>`. Cross-section has no leak mark.
 
 ```html
 <ol>
@@ -207,7 +207,7 @@ Use one `<ol>` per pane, right after the `<h3>`, with one `<li>` per layer a cal
 
 ### Collapse (call graph folds into one module)
 
-A box contains the boxes it calls. Each box opens with its name: plain text, or a `<span class="caps">` on the deep box. Before: mark a module that leaks with `data-kind="leak"`. After: one deep box, with the now-internal calls inside it.
+Box contains boxes it calls. Each box opens with name: plain text, or `<span class="caps">` on deep box. Before: mark leaking module with `data-kind="leak"`. After: one deep box, now-internal calls inside it.
 
 ```html
 <div class="box">
@@ -223,7 +223,7 @@ A box contains the boxes it calls. Each box opens with its name: plain text, or 
 
 ## Tone
 
-Plain English, concise, but the architectural nouns and verbs come straight from the `groundwork:codebase-design` skill. Concision is not an excuse to drift.
+Plain English, concise, but architectural nouns and verbs come straight from `groundwork:codebase-design` skill. Concision no excuse to drift.
 
 **Use exactly:** module, interface, implementation, depth, deep, shallow, seam, adapter, leverage, locality.
 
@@ -236,6 +236,6 @@ Plain English, concise, but the architectural nouns and verbs come straight from
 - "Deepen: one interface, one place to test."
 - "Two adapters justify the seam: HTTP in prod, in-memory in tests."
 
-**Wins bullets** name the gain in glossary terms: _"locality: bugs concentrate in one module"_, _"leverage: one interface, N call sites"_, _"interface shrinks; implementation absorbs the wrappers"_. Don't write _"easier to maintain"_ or _"cleaner code"_, because those terms aren't in the glossary and don't earn their place.
+**Wins bullets** name gain in glossary terms: _"locality: bugs concentrate in one module"_, _"leverage: one interface, N call sites"_, _"interface shrinks; implementation absorbs the wrappers"_. Don't write _"easier to maintain"_ or _"cleaner code"_: not in glossary, don't earn place.
 
-No hedging, no throat-clearing, no "it's worth noting that…". If a sentence could be a bullet, make it a bullet. If a bullet could be cut, cut it. If a term isn't in the `groundwork:codebase-design` glossary, reach for one that is before inventing a new one.
+No hedging, no throat-clearing, no "it's worth noting that…". Sentence could be bullet → make bullet. Bullet could be cut → cut. Term not in `groundwork:codebase-design` glossary → reach for one that is before inventing new.
