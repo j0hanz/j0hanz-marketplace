@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { type Plugin, site } from '../site';
+import { type ClientId, type Plugin, site } from '../site';
 
 export const ALL = 'all';
 
@@ -29,7 +29,7 @@ const haystacks = (() => {
   return map;
 })();
 
-export function useCatalogFilter() {
+export function useCatalogFilter(client: ClientId) {
   const [category, setCategory] = useState(() => {
     const value = readSearch('category');
     return value && site.categories.includes(value) ? value : ALL;
@@ -52,11 +52,13 @@ export function useCatalogFilter() {
   const visible = useMemo(
     () =>
       site.plugins.filter((plugin) => {
+        // A plugin the chosen client cannot install has nothing to offer there.
+        if (!plugin.installs[client]) return false;
         if (category !== ALL && plugin.category !== category) return false;
         if (needle && !(haystacks.get(plugin) ?? '').includes(needle)) return false;
         return true;
       }),
-    [category, needle],
+    [client, category, needle],
   );
 
   return {

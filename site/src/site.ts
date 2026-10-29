@@ -27,11 +27,6 @@ export interface Installs {
 
 export type ClientId = keyof Installs;
 
-interface Step {
-  label: string;
-  value: string;
-}
-
 export interface Plugin {
   name: string;
   displayName: string;
@@ -56,8 +51,8 @@ export interface Site {
   repoUrl: string;
   categories: string[];
   plugins: Plugin[];
-  /** The hero's numbered steps, per client: add, install, run, as far as each one goes. */
-  steps: Record<ClientId, Step[]>;
+  /** The hero's add-the-marketplace command per client; null where the client reads no catalog. */
+  add: Record<ClientId, string | null>;
 }
 
 export const site: Site = raw;

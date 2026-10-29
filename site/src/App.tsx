@@ -10,8 +10,8 @@ import { SkillIndex } from './components/SkillIndex';
 import { SkipLink } from './components/SkipLink';
 
 export function App() {
-  const filter = useCatalogFilter();
   const [client, setClient] = useClient();
+  const filter = useCatalogFilter(client);
 
   useEffect(() => {
     requestAnimationFrame(() => {

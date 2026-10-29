@@ -7,25 +7,9 @@ import Typography from '@mui/material/Typography';
 import { clientName } from '../clients';
 import { ArrowDownwardIcon, GitHubIcon } from '../icons';
 import { type ClientId, external, externalLabel, site } from '../site';
-import { mono, rule, tag } from '../theme/tokens';
+import { rule, tag } from '../theme/tokens';
 import { ClientPicker } from './ClientPicker';
 import { Command } from './Command';
-
-// Ordinals, not icons: these are the only numbered things on the page, and the
-// number is the information — step 2 does not work before step 1.
-const marker = {
-  flexShrink: 0,
-  width: 22,
-  height: 22,
-  display: 'grid',
-  placeItems: 'center',
-  fontFamily: mono,
-  fontWeight: 700,
-  fontSize: '0.75rem',
-  lineHeight: 1,
-  bgcolor: 'primary.main',
-  color: 'primary.contrastText',
-};
 
 export function Hero({
   client,
@@ -34,7 +18,7 @@ export function Hero({
   client: ClientId;
   onClient: (next: ClientId) => void;
 }) {
-  const steps = site.steps[client];
+  const add = site.add[client];
   return (
     <Container component="section" id="top" maxWidth="lg" sx={{ pt: { xs: 5, md: 6 }, pb: 4 }}>
       {/* Both columns start on the same line, so the panel's lit top rule sits
@@ -92,27 +76,26 @@ export function Hero({
             <Box data-hero-panel sx={{ '--i': 0 }}>
               <ClientPicker value={client} onChange={onClient} />
             </Box>
-            <Stack
-              component="ol"
-              role="list"
-              aria-label={`Get started in ${clientName(client)}`}
-              spacing={2.5}
-              sx={{ listStyle: 'none', m: 0, p: 0 }}
-            >
-              {steps.map((step, i) => (
-                <Box component="li" key={step.label} data-hero-panel sx={{ '--i': i + 1 }}>
-                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
-                    <Box aria-hidden sx={marker}>
-                      {i + 1}
-                    </Box>
-                    <Typography variant="caption" color="textSecondary" sx={tag}>
-                      {step.label}
-                    </Typography>
-                  </Stack>
-                  <Command value={step.value} />
-                </Box>
-              ))}
-            </Stack>
+            <Box data-hero-panel sx={{ '--i': 1 }}>
+              {add ? (
+                <>
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    component="p"
+                    sx={{ ...tag, mb: 1 }}
+                  >
+                    Add the marketplace
+                  </Typography>
+                  <Command value={add} />
+                </>
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  {clientName(client)} installs each plugin from its own folder. Copy the command
+                  from a card below.
+                </Typography>
+              )}
+            </Box>
           </Stack>
         </Grid>
       </Grid>

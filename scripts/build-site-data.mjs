@@ -209,39 +209,12 @@ export function build() {
     `${count(plugins.length, 'plugin')} for Claude Code, GitHub Copilot CLI and Antigravity CLI. ` +
     'Install one at a time, no build step.';
 
-  // The first commands a visitor actually runs, per client. Picked at build time, so the
-  // hero ships its install steps in one import, not a flatMap at render. Antigravity names a
-  // plugin's skills `/plugin:skill` as Claude Code does; Copilot lists them by bare name, so
-  // its steps stop at the install.
-  const firstSteps = (client, { run }) => {
-    const ready = plugins.filter((p) => p.installs[client]);
-    const mcpPlugin = ready.find((p) => p.mcpServers.length > 0);
-    const pick =
-      ready
-        .flatMap((p) =>
-          p.skills.flatMap((s) =>
-            s.command ? { install: p.installs[client], run: s.command } : [],
-          ),
-        )
-        .at(0) ?? (mcpPlugin ? { install: mcpPlugin.installs[client], run: '/mcp' } : null);
-    if (!pick) return [];
-    return [
-      { label: 'Install a plugin', value: pick.install },
-      ...(run
-        ? [{ label: pick.run === '/mcp' ? 'Check connection' : 'Run it', value: pick.run }]
-        : []),
-    ];
-  };
-  const steps = {
-    claude: [
-      { label: 'Add the marketplace', value: addCommand.claude(repo) },
-      ...firstSteps('claude', { run: true }),
-    ],
-    copilot: [
-      { label: 'Add the marketplace', value: addCommand.copilot(repo) },
-      ...firstSteps('copilot', { run: false }),
-    ],
-    antigravity: firstSteps('antigravity', { run: true }),
+  // The one command the hero shows per client: adding the marketplace. Each plugin's install
+  // line sits on its own card below. Antigravity reads no catalog, so it has nothing to add.
+  const add = {
+    claude: addCommand.claude(repo),
+    copilot: addCommand.copilot(repo),
+    antigravity: null,
   };
 
   return {
@@ -263,7 +236,7 @@ export function build() {
     repoUrl: `https://github.com/${repo}`,
     categories,
     plugins,
-    steps,
+    add,
   };
 }
 

@@ -15,11 +15,10 @@ import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
-import { clientName } from '../clients';
 import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { type ClientId, countLabel, external, externalLabel, site, type Plugin } from '../site';
-import { accent, drawable, edge, outline, segmented, srOnly, tag } from '../theme/tokens';
+import { accent, drawable, outline, segmented, srOnly, tag } from '../theme/tokens';
 import { ClientPicker } from './ClientPicker';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
@@ -30,7 +29,8 @@ const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } 
 
 function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
   const hooks = plugin.hookEvents.join(', ');
-  const command = plugin.installs[client];
+  // The catalog filter drops plugins the client cannot install.
+  const command = plugin.installs[client]!;
   return (
     <Card
       variant="outlined"
@@ -102,19 +102,7 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
       </CardContent>
 
       <CardActions disableSpacing sx={{ position: 'relative', flexDirection: 'column' }}>
-        {/* Kept on the page rather than filtered out: a plugin the chosen client cannot
-            run is still worth knowing about, and the dashed bar holds the command's place. */}
-        {command ? (
-          <Command value={command} />
-        ) : (
-          <Typography
-            variant="caption"
-            color="textSecondary"
-            sx={{ alignSelf: 'stretch', px: 1.5, py: 1.5, border: `1px dashed ${edge}` }}
-          >
-            Not available in {clientName(client)}
-          </Typography>
-        )}
+        <Command value={command} />
       </CardActions>
     </Card>
   );

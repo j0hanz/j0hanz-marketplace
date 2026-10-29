@@ -113,11 +113,7 @@ test('an MCP-only catalog offers installation and connection verification', (con
     { skill: false },
   );
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.data().steps.claude, [
-    { label: 'Add the marketplace', value: '/plugin marketplace add example/marketplace' },
-    { label: 'Install a plugin', value: '/plugin install sample@example' },
-    { label: 'Check connection', value: '/mcp' },
-  ]);
+  assert.equal(result.data().add.claude, '/plugin marketplace add example/marketplace');
   assert.match(result.data().tagline, /1 MCP server/);
   assert.equal(result.data().pageTitle, 'Plugins for coding agents · example');
 });
@@ -126,10 +122,7 @@ test('every plugin gets a Copilot CLI install line unless tagged claude-code-onl
   const result = generate(context);
   assert.equal(result.status, 0, result.stderr);
   const data = result.data();
-  assert.deepEqual(data.steps.copilot, [
-    { label: 'Add the marketplace', value: 'copilot plugin marketplace add example/marketplace' },
-    { label: 'Install a plugin', value: 'copilot plugin install sample@example' },
-  ]);
+  assert.equal(data.add.copilot, 'copilot plugin marketplace add example/marketplace');
   assert.equal(data.plugins[0].installs.copilot, 'copilot plugin install sample@example');
   assert.match(result.readme(), /copilot plugin install sample@example/);
 
@@ -146,16 +139,12 @@ test('a plugin installs in Antigravity CLI from its GitHub folder once it carrie
   const command =
     'agy plugin install https://github.com/example/marketplace/tree/main/plugins/sample';
   assert.equal(result.data().plugins[0].installs.antigravity, command);
-  assert.deepEqual(result.data().steps.antigravity, [
-    { label: 'Install a plugin', value: command },
-    { label: 'Run it', value: '/sample:guide' },
-  ]);
+  assert.equal(result.data().add.antigravity, null);
   assert.match(result.readme(), /<!-- antigravity:start -->\n\n```text\nagy plugin install https:/);
 
   const unported = generate(context);
   assert.equal(unported.status, 0, unported.stderr);
   assert.equal(unported.data().plugins[0].installs.antigravity, null);
-  assert.deepEqual(unported.data().steps.antigravity, []);
   assert.doesNotMatch(unported.readme(), /agy plugin install/);
 });
 
