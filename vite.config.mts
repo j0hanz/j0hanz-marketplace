@@ -33,7 +33,15 @@ const ORIGIN = process.env['VERCEL_PROJECT_PRODUCTION_URL']
   ? `https://${process.env['VERCEL_PROJECT_PRODUCTION_URL']}/`
   : '';
 
-const THEME_SCRIPT_HASH = 'sha256-qtbieZlDsmW7yCtw/DDZy9Zdyb9cOgyCVPs9MC22EJs=';
+// vercel.json's script-src is the one copy; the build checks the inline script against it.
+const THEME_SCRIPT_HASH = readFileSync(new URL('./vercel.json', import.meta.url), 'utf8').match(
+  /'(sha256-[A-Za-z0-9+/=]+)'/,
+)?.[1];
+if (!THEME_SCRIPT_HASH) {
+  throw new Error(
+    "vercel.json has no 'sha256-…' in script-src; the inline theme script needs one.",
+  );
+}
 
 const jsonLd = (site: Site) =>
   JSON.stringify({
@@ -75,8 +83,8 @@ const siteMeta = (): Plugin => ({
       const hash = `sha256-${createHash('sha256').update(inline).digest('base64')}`;
       if (hash !== THEME_SCRIPT_HASH) {
         throw new Error(
-          `index.html's inline theme script changed. Set script-src in vercel.json and ` +
-            `THEME_SCRIPT_HASH here to '${hash}', or the CSP will block it in production.`,
+          `index.html's inline theme script changed. Set its hash in vercel.json's script-src ` +
+            `to '${hash}', or the CSP will block it in production.`,
         );
       }
     }
