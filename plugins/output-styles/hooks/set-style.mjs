@@ -48,7 +48,9 @@ const MENU = STYLES.map(([key, , description]) => [key, description]);
 // Longest key, so a longer style can't silently break the menu's column alignment.
 const MENU_PAD = Math.max(...STYLES.map(([key]) => key.length));
 
-const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
+// Claude Code reads its global config from CLAUDE_CONFIG_DIR when that is set.
+const CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+const SETTINGS = path.join(CONFIG_DIR, 'settings.json');
 
 // UserPromptExpansion sends command_args as one space-separated string. Tolerate an
 // array too, so the parse survives if that shape ever changes back — and so argv,
@@ -115,8 +117,14 @@ function applyChoice(obj, choice) {
 }
 
 // Temp file + rename, because a crash mid-write would otherwise truncate the file
-// holding every other global setting the user has.
+// holding every other global setting the user has. A symlinked file (dotfiles) is
+// written through to its target, so the rename never replaces the link.
 function writeSettings(file, obj) {
+  try {
+    file = fs.realpathSync(file);
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+  }
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const tmp = path.join(dir, `.set-style.${process.pid}.tmp`);
@@ -136,7 +144,7 @@ function overrideWarnings(cwd) {
     // When cwd is the user's home, these resolve to the global config files
     // (~/.claude/*), not project overrides — warning about them tells the user
     // their global setting overrides itself. Skip that case.
-    if (path.resolve(cwd, name) === path.resolve(os.homedir(), name)) continue;
+    if (path.resolve(cwd, name) === path.join(CONFIG_DIR, path.basename(name))) continue;
     let obj;
     try {
       obj = JSON.parse(fs.readFileSync(path.join(cwd, name), 'utf8'));
