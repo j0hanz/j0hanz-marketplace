@@ -1,15 +1,27 @@
-// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell). A Bash
-//         command is split at unquoted && || ; | and newlines; each `git commit` or
-//         `gh pr create|edit|comment|review` segment is scanned on its own. Nothing else fires.
-// reads:  tool_input.{file_path,content,new_string} or .command; a -F/--file/--body-file a
-//         segment names, resolved against payload.cwd (a `cd` earlier in the session is unseen)
-// emits:  hookSpecificOutput.additionalContext (flat additionalContext on Copilot), or nothing
+// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell; Antigravity:
+//         write_file|edit_file|run_command). A Bash command is split at unquoted && || ; | and
+//         newlines; each `git commit` or `gh pr create|edit|comment|review` segment is scanned
+//         on its own. Nothing else fires.
+// reads:  tool_input.{file_path,content,new_string} or .command (Antigravity: toolCall.args
+//         {Path, Content, Replacement, CommandLine}); a -F/--file/--body-file a segment
+//         names, resolved against payload.cwd (workspacePaths[0] on Antigravity; a `cd`
+//         earlier in the session is unseen)
+// emits:  hookSpecificOutput.additionalContext (flat additionalContext on Copilot), or
+//         nothing. Antigravity has no PostToolUse context channel, so there the findings
+//         wait in a per-conversation state file for `scan.mjs deliver`, a PreInvocation
+//         hook that answers injectSteps and clears the file.
 // fails:  any parse or read error -> exit 0, no output; never blocks
 // verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
-import { basename, resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
+import { appendFileSync, readFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { text as readText } from 'node:stream/consumers';
-import { context, toolInput, toolName } from './client.mjs';
+import { context, onAntigravity, toolInput, toolName } from './client.mjs';
+
+// Antigravity's PostToolUse findings wait here until the PreInvocation deliver pass reads
+// and clears them, keyed by the conversation.
+const stateFile = (id) =>
+  join(tmpdir(), `writeup-unslop-${String(id ?? '').replace(/[^\w-]/g, '_')}.txt`);
 
 const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
 
@@ -143,11 +155,11 @@ const commandKind = (words) => {
   return null;
 };
 
-// Files an agent reads rather than a person: anything under .claude/ or .copilot/ (memory,
-// plans) and instruction files. Their house style (an em dash per index line, for one) is
-// not slop.
+// Files an agent reads rather than a person: anything under .claude/, .copilot/ or .gemini/
+// (memory, plans) and instruction files. Their house style (an em dash per index line, for
+// one) is not slop.
 const AGENT_FACING =
-  /(?:^|[\\/])\.(?:claude|copilot)[\\/]|(?:^|[\\/])(?:CLAUDE|AGENTS|copilot-instructions)\.md$/i;
+  /(?:^|[\\/])\.(?:claude|copilot|gemini)[\\/]|(?:^|[\\/])(?:CLAUDE|AGENTS|GEMINI|copilot-instructions)\.md$/i;
 
 // One target per thing scanned; a shell command yields one per commit or gh segment, with
 // lines counted inside that segment.
@@ -171,7 +183,7 @@ export const targets = (payload) => {
       const found = commandKind(words);
       if (!found) return [];
       const [kind, name] = found;
-      const msg = messageFile(words, payload.cwd);
+      const msg = messageFile(words, payload.cwd ?? payload.workspacePaths?.[0]);
       return [msg ? { kind, name: `${name} (${msg.file})`, text: msg.text } : { kind, name, text }];
     });
   }
@@ -192,12 +204,33 @@ export const message = (t, hits) =>
 if (basename(process.argv[1] ?? '') === 'scan.mjs') {
   try {
     const payload = JSON.parse((await readText(process.stdin)) || '{}');
-    const blocks = targets(payload).flatMap((t) => {
-      const hits = findSlop(t.text);
-      return hits.length ? [message(t, hits)] : [];
-    });
-    if (blocks.length) process.stdout.write(context('PostToolUse', blocks.join('\n\n')));
+    if (process.argv[2] === 'deliver') {
+      // Antigravity's PreInvocation pass: findings waiting for this conversation go out as
+      // one ephemeral step, and the state file is spent either way.
+      const file = stateFile(payload.conversationId);
+      let notes = '';
+      try {
+        notes = readFileSync(file, 'utf8');
+        unlinkSync(file);
+      } catch {
+        // nothing waiting
+      }
+      process.stdout.write(notes ? context('PreInvocation', notes.trim()) : '{}');
+    } else {
+      const blocks = targets(payload).flatMap((t) => {
+        const hits = findSlop(t.text);
+        return hits.length ? [message(t, hits)] : [];
+      });
+      if (onAntigravity()) {
+        if (blocks.length)
+          appendFileSync(stateFile(payload.conversationId), `${blocks.join('\n\n')}\n\n`);
+        process.stdout.write('{}');
+      } else if (blocks.length) {
+        process.stdout.write(context('PostToolUse', blocks.join('\n\n')));
+      }
+    }
   } catch {
+    if (onAntigravity()) process.stdout.write('{}');
     // fail open: never block a tool on a reflective hook
   }
 }

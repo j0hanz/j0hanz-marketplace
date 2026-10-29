@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -337,4 +337,105 @@ test('the hook runs when invoked through a symlink or junction', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// Antigravity has no PostToolUse context channel, so a scan answers {} and its findings wait
+// in a per-conversation state file; the deliver pass answers injectSteps once and spends it.
+const agy = (payload, args = []) =>
+  execFileSync('node', [HOOK, ...args], { input: JSON.stringify(payload), encoding: 'utf8' });
+const agyState = (id) => join(tmpdir(), `writeup-unslop-${id}.txt`);
+
+test('Antigravity: write_file findings wait in state and deliver once', () => {
+  const id = `agytest${process.pid}`;
+  try {
+    assert.equal(
+      agy(
+        {
+          conversationId: id,
+          workspacePaths: [tmpdir()],
+          toolCall: { name: 'write_file', args: { Path: 'docs/a.md', Content: 'We delve.' } },
+        },
+        ['--antigravity'],
+      ),
+      '{}',
+    );
+    const out = JSON.parse(agy({ conversationId: id }, ['deliver', '--antigravity']));
+    assert.equal(out.injectSteps.length, 1);
+    assert.match(
+      out.injectSteps[0].ephemeralMessage,
+      /^writeup:unslop flagged 1 pattern in docs\/a\.md:\n- rule 7 "delve" \(line 1\)\nA rewrite without these patterns passes the scan\.$/,
+    );
+    assert.equal(agy({ conversationId: id }, ['deliver', '--antigravity']), '{}');
+  } finally {
+    rmSync(agyState(id), { force: true });
+  }
+});
+
+test('Antigravity: run_command CommandLine is scanned, its message file read from the workspace', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  const id = `agytestcmd${process.pid}`;
+  try {
+    writeFileSync(join(dir, 'msg.txt'), 'fix: x\n\nWe delve here.\n');
+    assert.equal(
+      agy(
+        {
+          conversationId: id,
+          workspacePaths: [dir],
+          toolCall: { name: 'run_command', args: { CommandLine: 'git commit -F msg.txt' } },
+        },
+        ['--antigravity'],
+      ),
+      '{}',
+    );
+    const out = JSON.parse(agy({ conversationId: id }, ['deliver', '--antigravity']));
+    assert.match(
+      out.injectSteps[0].ephemeralMessage,
+      /commit message \(msg\.txt\):\n- rule 7 "delve" \(line 3\)/,
+    );
+    assert.match(out.injectSteps[0].ephemeralMessage, /git commit --amend/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(agyState(id), { force: true });
+  }
+});
+
+test('Antigravity: edit_file Replacement reads as an edit; a clean write leaves no state', () => {
+  const id = `agytestedit${process.pid}`;
+  const clean = `agytestclean${process.pid}`;
+  try {
+    agy(
+      {
+        conversationId: id,
+        toolCall: {
+          name: 'edit_file',
+          args: { Path: 'README.md', Target: 'x', Replacement: 'We delve.' },
+        },
+      },
+      ['--antigravity'],
+    );
+    const out = JSON.parse(agy({ conversationId: id }, ['deliver', '--antigravity']));
+    assert.match(
+      out.injectSteps[0].ephemeralMessage,
+      /^writeup:unslop flagged 1 pattern in an edit to README\.md:\n- rule 7 "delve" \(line 1 of the edit\)/,
+    );
+
+    agy(
+      {
+        conversationId: clean,
+        toolCall: { name: 'write_file', args: { Path: 'README.md', Content: 'Plain text.' } },
+      },
+      ['--antigravity'],
+    );
+    assert.equal(existsSync(agyState(clean)), false);
+  } finally {
+    rmSync(agyState(id), { force: true });
+    rmSync(agyState(clean), { force: true });
+  }
+});
+
+test('GEMINI.md is agent-facing and stays quiet', () => {
+  assert.equal(
+    claude({ tool_name: 'Write', tool_input: { file_path: 'GEMINI.md', content: 'We delve.' } }),
+    '',
+  );
 });

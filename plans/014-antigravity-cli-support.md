@@ -262,8 +262,11 @@ its manifest, so a half-ported plugin is never on Antigravity.
    as delivered and skip the rest.
 4. Each plugin: a root `hooks.json` in Antigravity's schema, its commands relative
    (`node ./hooks/<script> … --antigravity`: an absolute command never runs, and
-   `${PLUGIN_ROOT}` is unset for hooks), its matchers regexes over agy's tool names
-   (`write_file|edit_file`, not `Write|Edit`); `npm run validate` clean;
+   `${PLUGIN_ROOT}` is unset for hooks). **Matchers are `""`**: `""` matches every
+   tool (probe runs 3 and 4, and writeup's live check), while an alternation
+   (`write_file|edit_file|run_command`) never fired, so every entry self-filters on
+   the tool name and a hooks.json edit after install takes no effect until the
+   plugin is reinstalled. `npm run validate` clean;
    `agy plugin validate` clean of errors; the probe session from Phase 0 repeated with the
    plugin installed.
 5. mcp-hub's three agents list Claude tools (`Read, Grep, Glob, Bash, Skill`). Give

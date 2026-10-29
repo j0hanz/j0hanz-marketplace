@@ -107,6 +107,7 @@ agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugin
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/prompt
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/nodejs
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/typescript-pro
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/writeup
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/groundwork
 ```
 

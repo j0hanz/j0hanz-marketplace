@@ -1,0 +1,11 @@
+{
+  "name": "writeup",
+  "version": "0.2.0",
+  "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/writeup",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace"
+}
