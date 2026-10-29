@@ -284,39 +284,21 @@ silent path, live-verified through the re-entry), **writeup** (#13: PostToolUse 
 park in a per-conversation state file and deliver on the next PreInvocation, live-verified
 through the transcript). Each carries the root `hooks.json`, the manifest and shim branch.
 
-Still to port, with what each needs beyond the pattern above:
-
-- **workbench**: `gate.mjs` must answer `allow` explicitly on every passing write (its
-  silence is a deny under agy), and its crash path must answer `allow` too or the gate
-  turns fail-closed. `brief.mjs`'s SessionStart and UserPromptSubmit arms fold into one
-  PreInvocation entry with a state file marking first-brief and per-`lastUserInput`
-  delivery; the UserPromptExpansion raw prompt replacement and the Skill-matcher brief
-  have no Antigravity counterpart and stay out. `stale.mjs` self-locates through
-  `import.meta.url` (both `*_PLUGIN_ROOT` vars are unset), keys its marker on
-  `conversationId`, and its warning rides the Stop continue.
-- **css**: `runtime.mjs pre` must answer `allow` on every clean pass and keep `deny` for
-  block hits; its degraded-mode notice must answer `allow` (a no-decision exit denies).
-  `runtime.mjs post` parks advisories like writeup's scan and delivers from PreInvocation.
-  `onstart.mjs` still writes its session mark from `conversationId` and
-  `workspacePaths[0]` (the sweep is dead without it). `sweep.mjs`'s findings ride the Stop
-  continue once, deduped by its sweep ledger; `stop_hook_active` has no equivalent, so the
-  ledger is the loop guard. All three state files re-key on `conversationId`.
-- **tutor**: `teach_hook.py` takes `--antigravity` and answers the Stop block as
-  `{decision: continue, reason}` (the block message is exactly a continue reason); the
-  session-start report moves to the first PreInvocation, once per conversation. The guard
-  file dir needs a substitute for `CLAUDE_PLUGIN_DATA` (the workspace or tmpdir, keyed by
-  `conversationId`). The hook command cannot use `$(command -v python)`: it must be a
-  plain relative `python hooks/teach_hook.py ...` form that the host shell resolves.
-  `SKILL.md` split first (item 6).
-- **mcp-hub**: pending the `agents.json` question (item 5). The SessionStart router
-  injection moves to the first PreInvocation like any SessionStart context, and
-  post-tool drift parks and delivers like writeup's scan.
+**Not ported, by decision (2026-10-29): the user plans to replace these plugins, so no
+further port work on them.** workbench, tutor, css and mcp-hub stay off Antigravity with
+that one reason; their port specs live in git history (PR #14) should a replacement ever
+want them. What the replacements will need is already settled here: the root `hooks.json`
+location and schema (item 4), the shim's answer dialect (item 1), and the state-file
+delivery channel (item 2).
 
 ## Phase 3: filesystem-mcp
 
-Only if Phase 0 step 5 finds a way to hand the server the project directory. Its
-`.mcp.json` passes `"cwd": "."` and `--allow-cwd --root-boundary .`; under Antigravity
-that resolves to the plugin's install folder, which would expose the wrong tree.
+Phase 0 step 5 found the way: the client answers `roots/list` with the workspace, so a
+server can learn the project directory. Closed with Phase 2 anyway (2026-10-29): the user
+plans to replace the plugins, filesystem-mcp among them, so no port lands. The trap a
+replacement must avoid stands: its `.mcp.json` passes `"cwd": "."` and
+`--allow-cwd --root-boundary .`; under Antigravity that resolves to the plugin's install
+folder, which would expose the wrong tree.
 
 ## Never
 
