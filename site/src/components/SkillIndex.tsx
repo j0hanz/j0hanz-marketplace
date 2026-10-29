@@ -8,7 +8,7 @@ import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography, { type TypographyProps } from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { countLabel, type Plugin } from '../site';
 import { codeSx, lit, outline, tag } from '../theme/tokens';
@@ -64,7 +64,20 @@ function Entry({ description, children }: { description: string; children: React
 
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
-  const firstPluginName = visible[0]?.name;
+  // A plugin that ships only hooks has nothing to list, and its row would open on nothing.
+  const listed = visible.filter(
+    (plugin) => plugin.skills.length + plugin.agents.length + plugin.mcpServers.length > 0,
+  );
+  const firstPluginName = listed[0]?.name;
+  // The visitor's own open and close choices, dropped when a search starts or ends
+  // so every row follows the new default. Controlled rather than re-keyed: a
+  // remount loses the row's reveal state and repaints it hidden.
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [wasSearching, setWasSearching] = useState(searching);
+  if (searching !== wasSearching) {
+    setWasSearching(searching);
+    setOpened({});
+  }
 
   const skills = sum(visible, (plugin) => plugin.skills.length);
   const agents = sum(visible, (plugin) => plugin.agents.length);
@@ -85,18 +98,19 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
           .join(', '),
       }}
     >
-      {visible.length === 0 ? (
+      {listed.length === 0 ? (
         <Typography variant="body1" color="textSecondary" sx={{ py: 6, px: 3, border: outline }}>
           Nothing to list while the plugins above are filtered out.
         </Typography>
       ) : (
-        <RevealOnEnter dep={visible.length}>
-          {visible.map((plugin) => {
+        <RevealOnEnter>
+          {listed.map((plugin) => {
             const openByDefault = searching || (isDesktop && plugin.name === firstPluginName);
             return (
               <Accordion
-                key={`${plugin.name}-${openByDefault}`}
-                defaultExpanded={openByDefault}
+                key={plugin.name}
+                expanded={opened[plugin.name] ?? openByDefault}
+                onChange={(_, open) => setOpened((prev) => ({ ...prev, [plugin.name]: open }))}
                 disableGutters
                 square
                 elevation={0}

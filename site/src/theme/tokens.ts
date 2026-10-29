@@ -80,11 +80,7 @@ export const codeSx = { fontFamily: mono, overflowWrap: 'anywhere' } as const;
  * else; anything that names a thing instead (category, version, kind of entry)
  * is set in this. Two classes, so a version stops reading as a fourth count.
  */
-export const tag = {
-  fontFamily: mono,
-  textTransform: 'uppercase',
-  letterSpacing: '0.12em',
-} as const;
+export const tag = { fontFamily: mono } as const;
 
 export const srOnly = {
   position: 'absolute',

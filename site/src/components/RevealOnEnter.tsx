@@ -2,8 +2,10 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 
 const SELECTOR = '[data-reveal],[data-draw]';
 
-export function RevealOnEnter({ children, dep }: { children: ReactNode; dep?: unknown }) {
+export function RevealOnEnter({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
+  // No deps: a filter can swap which elements are mounted without changing how
+  // many, and an element mounted after the last scan would stay hidden.
   useLayoutEffect(() => {
     const node = root.current;
     if (!node || !document.documentElement.dataset['motion']) return;
@@ -25,7 +27,7 @@ export function RevealOnEnter({ children, dep }: { children: ReactNode; dep?: un
     );
     for (const el of pending) observer.observe(el);
     return () => observer.disconnect();
-  }, [dep]);
+  });
   return (
     <div ref={root} style={{ display: 'contents' }}>
       {children}

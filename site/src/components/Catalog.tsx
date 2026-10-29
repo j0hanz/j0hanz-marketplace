@@ -233,7 +233,7 @@ export function Catalog({
           </Link>
         </Stack>
       ) : (
-        <RevealOnEnter dep={visible.length}>
+        <RevealOnEnter>
           <Grid container spacing={3}>
             {visible.map((plugin) => (
               <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>

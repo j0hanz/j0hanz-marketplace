@@ -45,15 +45,7 @@ export function Section({
             <Box
               component="span"
               aria-label={count.label}
-              sx={{
-                px: 1,
-                py: 0.25,
-                border: 1,
-                borderColor: 'divider',
-                fontFamily: mono,
-                fontSize: '0.75rem',
-                lineHeight: 1.6,
-              }}
+              sx={{ color: 'text.secondary', fontFamily: mono, fontSize: '1rem' }}
             >
               {count.total}
             </Box>

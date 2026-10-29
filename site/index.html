@@ -200,15 +200,7 @@
       .skel-panel,
       .skel-card {
         background-color: var(--paint-paper);
-        background-image: linear-gradient(
-          90deg,
-          transparent 0%,
-          var(--paint-steel) 50%,
-          transparent 100%
-        );
-        background-size: 200% 100%;
-        background-repeat: no-repeat;
-        animation: skel-shimmer 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        animation: skel-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
       }
       .skel-line {
         height: 14px;
@@ -227,7 +219,6 @@
       }
       .skel-panel {
         height: 160px;
-        border: 1px solid var(--paint-steel);
       }
       .skel-grid {
         display: grid;
@@ -246,14 +237,10 @@
       }
       .skel-card {
         height: 200px;
-        border: 1px solid var(--paint-steel);
       }
-      @keyframes skel-shimmer {
-        0% {
-          background-position: -150% 0;
-        }
-        100% {
-          background-position: 250% 0;
+      @keyframes skel-pulse {
+        to {
+          opacity: 0.5;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -264,7 +251,6 @@
         .skel-panel,
         .skel-card {
           animation: none;
-          background-image: none;
         }
       }
     </style>
