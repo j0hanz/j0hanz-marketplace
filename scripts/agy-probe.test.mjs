@@ -18,6 +18,8 @@ import {
   copilotHooks,
   envOf,
   hooksConfig,
+  LOG_NAME,
+  logTargets,
   mcpConfig,
   report,
   shrink,
@@ -30,7 +32,6 @@ const phase0 = fileURLToPath(new URL('./agy-probe/phase0.mjs', import.meta.url))
 const scratch = (context) => {
   const dir = mkdtempSync(join(tmpdir(), 'agy-probe-test-'));
   context.after(() => rmSync(dir, { recursive: true, force: true }));
-  writeFileSync(join(dir, 'env-baseline.json'), JSON.stringify(Object.keys(process.env)));
   return { dir, log: join(dir, 'log.jsonl') };
 };
 const records = (log) =>
@@ -39,11 +40,12 @@ const records = (log) =>
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 
-const hook = (log, event, form, payload, env = {}) =>
-  spawnSync(process.execPath, [probe, 'hook', event, form, log], {
+// The probe as a hook, run in `cwd`; with no `log`, as the relative form runs.
+const hook = ({ cwd, log }, event, form, payload) =>
+  spawnSync(process.execPath, [probe, 'hook', event, form, ...(log ? [log] : [])], {
+    cwd,
     input: JSON.stringify(payload),
     encoding: 'utf8',
-    env: { ...process.env, ...env },
   });
 
 test('shrink keeps every key and cuts long strings and arrays', () => {
@@ -68,7 +70,7 @@ test('envOf shows only what the setup shell lacked, and hides credential-like va
   ]);
 });
 
-test('the probe hooks cover every event, with the risky forms kept off PreToolUse', () => {
+test('the probe hooks cover every event, PreToolUse in the plugin-folder form alone', () => {
   const config = hooksConfig({ probe: '/abs/probe.mjs', log: '/abs/log.jsonl' })['agy-probe'];
   assert.deepEqual(Object.keys(config), [
     'SessionStart',
@@ -78,40 +80,59 @@ test('the probe hooks cover every event, with the risky forms kept off PreToolUs
     'PostInvocation',
     'Stop',
   ]);
-  assert.equal(config.SessionStart.length, 3);
-  assert.equal(config.PostToolUse[0].hooks.length, 3);
+  assert.deepEqual(
+    config.SessionStart.map((h) => h.command),
+    [
+      'node ./probe.mjs hook SessionStart relative',
+      'node "/abs/probe.mjs" hook SessionStart absolute "/abs/log.jsonl"',
+    ],
+  );
   assert.deepEqual(
     config.PreToolUse[0].hooks.map((h) => h.command),
-    ['node "/abs/probe.mjs" hook PreToolUse absolute "/abs/log.jsonl"'],
+    ['node ./probe.mjs hook PreToolUse relative'],
   );
-  assert.match(config.SessionStart[1].command, /^node "\$\{PLUGIN_ROOT\}\/probe\.mjs" hook/);
+  assert.equal(config.PostToolUse[0].hooks.length, 2);
   assert.equal(config.Stop[0].matcher, undefined);
+  assert.doesNotMatch(JSON.stringify(config), /PLUGIN_ROOT/);
   const servers = mcpConfig({ probe: '/abs/probe.mjs', log: '/abs/log.jsonl' }).mcpServers;
-  assert.equal(servers['probe-root'].args[0], '${PLUGIN_ROOT}/probe.mjs');
+  assert.deepEqual(Object.keys(servers), ['probe-abs', 'probe-root', 'probe-rel']);
+  assert.deepEqual(servers['probe-rel'].args, ['probe.mjs', 'mcp', 'relative']);
 });
 
 test('a hook answers {} and records the payload; SessionStart asks for the token', (context) => {
-  const { log } = scratch(context);
-  const pre = hook(log, 'PreToolUse', 'absolute', {
+  const { dir } = scratch(context);
+  const pre = hook({ cwd: dir }, 'PreToolUse', 'relative', {
     conversationId: 'c1',
     toolCall: { name: 'write_to_file', args: { TargetFile: '/w/a.txt', CodeContent: 'hi' } },
   });
   assert.equal(pre.status, 0);
   assert.equal(pre.stdout, '{}');
 
-  const start = hook(log, 'SessionStart', 'absolute', { transcriptPath: '/t.jsonl' });
+  const start = hook({ cwd: dir }, 'SessionStart', 'relative', { transcriptPath: '/t.jsonl' });
   const steps = JSON.parse(start.stdout).injectSteps;
   assert.equal(steps.length, 1);
   assert.doesNotMatch(steps[0].ephemeralMessage, new RegExp(TOKEN));
 
-  const [first, second] = records(log);
+  const [first, second] = records(join(dir, LOG_NAME));
   assert.equal(first.payload.toolCall.args.TargetFile, '/w/a.txt');
+  assert.equal(first.wroteTo, join(dir, LOG_NAME));
   assert.equal(second.transcript, '/t.jsonl');
 });
 
+test('a log path the probe cannot write falls back to its folder, naming the refusal', (context) => {
+  const { dir } = scratch(context);
+  const blocked = join(dir, 'missing', 'log.jsonl');
+  const result = hook({ cwd: dir, log: blocked }, 'PostToolUse', 'absolute', { stepIdx: 1 });
+  assert.equal(result.stdout, '{}');
+  const [line] = records(join(dir, LOG_NAME));
+  assert.deepEqual(line.failed, [{ path: blocked, error: 'ENOENT' }]);
+  assert.deepEqual(logTargets(undefined, '/plugin', '/tmp').length, 2);
+});
+
 test('a hook given garbage on stdin still answers {}', (context) => {
-  const { log } = scratch(context);
-  const result = spawnSync(process.execPath, [probe, 'hook', 'PreToolUse', 'absolute', log], {
+  const { dir } = scratch(context);
+  const result = spawnSync(process.execPath, [probe, 'hook', 'PreToolUse', 'relative'], {
+    cwd: dir,
     input: 'not json',
     encoding: 'utf8',
   });
@@ -174,36 +195,52 @@ test('the report answers each Phase 0 question from the records', () => {
         version: { command: 'agy --version', status: 0, output: '1.4.10' },
         'validate-review': { command: 'agy plugin validate', status: 0, output: 'ok' },
         'copilot-session': { command: 'copilot -p', status: 0, output: 'ok' },
+        session: { command: 'agy -p', status: 0, output: 'Step 7: worked' },
       },
     },
     records: [
-      { ...at, kind: 'hook', event: 'SessionStart', via: 'absolute', payload: {} },
-      { ...at, kind: 'hook', event: 'SessionStart', via: 'plugin-root', payload: {} },
+      { ...at, kind: 'hook', event: 'SessionStart', via: 'relative', payload: {} },
+      {
+        ...at,
+        kind: 'hook',
+        event: 'SessionStart',
+        via: 'absolute',
+        payload: {},
+        wroteTo: '/plugin/probe-log.jsonl',
+        failed: [{ path: '/repo/.agy-probe/log.jsonl', error: 'EPERM' }],
+      },
       {
         ...at,
         kind: 'hook',
         event: 'PreToolUse',
-        via: 'absolute',
+        via: 'relative',
         payload: {
           toolCall: { name: 'write_to_file', args: { TargetFile: 'a', CodeContent: 'b' } },
         },
       },
       { ...at, kind: 'hook', event: 'CopilotSessionStart', via: 'hooks-dir', payload: {} },
-      { ...at, kind: 'mcp', event: 'start', via: 'absolute', argv: ['mcp', 'absolute'] },
-      { ...at, kind: 'mcp', event: 'roots/list result', via: 'absolute', result: { roots: [] } },
+      { ...at, kind: 'mcp', event: 'start', via: 'relative', argv: ['mcp', 'relative'] },
+      { ...at, kind: 'mcp', event: 'roots/list result', via: 'relative', result: { roots: [] } },
     ],
     transcripts: { checked: 1, hits: 1 },
   });
-  assert.match(markdown, /\| SessionStart \| 1 \| 1 \| 0 \|/);
-  assert.match(markdown, /`\$\{PLUGIN_ROOT\}` expands in a hook command: yes/);
-  assert.match(markdown, /A relative command \(`\.\/probe\.mjs`\) resolves: no/);
+  assert.match(markdown, /- The agy session \(`agy -p`\): exit 0\n\n```\nStep 7: worked/);
+  assert.match(markdown, /\| SessionStart \| 1 \| 1 \|/);
+  assert.match(markdown, /\| PreToolUse \| 1 \| 0 \|/);
+  assert.match(markdown, /A relative command \(`\.\/probe\.mjs`\) resolves: yes/);
+  assert.match(markdown, /Refused before that: `\/repo\/\.agy-probe\/log\.jsonl \(EPERM\)`/);
   assert.match(markdown, /\| `write_to_file` \| PreToolUse \| TargetFile, CodeContent \|/);
   assert.match(markdown, /reached the model: yes/);
   assert.match(markdown, /Root `hooks\.json` ran: no/);
   assert.match(markdown, /`hooks\/hooks\.json` ran: yes/);
   assert.match(markdown, /Result of `roots\/list`/);
   assert.match(markdown, /\$\{PLUGIN_ROOT\}` expands in `args`: no/);
+  assert.match(markdown, /a bare script name resolves: yes/);
   assert.match(markdown, /## 6\. Install under a throwaway HOME\n\n- Install: not run/);
+  assert.match(
+    markdown,
+    /## 7\. A Claude Code plugin converted on install \(css\)\n\n- Install: not run/,
+  );
 });
 
 test('the Copilot hooks probe names its file and carries the powershell twin', () => {

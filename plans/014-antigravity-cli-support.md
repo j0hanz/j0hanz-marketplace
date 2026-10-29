@@ -94,16 +94,21 @@ Needs a machine with `agy` signed in. Its installer lives on antigravity.google,
 cloud session may not reach. `scripts/agy-probe/` runs all of it:
 
 ```text
-node scripts/agy-probe/phase0.mjs setup      # checks, installs, the probe plugin
-# one agy session in the workspace setup prints, with the prompt it prints
+node scripts/agy-probe/phase0.mjs setup      # checks, installs, the probe, one agy -p session
 node scripts/agy-probe/phase0.mjs report     # writes .agy-probe/report.md: paste it back
 node scripts/agy-probe/phase0.mjs clean      # uninstalls agy-probe, removes the files
 ```
 
-`setup --home-test` adds question 6; with no sign-in in that home, agy may open a browser.
+`setup` runs the agy session itself, headless (`agy -p`) in a fresh workspace outside the
+repo, so nothing is pasted and agy's reply lands in the report. Then it installs css from
+GitHub to see what agy's conversion makes of a Claude Code plugin with hooks, reads the
+files back and uninstalls it. `setup --home-test` adds question 6; with no sign-in in that
+home, agy may open a browser.
+
 The probe plugin registers every hook event, answers `{}` (a SessionStart request aside),
-and logs each payload with long strings cut and credential-like variables hidden. It stays
-installed until `clean`, and its hooks run from `.agy-probe/`. So `setup` refuses while an
+and logs each payload with long strings cut and credential-like variables hidden. Each line
+goes to the repo log, else the folder the probe runs in, else the temp folder, and says
+which paths refused it. It stays installed until `clean`. So `setup` refuses while an
 earlier run's folder is there, and `clean` removes it only once a successful
 `agy plugin list --json` no longer names the plugin (`clean --force` if agy itself is gone).
 
@@ -123,6 +128,8 @@ The report answers, one section each:
    the client's declared capabilities, `roots/list`, and what a tool call carries.
 6. Whether `agy plugin install` runs non-interactively under a throwaway `HOME`. If so,
    validate.mjs can add an install smoke test beside Copilot's.
+7. What `agy plugin install` writes when it converts css: its manifest, hooks and MCP
+   files as agy translated them, if it did.
 
 ### Phase 0 answers
 
@@ -147,6 +154,18 @@ payloads, tool names, `injectSteps` and MCP answers (parts of 3, and 5) are stil
    `hooks` field points back at `hooks/hooks.json`.
 5. Open.
 6. Not run.
+
+Run 2, same machine, with the session run by hand: still nothing logged from agy, not one
+hook line and no MCP server start. agy lists agy-probe as enabled, and the probe, run by
+hand with the same command, writes the same log. So inside agy the probe either could not
+write to the repo or never started; it swallowed its write errors, so the run could not
+say which. The kit now writes inside the plugin folder as a fallback, records each refused
+path, and runs the session headless so agy's reply is in the report.
+
+Copilot, from the run 1 log: a plugin hook gets `CLAUDE_PLUGIN_ROOT`, `COPILOT_PLUGIN_ROOT`,
+`PLUGIN_ROOT`, `CLAUDE_PROJECT_DIR`, `COPILOT_PROJECT_DIR` and `COPILOT_CLI=1`, and its
+SessionStart payload is `{hook_event_name, session_id, timestamp, cwd, source: "new",
+initial_prompt}`.
 
 ## Phase 2: port the hooks
 

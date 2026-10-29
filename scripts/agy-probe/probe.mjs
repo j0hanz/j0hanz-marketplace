@@ -1,38 +1,52 @@
-// Runs inside Antigravity CLI as every hook and both MCP servers of the agy-probe plugin
-// (plan 014, Phase 0), and inside Copilot CLI for the hooks-file check. It records what it was
-// handed and answers as little as it can: `{}` to every hook, except one SessionStart request
-// that shows whether injectSteps reaches the model. phase0.mjs copies it, with lib.mjs, into
-// the probe plugin.
+// Runs inside Antigravity CLI as every hook and MCP server of the agy-probe plugin (plan 014,
+// Phase 0), and inside Copilot CLI for the hooks-file check. It records what it was handed and
+// answers as little as it can: `{}` to every hook, except one SessionStart request that shows
+// whether injectSteps reaches the model. phase0.mjs copies it, with lib.mjs and the setup
+// shell's variable names (env-baseline.json), into the probe plugin.
 //
-//   node probe.mjs hook <event> <form> <log>
-//   node probe.mjs mcp <form> <log> [extra args, recorded as given]
+//   node probe.mjs hook <event> <form> [log]
+//   node probe.mjs mcp <form> [log] [extra args, recorded as given]
 import { appendFileSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { envOf, shrink, TOKEN_HEAD, TOKEN_TAIL } from './lib.mjs';
+import { envOf, logTargets, shrink, TOKEN_HEAD, TOKEN_TAIL } from './lib.mjs';
 
 const [mode, ...rest] = process.argv.slice(2);
 
-const baseline = (log) => {
+const baseline = () => {
   try {
-    return new Set(JSON.parse(readFileSync(join(dirname(log), 'env-baseline.json'), 'utf8')));
+    return new Set(
+      JSON.parse(readFileSync(join(import.meta.dirname, 'env-baseline.json'), 'utf8')),
+    );
   } catch {
     return new Set();
   }
 };
 
+// Never throws: a hook that crashes may deny the tool it guards. When no target takes the
+// line, stderr says why, for whatever agy shows of a hook's errors.
 const record = (log, entry) => {
+  const failed = [];
   try {
     const line = {
       at: new Date().toISOString(),
       argv: process.argv.slice(2),
       cwd: process.cwd(),
-      env: envOf(process.env, baseline(log)),
+      env: envOf(process.env, baseline()),
       ...entry,
     };
-    appendFileSync(log, `${JSON.stringify(line)}\n`);
+    for (const path of logTargets(log, process.cwd(), tmpdir())) {
+      try {
+        appendFileSync(path, `${JSON.stringify({ ...line, wroteTo: path, failed })}\n`);
+        return;
+      } catch (error) {
+        failed.push({ path, error: error.code ?? error.message });
+      }
+    }
+    process.stderr.write(`agy-probe: no log took this line: ${JSON.stringify(failed)}\n`);
   } catch {
-    // A probe that cannot write still answers; the report shows the event as never fired.
+    // Nothing left to try; the answer still goes out.
   }
 };
 
@@ -54,7 +68,7 @@ function hook([event, form, log]) {
       payload: shrink(payload),
       transcript: payload?.transcriptPath,
     });
-    if (event === 'SessionStart' && form === 'absolute') {
+    if (event === 'SessionStart' && form === 'relative') {
       const ask =
         `agy-probe check: in your next reply, write ${TOKEN_HEAD} followed by a hyphen ` +
         `and ${TOKEN_TAIL}, as one word.`;
