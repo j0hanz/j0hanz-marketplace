@@ -30,8 +30,13 @@ const repo = (files) => {
 };
 
 // stderr is ignored: a probe that fails is normal here, and its noise would read as a failing run.
-const runRaw = (cwd, input) =>
-  execFileSync('node', [HOOK], { cwd, input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+const runRaw = (cwd, input, args = []) =>
+  execFileSync('node', [HOOK, ...args], {
+    cwd,
+    input,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'ignore'],
+  });
 
 const run = (cwd, session_id) => runRaw(cwd, JSON.stringify({ cwd, session_id }));
 
@@ -262,6 +267,70 @@ test('Copilot: the note goes to stderr with exit 2, the channel Copilot shows th
       r.stderr,
       /^frontend: 1 changed FE file — run frontend:guidelines\n {2}- App\.tsx\n$/,
     );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// Antigravity names the workspace workspacePaths and the session conversationId, and a Stop
+// hook that answers nothing leaves the session's end undecided, so every silent path answers {}.
+const runAgy = (dir, payload) => runRaw(dir, JSON.stringify(payload), ['--antigravity']);
+
+test('Antigravity: the note re-enters once with its reason, then {} ends the session', () => {
+  const dir = repo({
+    'package.json': '{"dependencies":{"react":"19.0.0"}}',
+    'App.tsx': 'export const App = () => null;\n',
+  });
+  try {
+    const payload = { conversationId: session('agy'), workspacePaths: [dir] };
+    const first = JSON.parse(runAgy(dir, payload));
+    assert.equal(first.decision, 'continue');
+    assert.match(first.reason, /^frontend: 1 changed FE file — run frontend:guidelines$/m);
+    assert.match(first.reason, /\n {2}- App\.tsx$/);
+
+    // The ledger already holds App.tsx, so the re-entry's Stop has nothing new and ends it.
+    assert.deepEqual(JSON.parse(runAgy(dir, payload)), {});
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Antigravity: every silent path answers {} instead of nothing', () => {
+  const dirty = repo({ 'package.json': '{"dependencies":{"react":"19.0.0"}}', 'a.tsx': 'x\n' });
+  const clean = repo({ 'package.json': '{"dependencies":{"react":"19.0.0"}}' });
+  const backend = repo({ 'a.css': 'a{}\n' });
+  try {
+    assert.equal(
+      runAgy(clean, { conversationId: session('agy-clean'), workspacePaths: [clean] }),
+      '{}',
+    );
+    assert.equal(
+      runAgy(backend, { conversationId: session('agy-backend'), workspacePaths: [backend] }),
+      '{}',
+    );
+    assert.equal(
+      runAgy(dirty, {
+        conversationId: session('agy-active'),
+        workspacePaths: [dirty],
+        stop_hook_active: true,
+      }),
+      '{}',
+    );
+    assert.equal(runRaw(dirty, 'not json', ['--antigravity']), '{}');
+  } finally {
+    rmSync(dirty, { recursive: true, force: true });
+    rmSync(clean, { recursive: true, force: true });
+    rmSync(backend, { recursive: true, force: true });
+  }
+});
+
+test('Antigravity: two conversations keep separate ledgers through conversationId', () => {
+  const dir = repo({ 'package.json': '{"dependencies":{"react":"19.0.0"}}', 'a.tsx': 'x\n' });
+  try {
+    const one = runAgy(dir, { conversationId: session('agy-a'), workspacePaths: [dir] });
+    const two = runAgy(dir, { conversationId: session('agy-b'), workspacePaths: [dir] });
+    assert.match(JSON.parse(one).reason, /1 changed FE file/);
+    assert.match(JSON.parse(two).reason, /1 changed FE file/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
