@@ -439,3 +439,10 @@ test('GEMINI.md is agent-facing and stays quiet', () => {
     '',
   );
 });
+
+test('Antigravity: garbage on stdin still answers {}', () => {
+  assert.equal(
+    execFileSync('node', [HOOK, '--antigravity'], { input: 'not json', encoding: 'utf8' }),
+    '{}',
+  );
+});

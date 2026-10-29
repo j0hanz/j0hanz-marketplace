@@ -223,7 +223,10 @@ PreInvocation: everything still open above is settled, and no STOP condition occ
    SKILL.md with `read_file`, so matchers need no skill name.
 4. **Copilot tolerates an Antigravity-format root `hooks.json`**: with one beside Copilot's
    `hooks/hooks.json`, Copilot ran `hooks/hooks.json` and the session answered normally.
-   Claude Code's `--strict` validate passes with the root file present too. So Antigravity's
+   Claude Code's `--strict` validate passes with the root file present, and a live
+   `claude -p --plugin-dir` session in a dirty frontend repo fired only the
+   `hooks/hooks.json` hook (one ledger, keyed by Claude's session id): Claude Code ignores
+   a root `hooks.json` too. So Antigravity's
    hooks live in a root `hooks.json` in Antigravity's schema, beside `hooks/hooks.json` for
    Claude Code and Copilot: no `.github/plugin/` manifest and no conversion needed.
 5. A tool call reaches the server carrying `_meta` with
