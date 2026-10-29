@@ -158,11 +158,6 @@ export const theme = createTheme({
         root: { '&.Mui-focused': { color: 'var(--mui-palette-text-primary)' } },
       },
     },
-    MuiToggleButtonGroup: {
-      styleOverrides: {
-        root: { '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { borderLeftColor: edge } },
-      },
-    },
     MuiToggleButton: {
       styleOverrides: {
         root: {

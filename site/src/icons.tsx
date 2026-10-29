@@ -27,8 +27,7 @@ export function CheckIcon(props: SvgIconProps) {
   );
 }
 
-// The icon now lives here, where it has one caller. The aria-label covers the
-// meaning; the glyph is purely decorative.
+// The srOnly text carries the new-tab announcement; the glyph is decorative.
 export function ExternalIcon(props: SvgIconProps) {
   return (
     <>

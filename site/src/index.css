@@ -118,19 +118,18 @@
   animation-timing-function: var(--ease-out);
 }
 
-/* The authored moment: the pitch rises, then the install steps wipe in behind
-   the panel's frame, in the order they are typed. */
+/* The authored moment: the pitch rises, then the panel's picker and command
+   wipe in behind its frame. */
 /* Cadence comes from --i on each element, so reordering either carries it. */
 :root[data-motion] [data-hero] {
   animation: rise 320ms var(--ease-out) both paused;
   animation-delay: calc(var(--i, 0) * 90ms);
 }
 
-/* The frame is there from the start, so the column never reflows; the steps it
-   holds arrive one at a time, because they are a sequence and step 2 does not
-   work before step 1. The last one lands at 520ms, with the pitch — the panel
-   holds the install command, and clipping it longer withholds the one thing
-   the page is asking for. */
+/* The frame is there from the start, so the column never reflows; the picker
+   arrives first because it decides the command beneath it. The command lands
+   at 440ms, before the pitch finishes: it is the one thing the page is asking
+   for, and clipping it longer withholds it. */
 :root[data-motion] [data-hero-panel] {
   animation: wipe 260ms var(--ease-out) both paused;
   animation-delay: calc(100ms + var(--i, 0) * 80ms);

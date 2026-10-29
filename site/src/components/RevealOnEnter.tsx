@@ -10,7 +10,8 @@ export function RevealOnEnter({ children }: { children: ReactNode }) {
     const node = root.current;
     if (!node || !document.documentElement.dataset['motion']) return;
 
-    const pending = [node, ...node.querySelectorAll<HTMLElement>(SELECTOR)].filter(
+    // Not the wrapper itself: display: contents gives it no box, so it never intersects.
+    const pending = [...node.querySelectorAll<HTMLElement>(SELECTOR)].filter(
       (el) => el.dataset['shown'] === undefined,
     );
     if (pending.length === 0) return;
