@@ -248,8 +248,9 @@ export function build() {
     name: catalog.name,
     // The catalog line names the marketplace; a <title> has to name what the page
     // is about first. Same words the hero opens with, so the tab and the headline
-    // agree. Marketplace name trails it as the brand.
-    pageTitle: `Plugins for Claude Code, GitHub Copilot and Antigravity · ${catalog.name}`,
+    // agree. Marketplace name trails it as the brand. The clients go unnamed here:
+    // three of them made a four-line headline, and the tagline names them all.
+    pageTitle: `Plugins for coding agents · ${catalog.name}`,
     // Counted rather than authored: the catalog is the description, and one that
     // is written by hand goes stale the first time a plugin ships a skill. Front
     // sentence carries the pitch, so a search engine clipping the tail only ever

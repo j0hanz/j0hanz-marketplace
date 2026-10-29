@@ -119,10 +119,7 @@ test('an MCP-only catalog offers installation and connection verification', (con
     { label: 'Check connection', value: '/mcp' },
   ]);
   assert.match(result.data().tagline, /1 MCP server/);
-  assert.equal(
-    result.data().pageTitle,
-    'Plugins for Claude Code, GitHub Copilot and Antigravity · example',
-  );
+  assert.equal(result.data().pageTitle, 'Plugins for coding agents · example');
 });
 
 test('every plugin gets a Copilot CLI install line unless tagged claude-code-only', (context) => {

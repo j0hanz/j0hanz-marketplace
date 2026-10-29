@@ -43,7 +43,7 @@ export function Hero({
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
-              Plugins for Claude Code, GitHub Copilot and Antigravity
+              Plugins for coding agents
             </Typography>
             {/* What the headline leaves to be counted. Same sentence the tab and
                 the search result carry, so the page opens the way it was found. */}
