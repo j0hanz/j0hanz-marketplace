@@ -1,0 +1,23 @@
+{
+  "writeup": {
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./hooks/scan.mjs --antigravity",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node ./hooks/scan.mjs deliver --antigravity",
+        "timeout": 10
+      }
+    ]
+  }
+}
