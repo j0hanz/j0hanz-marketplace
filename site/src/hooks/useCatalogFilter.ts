@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { categoriesFor } from '../catalog';
 import { type ClientId, type Plugin, site } from '../site';
 
 export const ALL = 'all';
@@ -30,12 +31,16 @@ const haystacks = (() => {
 })();
 
 export function useCatalogFilter(client: ClientId) {
-  const [category, setCategory] = useState(() => {
+  const [chosen, setCategory] = useState(() => {
     const value = readSearch('category');
     return value && site.categories.includes(value) ? value : ALL;
   });
   const [query, setQuery] = useState(() => readSearch('q') ?? '');
   const deferred = useDeferredValue(query);
+  const categories = useMemo(() => categoriesFor(site.plugins, site.categories, client), [client]);
+  // A choice the client has no plugins for falls back without being forgotten,
+  // so switching back to a client that has them restores it.
+  const category = categories.includes(chosen) ? chosen : ALL;
 
   useEffect(() => {
     const next = new URLSearchParams(location.search);
@@ -64,6 +69,7 @@ export function useCatalogFilter(client: ClientId) {
   return {
     visible,
     needle,
+    categories,
     category,
     setCategory,
     query,

@@ -17,7 +17,7 @@ import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
 import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
-import { type ClientId, countLabel, external, externalLabel, site, type Plugin } from '../site';
+import { type ClientId, countLabel, external, externalLabel, type Plugin } from '../site';
 import { accent, drawable, outline, segmented, srOnly, tag } from '../theme/tokens';
 import { ClientPicker } from './ClientPicker';
 import { Command } from './Command';
@@ -117,7 +117,7 @@ export function Catalog({
   client: ClientId;
   onClient: (next: ClientId) => void;
 }) {
-  const { visible, category, setCategory, query, setQuery, reset } = filter;
+  const { visible, categories, category, setCategory, query, setQuery, reset } = filter;
   const searchInput = useRef<HTMLInputElement>(null);
   const pickCategory = (next: string) => {
     if (!document.startViewTransition) {
@@ -195,7 +195,7 @@ export function Catalog({
             sx={segmented}
           >
             <ToggleButton value={ALL}>All</ToggleButton>
-            {site.categories.map((name) => (
+            {categories.map((name) => (
               <ToggleButton key={name} value={name}>
                 {name}
               </ToggleButton>
