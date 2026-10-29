@@ -88,6 +88,19 @@ export const mcpConfig = ({ probe, log }) => ({
   },
 });
 
+// Copilot's side of the hooks-file check: a SessionStart hook that names the file it sits in.
+// It carries the powershell twin every hook here does: Copilot on Windows runs that field, and
+// without it neither file would run there, for a reason that has nothing to do with which
+// file Copilot reads. The paths are absolute, so one command serves both.
+export const copilotHooks = ({ probe, log }, file) => {
+  const command = `node "${probe}" hook CopilotSessionStart ${file} "${log}"`;
+  return {
+    hooks: {
+      SessionStart: [{ hooks: [{ type: 'command', command, powershell: command, timeout: 10 }] }],
+    },
+  };
+};
+
 const fence = (text, lang = '') => ['```' + lang, String(text ?? '').trim() || '(empty)', '```'];
 const json = (value) => fence(JSON.stringify(value, null, 2), 'json');
 const yesNo = (value) => (value ? 'yes' : 'no');

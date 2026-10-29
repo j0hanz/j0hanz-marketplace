@@ -103,8 +103,9 @@ node scripts/agy-probe/phase0.mjs clean      # uninstalls agy-probe, removes the
 `setup --home-test` adds question 6; with no sign-in in that home, agy may open a browser.
 The probe plugin registers every hook event, answers `{}` (a SessionStart request aside),
 and logs each payload with long strings cut and credential-like variables hidden. It stays
-installed until `clean`, and its hooks run from `.agy-probe/`, so `clean` keeps that
-folder while `agy plugin list` still shows the plugin.
+installed until `clean`, and its hooks run from `.agy-probe/`. So `setup` refuses while an
+earlier run's folder is there, and `clean` removes it only once a successful
+`agy plugin list --json` no longer names the plugin (`clean --force` if agy itself is gone).
 
 The report answers, one section each:
 

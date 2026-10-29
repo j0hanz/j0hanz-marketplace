@@ -1,11 +1,28 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { envOf, hooksConfig, mcpConfig, report, shrink, TOKEN } from './agy-probe/lib.mjs';
+import {
+  copilotHooks,
+  envOf,
+  hooksConfig,
+  mcpConfig,
+  report,
+  shrink,
+  TOKEN,
+} from './agy-probe/lib.mjs';
 
 const probe = fileURLToPath(new URL('./agy-probe/probe.mjs', import.meta.url));
 const phase0 = fileURLToPath(new URL('./agy-probe/phase0.mjs', import.meta.url));
@@ -189,11 +206,105 @@ test('the report answers each Phase 0 question from the records', () => {
   assert.match(markdown, /## 6\. Install under a throwaway HOME\n\n- Install: not run/);
 });
 
-test('setup stops before touching anything when agy is not on PATH', () => {
-  const result = spawnSync(process.execPath, [phase0, 'setup'], {
-    encoding: 'utf8',
-    env: { ...process.env, PATH: '' },
-  });
+test('the Copilot hooks probe names its file and carries the powershell twin', () => {
+  const [entry] = copilotHooks({ probe: 'C:/p/probe.mjs', log: 'C:/p/log.jsonl' }, 'hooks-dir')
+    .hooks.SessionStart[0].hooks;
+  assert.equal(
+    entry.command,
+    'node "C:/p/probe.mjs" hook CopilotSessionStart hooks-dir "C:/p/log.jsonl"',
+  );
+  assert.equal(entry.powershell, entry.command);
+});
+
+// phase0.mjs finds .agy-probe/ beside the scripts folder it sits in, so these run a copy in a
+// scratch root and never reach the real one.
+const scratchRoot = (context) => {
+  const root = mkdtempSync(join(tmpdir(), 'agy-probe-root-'));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  const scripts = join(root, 'scripts', 'agy-probe');
+  mkdirSync(scripts, { recursive: true });
+  for (const file of ['phase0.mjs', 'lib.mjs']) {
+    copyFileSync(join(dirname(phase0), file), join(scripts, file));
+  }
+  const probeFile = join(root, '.agy-probe', 'agy-probe', 'probe.mjs');
+  const leaveEarlierRun = () => {
+    mkdirSync(dirname(probeFile), { recursive: true });
+    writeFileSync(probeFile, '');
+  };
+  const runPhase0 = (args, env) =>
+    spawnSync(process.execPath, [join(scripts, 'phase0.mjs'), ...args], {
+      encoding: 'utf8',
+      env,
+    });
+  return { root, probeFile, leaveEarlierRun, runPhase0 };
+};
+
+// PATH is spelled Path on Windows; drop every spelling before setting it.
+const withPath = (path, extra = {}) => ({
+  ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^path$/i.test(name))),
+  PATH: path,
+  ...extra,
+});
+
+// A stand-in agy that prints AGY_LIST for `plugin list --json` and succeeds at everything else.
+// A shell script, so these tests skip Windows.
+const fakeAgy = (context) => {
+  const bin = mkdtempSync(join(tmpdir(), 'agy-probe-bin-'));
+  context.after(() => rmSync(bin, { recursive: true, force: true }));
+  const agy = join(bin, 'agy');
+  writeFileSync(
+    agy,
+    '#!/bin/sh\nif [ "$*" = "plugin list --json" ]; then echo "$AGY_LIST"; else echo ok; fi\n',
+  );
+  chmodSync(agy, 0o755);
+  return bin;
+};
+const posixOnly = { skip: process.platform === 'win32' && 'the stand-in agy is a shell script' };
+
+test('setup stops before touching anything when agy is not on PATH', (context) => {
+  const { root, runPhase0 } = scratchRoot(context);
+  const result = runPhase0(['setup'], withPath(''));
   assert.equal(result.status, 1);
   assert.match(result.stdout, /agy is not on PATH/);
+  assert.equal(existsSync(join(root, '.agy-probe')), false);
 });
+
+test('setup leaves an earlier run alone and points at clean', posixOnly, (context) => {
+  const { probeFile, leaveEarlierRun, runPhase0 } = scratchRoot(context);
+  leaveEarlierRun();
+  const result = runPhase0(['setup'], withPath(fakeAgy(context)));
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /left from an earlier run\. Run node ".+phase0\.mjs" clean first/);
+  assert.equal(existsSync(probeFile), true);
+});
+
+test('clean keeps the probe files unless agy confirms the plugin is gone', (context) => {
+  const { probeFile, leaveEarlierRun, runPhase0 } = scratchRoot(context);
+  leaveEarlierRun();
+  const missing = runPhase0(['clean'], withPath(''));
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /Could not confirm agy-probe is uninstalled/);
+  assert.equal(existsSync(probeFile), true);
+
+  const forced = runPhase0(['clean', '--force'], withPath(''));
+  assert.equal(forced.status, 0);
+  assert.equal(existsSync(probeFile), false);
+});
+
+test(
+  'clean removes the probe files once the plugin list no longer names it',
+  posixOnly,
+  (context) => {
+    const { probeFile, leaveEarlierRun, runPhase0 } = scratchRoot(context);
+    const bin = fakeAgy(context);
+    leaveEarlierRun();
+    const listed = runPhase0(['clean'], withPath(bin, { AGY_LIST: '[{"name":"agy-probe"}]' }));
+    assert.equal(listed.status, 1);
+    assert.match(listed.stdout, /agy-probe is still installed/);
+    assert.equal(existsSync(probeFile), true);
+
+    const gone = runPhase0(['clean'], withPath(bin, { AGY_LIST: '[{"name":"review"}]' }));
+    assert.equal(gone.status, 0);
+    assert.equal(existsSync(probeFile), false);
+  },
+);

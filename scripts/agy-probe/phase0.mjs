@@ -9,8 +9,9 @@
 //   (one agy session in the printed workspace, with the printed prompt)
 //   node scripts/agy-probe/phase0.mjs report
 //       writes .agy-probe/report.md, the one file to paste back.
-//   node scripts/agy-probe/phase0.mjs clean
-//       uninstalls agy-probe, then removes .agy-probe/ and the workspace.
+//   node scripts/agy-probe/phase0.mjs clean [--force]
+//       uninstalls agy-probe, then removes .agy-probe/ and the workspace once agy confirms the
+//       plugin is gone. --force removes them anyway, for a machine where agy itself is gone.
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -23,7 +24,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { hooksConfig, mcpConfig, posix, report, TOKEN } from './lib.mjs';
+import { copilotHooks, hooksConfig, mcpConfig, posix, report, TOKEN } from './lib.mjs';
 
 const HERE = import.meta.dirname;
 const ROOT = resolve(HERE, '..', '..');
@@ -42,19 +43,25 @@ const writeJson = (path, value) => {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 };
 const quote = (value) => `"${value}"`;
+// By absolute path: the session step leaves the shell in the workspace, outside the repo.
+const self = (command) => `node ${quote(join(HERE, 'phase0.mjs'))} ${command}`;
 
 // shell: true for the same reason as validate.mjs: `agy` and `copilot` may be .cmd shims on
 // Windows. One command string, quoted by the caller, since Node 24 deprecates an argument
 // list with shell: true. stdin is closed, so a command that wants input fails, not waits.
-const CAP = 6000;
-const run = (bin, args, { env = {}, timeout = 120_000 } = {}) => {
-  const result = spawnSync([bin, ...args].join(' '), {
+const execute = (bin, args, { env = {}, timeout = 120_000 } = {}) =>
+  spawnSync([bin, ...args].join(' '), {
     shell: true,
     encoding: 'utf8',
     timeout,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, NO_COLOR: '1', ...env },
   });
+
+// A step's output, cut to keep state.json and the report readable.
+const CAP = 6000;
+const run = (bin, args, options) => {
+  const result = execute(bin, args, options);
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   return {
     command: [bin, ...args].join(' '),
@@ -108,7 +115,7 @@ function writeProbePlugin() {
 
 // Copilot reads `hooks.json` or `hooks/hooks.json` at a plugin root, and its docs do not say
 // which wins. A plugin with both, each naming itself, installed under a throwaway home.
-function writeCopilotProbe({ probe, log }) {
+function writeCopilotProbe(paths) {
   const market = join(DIR, 'copilot-market');
   writeJson(join(market, '.claude-plugin', 'marketplace.json'), {
     name: 'agy-probe-market',
@@ -121,23 +128,8 @@ function writeCopilotProbe({ probe, log }) {
     version: '0.0.0',
     description: 'Which hooks file Copilot CLI reads (plan 014, Phase 0).',
   });
-  const hooks = (form) => ({
-    hooks: {
-      SessionStart: [
-        {
-          hooks: [
-            {
-              type: 'command',
-              command: `node "${probe}" hook CopilotSessionStart ${form} "${log}"`,
-              timeout: 10,
-            },
-          ],
-        },
-      ],
-    },
-  });
-  writeJson(join(plugin, 'hooks.json'), hooks('root-hooks.json'));
-  writeJson(join(plugin, 'hooks', 'hooks.json'), hooks('hooks-dir'));
+  writeJson(join(plugin, 'hooks.json'), copilotHooks(paths, 'root-hooks.json'));
+  writeJson(join(plugin, 'hooks', 'hooks.json'), copilotHooks(paths, 'hooks-dir'));
   return market;
 }
 
@@ -154,7 +146,12 @@ function setup(args) {
     say('agy is not on PATH. Install Antigravity CLI and sign in, then run setup again.');
     process.exit(1);
   }
-  rmSync(DIR, { recursive: true, force: true });
+  // An earlier run's probe may still be installed, its hooks running from .agy-probe/. Only
+  // clean, which uninstalls it first, may take that folder away.
+  if (existsSync(DIR)) {
+    say(`.agy-probe/ is left from an earlier run. Run ${self('clean')} first.`);
+    process.exit(1);
+  }
   mkdirSync(DIR, { recursive: true });
   writeJson(join(DIR, 'env-baseline.json'), Object.keys(process.env));
 
@@ -237,7 +234,7 @@ function setup(args) {
   say();
   say(PROMPT.replace(/^/gm, '     '));
   say();
-  say('  3. Leave the session, then run: node scripts/agy-probe/phase0.mjs report');
+  say(`  3. Leave the session, then run: ${self('report')}`);
 }
 
 function writeReport() {
@@ -263,21 +260,31 @@ function writeReport() {
     REPORT,
     report({ state: readJson(STATE), records, transcripts: { checked: paths.length, hits } }),
   );
-  say(`Wrote ${REPORT}. Paste the whole file back. Then: node scripts/agy-probe/phase0.mjs clean`);
+  say(`Wrote ${REPORT}. Paste the whole file back. Then: ${self('clean')}`);
 }
 
 // The installed probe runs its hooks from .agy-probe/, so deleting that while agy-probe is still
 // installed leaves every agy session a PreToolUse hook that fails, which may deny tool calls.
-function clean() {
-  run('agy', ['plugin', 'uninstall', 'agy-probe']);
-  const listed = run('agy', ['plugin', 'list', '--json']);
-  if (listed.status === 0 && listed.output.includes('agy-probe')) {
-    say('agy-probe is still installed, and its hooks run from .agy-probe/, so that stays.');
-    say('In agy, run /plugin uninstall agy-probe, then run clean again.');
+// Only a listing that succeeded, read whole, and does not name agy-probe lets the files go: an
+// agy that is missing, fails or times out proves nothing.
+function clean(args) {
+  execute('agy', ['plugin', 'uninstall', 'agy-probe']);
+  const listed = execute('agy', ['plugin', 'list', '--json'], { timeout: 60_000 });
+  const gone = listed.status === 0 && !String(listed.stdout).includes('agy-probe');
+  if (!gone && !args.includes('--force')) {
+    say(
+      listed.status === 0
+        ? 'agy-probe is still installed.'
+        : 'Could not confirm agy-probe is uninstalled: `agy plugin list --json` did not succeed.',
+    );
+    say('Its hooks run from .agy-probe/, so that stays. In agy, run /plugin uninstall agy-probe,');
+    say(`then ${self('clean')} again; add --force only if agy itself is gone.`);
     process.exit(1);
   }
+  // The workspace setup recorded; with no record, nothing of this run's to remove.
+  const workspace = existsSync(STATE) ? readJson(STATE).workspace : undefined;
   rmSync(DIR, { recursive: true, force: true });
-  rmSync(WORKSPACE, { recursive: true, force: true });
+  if (workspace) rmSync(workspace, { recursive: true, force: true });
   say('Removed agy-probe, .agy-probe/ and the workspace. review stays installed in agy;');
   say('remove it with /plugin uninstall review if you do not want it.');
 }
@@ -285,8 +292,8 @@ function clean() {
 const [command, ...args] = process.argv.slice(2);
 if (command === 'setup') setup(args);
 else if (command === 'report') writeReport();
-else if (command === 'clean') clean();
+else if (command === 'clean') clean(args);
 else {
-  say('usage: node scripts/agy-probe/phase0.mjs <setup [--home-test] | report | clean>');
+  say('usage: node scripts/agy-probe/phase0.mjs <setup [--home-test] | report | clean [--force]>');
   process.exit(command ? 1 : 0);
 }
