@@ -63,11 +63,7 @@ export function Command({ value }: { value: string }) {
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" aria-live="polite" sx={srOnly}>
-        {status === 'idle'
-          ? 'Copy'
-          : status === 'copied'
-            ? 'Copied'
-            : 'Copy failed. Select the text and copy it'}
+        {tip}
       </Box>
     </Paper>
   );
