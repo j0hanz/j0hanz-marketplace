@@ -21,6 +21,7 @@ import {
   LOG_NAME,
   logTargets,
   mcpConfig,
+  PRE_TOKEN,
   report,
   shrink,
   TOKEN,
@@ -40,13 +41,18 @@ const records = (log) =>
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 
-// The probe as a hook, run in `cwd`; with no `log`, as the relative form runs.
-const hook = ({ cwd, log }, event, form, payload) =>
-  spawnSync(process.execPath, [probe, 'hook', event, form, ...(log ? [log] : [])], {
-    cwd,
-    input: JSON.stringify(payload),
-    encoding: 'utf8',
-  });
+// The probe as a hook, run in `cwd`; with no `log`, as the relative form runs. `answer` is the
+// trailing word only the PreToolUse command carries.
+const hook = ({ cwd, log }, event, form, payload, answer) =>
+  spawnSync(
+    process.execPath,
+    [probe, 'hook', event, form, ...(log ? [log] : []), ...(answer ? [answer] : [])],
+    {
+      cwd,
+      input: JSON.stringify(payload),
+      encoding: 'utf8',
+    },
+  );
 
 test('shrink keeps every key and cuts long strings and arrays', () => {
   const out = shrink({ CodeContent: 'x'.repeat(500), chunks: [1, 2, 3, 4, 5, 6, 7], ok: true });
@@ -89,7 +95,7 @@ test('the probe hooks cover every event, PreToolUse in the plugin-folder form al
   );
   assert.deepEqual(
     config.PreToolUse[0].hooks.map((h) => h.command),
-    ['node ./probe.mjs hook PreToolUse relative'],
+    ['node ./probe.mjs hook PreToolUse relative allow'],
   );
   assert.equal(config.PostToolUse[0].hooks.length, 2);
   assert.equal(config.Stop[0].matcher, undefined);
@@ -99,24 +105,35 @@ test('the probe hooks cover every event, PreToolUse in the plugin-folder form al
   assert.deepEqual(servers['probe-rel'].args, ['probe.mjs', 'mcp', 'relative']);
 });
 
-test('a hook answers {} and records the payload; SessionStart asks for the token', (context) => {
+test('a hook answers {} by default, allow when told, and records the payload', (context) => {
   const { dir } = scratch(context);
-  const pre = hook({ cwd: dir }, 'PreToolUse', 'relative', {
+  const call = {
     conversationId: 'c1',
-    toolCall: { name: 'write_to_file', args: { TargetFile: '/w/a.txt', CodeContent: 'hi' } },
-  });
+    toolCall: { name: 'write_file', args: { Path: '/w/a.txt', Content: 'hi' } },
+  };
+  const pre = hook({ cwd: dir }, 'PreToolUse', 'relative', call);
   assert.equal(pre.status, 0);
   assert.equal(pre.stdout, '{}');
+  const allowed = hook({ cwd: dir }, 'PreToolUse', 'relative', call, 'allow');
+  assert.equal(allowed.status, 0);
+  assert.equal(allowed.stdout, JSON.stringify({ decision: 'allow' }));
 
   const start = hook({ cwd: dir }, 'SessionStart', 'relative', { transcriptPath: '/t.jsonl' });
   const steps = JSON.parse(start.stdout).injectSteps;
   assert.equal(steps.length, 1);
   assert.doesNotMatch(steps[0].ephemeralMessage, new RegExp(TOKEN));
 
-  const [first, second] = records(join(dir, LOG_NAME));
-  assert.equal(first.payload.toolCall.args.TargetFile, '/w/a.txt');
-  assert.equal(first.wroteTo, join(dir, LOG_NAME));
-  assert.equal(second.transcript, '/t.jsonl');
+  const invocation = hook({ cwd: dir }, 'PreInvocation', 'relative', {
+    transcriptPath: '/t.jsonl',
+  });
+  const asked = JSON.parse(invocation.stdout).injectSteps;
+  assert.equal(asked.length, 1);
+  assert.doesNotMatch(asked[0].ephemeralMessage, new RegExp(PRE_TOKEN));
+
+  const logged = records(join(dir, LOG_NAME));
+  assert.equal(logged[0].payload.toolCall.args.Path, '/w/a.txt');
+  assert.equal(logged[0].wroteTo, join(dir, LOG_NAME));
+  assert.equal(logged.find((r) => r.event === 'SessionStart').transcript, '/t.jsonl');
 });
 
 test('a log path the probe cannot write falls back to its folder, naming the refusal', (context) => {
@@ -195,6 +212,8 @@ test('the report answers each Phase 0 question from the records', () => {
         version: { command: 'agy --version', status: 0, output: '1.4.10' },
         'validate-review': { command: 'agy plugin validate', status: 0, output: 'ok' },
         'copilot-session': { command: 'copilot -p', status: 0, output: 'ok' },
+        'copilot-install-2': { command: 'copilot plugin install', status: 0, output: 'ok' },
+        'copilot-session-2': { command: 'copilot -p', status: 0, output: 'ok' },
         session: { command: 'agy -p', status: 0, output: 'Step 7: worked' },
       },
     },
@@ -219,10 +238,17 @@ test('the report answers each Phase 0 question from the records', () => {
         },
       },
       { ...at, kind: 'hook', event: 'CopilotSessionStart', via: 'hooks-dir', payload: {} },
+      {
+        ...at,
+        kind: 'hook',
+        event: 'CopilotSessionStart',
+        via: 'antigravity-hooks-dir',
+        payload: {},
+      },
       { ...at, kind: 'mcp', event: 'start', via: 'relative', argv: ['mcp', 'relative'] },
       { ...at, kind: 'mcp', event: 'roots/list result', via: 'relative', result: { roots: [] } },
     ],
-    transcripts: { checked: 1, hits: 1 },
+    transcripts: { checked: 1, hits: 1, preHits: 0 },
   });
   assert.match(markdown, /- The agy session \(`agy -p`\): exit 0\n\n```\nStep 7: worked/);
   assert.match(markdown, /\| SessionStart \| 1 \| 1 \|/);
@@ -230,9 +256,14 @@ test('the report answers each Phase 0 question from the records', () => {
   assert.match(markdown, /A relative command \(`\.\/probe\.mjs`\) resolves: yes/);
   assert.match(markdown, /Refused before that: `\/repo\/\.agy-probe\/log\.jsonl \(EPERM\)`/);
   assert.match(markdown, /\| `write_to_file` \| PreToolUse \| TargetFile, CodeContent \|/);
-  assert.match(markdown, /reached the model: yes/);
+  assert.match(markdown, /injectSteps from SessionStart reached the model: yes/);
+  assert.match(markdown, /injectSteps from PreInvocation reached the model: no/);
   assert.match(markdown, /Root `hooks\.json` ran: no/);
   assert.match(markdown, /`hooks\/hooks\.json` ran: yes/);
+  assert.match(
+    markdown,
+    /With an Antigravity-format root `hooks\.json`, `hooks\/hooks\.json` ran: yes/,
+  );
   assert.match(markdown, /Result of `roots\/list`/);
   assert.match(markdown, /\$\{PLUGIN_ROOT\}` expands in `args`: no/);
   assert.match(markdown, /a bare script name resolves: yes/);

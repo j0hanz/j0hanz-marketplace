@@ -4,10 +4,12 @@
 //   node scripts/agy-probe/phase0.mjs setup [--home-test]
 //       version, `agy plugin validate` on four of our plugins, an install from this repo's
 //       GitHub folder, the agy-probe plugin installed, Copilot's hooks-file check when
-//       `copilot` is on PATH, one headless agy session (`agy -p`) that exercises the probe,
-//       and css installed, read back and uninstalled to see what agy's conversion of a Claude
-//       Code plugin makes of its hooks. --home-test also tries an install under a throwaway
-//       HOME; with no sign-in there, agy may open a browser.
+//       `copilot` is on PATH (both files in Copilot's format, then an Antigravity-format root
+//       `hooks.json` beside Copilot's `hooks/hooks.json`), one headless agy session (`agy -p`)
+//       whose PreToolUse answers allow so tools run and PostToolUse can fire, and css
+//       installed, read back and uninstalled to see what agy's conversion of a Claude Code
+//       plugin makes of its hooks. --home-test also tries an install under a throwaway HOME;
+//       with no sign-in there, agy may open a browser.
 //   node scripts/agy-probe/phase0.mjs report
 //       writes .agy-probe/report.md, the one file to paste back.
 //   node scripts/agy-probe/phase0.mjs clean [--force]
@@ -32,6 +34,7 @@ import {
   LOG_NAME,
   mcpConfig,
   posix,
+  PRE_TOKEN,
   report,
   TMP_LOG_NAME,
   TOKEN,
@@ -134,13 +137,23 @@ function writeProbePlugin() {
 }
 
 // Copilot reads `hooks.json` or `hooks/hooks.json` at a plugin root, and its docs do not say
-// which wins. A plugin with both, each naming itself, installed under a throwaway home.
+// which wins. The first plugin carries both in Copilot's format, each naming itself. The
+// second carries what Phase 2 would ship: an Antigravity-format root `hooks.json` beside
+// Copilot's `hooks/hooks.json`. Whether Copilot still runs its hooks beside the foreign file
+// decides where Antigravity's hooks can live.
 function writeCopilotProbe(paths) {
   const market = join(DIR, 'copilot-market');
   writeJson(join(market, '.claude-plugin', 'marketplace.json'), {
     name: 'agy-probe-market',
     owner: { name: 'agy-probe' },
-    plugins: [{ name: 'hooks-probe', source: './hooks-probe', description: 'Hooks-file check' }],
+    plugins: [
+      { name: 'hooks-probe', source: './hooks-probe', description: 'Hooks-file check' },
+      {
+        name: 'antigravity-root',
+        source: './antigravity-root',
+        description: 'Antigravity hooks.json under Copilot',
+      },
+    ],
   });
   const plugin = join(market, 'hooks-probe');
   writeJson(join(plugin, '.claude-plugin', 'plugin.json'), {
@@ -150,6 +163,14 @@ function writeCopilotProbe(paths) {
   });
   writeJson(join(plugin, 'hooks.json'), copilotHooks(paths, 'root-hooks.json'));
   writeJson(join(plugin, 'hooks', 'hooks.json'), copilotHooks(paths, 'hooks-dir'));
+  const antigravity = join(market, 'antigravity-root');
+  writeJson(join(antigravity, '.claude-plugin', 'plugin.json'), {
+    name: 'antigravity-root',
+    version: '0.0.0',
+    description: 'An Antigravity-format root hooks.json under Copilot CLI (plan 014, Phase 0).',
+  });
+  writeJson(join(antigravity, 'hooks.json'), hooksConfig(paths));
+  writeJson(join(antigravity, 'hooks', 'hooks.json'), copilotHooks(paths, 'antigravity-hooks-dir'));
   return market;
 }
 
@@ -234,6 +255,20 @@ function setup(args) {
     step(
       'copilot-session',
       'copilot -p (hooks probe session)',
+      'copilot',
+      ['-p', quote('Reply with the word ok.')],
+      { env },
+    );
+    step(
+      'copilot-install-2',
+      'copilot plugin install antigravity-root',
+      'copilot',
+      ['plugin', 'install', 'antigravity-root@agy-probe-market'],
+      { env },
+    );
+    step(
+      'copilot-session-2',
+      'copilot -p (antigravity-root session)',
       'copilot',
       ['-p', quote('Reply with the word ok.')],
       { env },
@@ -333,11 +368,10 @@ function writeReport() {
   }
   const records = readRecords();
   const paths = [...new Set(records.map((r) => r.transcript).filter(Boolean))].filter(existsSync);
-  const hits = paths.reduce((n, path) => n + readFileSync(path, 'utf8').split(TOKEN).length - 1, 0);
-  writeFileSync(
-    REPORT,
-    report({ state: readJson(STATE), records, transcripts: { checked: paths.length, hits } }),
-  );
+  const count = (token) =>
+    paths.reduce((n, path) => n + readFileSync(path, 'utf8').split(token).length - 1, 0);
+  const transcripts = { checked: paths.length, hits: count(TOKEN), preHits: count(PRE_TOKEN) };
+  writeFileSync(REPORT, report({ state: readJson(STATE), records, transcripts }));
   say(`Wrote ${REPORT}. Paste the whole file back. Then: ${self('clean')}`);
 }
 

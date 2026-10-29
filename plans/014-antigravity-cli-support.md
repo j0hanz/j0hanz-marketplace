@@ -105,10 +105,12 @@ GitHub to see what agy's conversion makes of a Claude Code plugin with hooks, re
 files back and uninstalls it. `setup --home-test` adds question 6; with no sign-in in that
 home, agy may open a browser.
 
-The probe plugin registers every hook event, answers `{}` (a SessionStart request aside),
-and logs each payload with long strings cut and credential-like variables hidden. Each line
-goes to the repo log, else the folder the probe runs in, else the temp folder, and says
-which paths refused it. It stays installed until `clean`. So `setup` refuses while an
+The probe plugin registers every hook event, answers `{}` except an `allow` decision at
+PreToolUse (an empty answer denies the tool in agy) and one token ask each at SessionStart and
+PreInvocation, and logs each payload with long strings cut and credential-like variables
+hidden. Each line goes to the repo log, else the folder the probe runs in, else the temp
+folder, and says which paths refused it. It stays installed until `clean`; agy runs its hooks
+from the installed copy under `~/.gemini/config/plugins/`, never from `.agy-probe/`. So `setup` refuses while an
 earlier run's folder is there, and `clean` removes it only once a successful
 `agy plugin list --json` no longer names the plugin (`clean --force` if agy itself is gone).
 
@@ -167,6 +169,69 @@ Copilot, from the run 1 log: a plugin hook gets `CLAUDE_PLUGIN_ROOT`, `COPILOT_P
 SessionStart payload is `{hook_event_name, session_id, timestamp, cwd, source: "new",
 initial_prompt}`.
 
+Run 3, 2026-10-29, same machine, kit from PR #10: the headless session ran (`agy -p`, exit 0)
+and the hooks fired, which settles runs 1-2's silence.
+
+1. Reconfirmed: the subfolder URL installs review.
+2. Reconfirmed: exit 0 on notes and warnings (review validates clean, bar the missing-logo
+   note), exit 1 on errors (mcp-hub, css and tutor until they get manifests).
+3. **Hooks fire, from the installed copy** (`~/.gemini/config/plugins/agy-probe`), with that
+   folder as working directory; the log landed beside the probe there. **An absolute-path hook
+   command never runs**: 0 events in that form against 30 in the relative form. agy drops it,
+   and that is why runs 1-2 logged nothing: their hooks were absolute-form. `${PLUGIN_ROOT}`
+   stays unset for hooks; the one variable agy adds is `ANTIGRAVITY_CONVERSATION_ID`. Events
+   that fire: SessionStart, PreInvocation (per model step: 9 times for one user turn),
+   PreToolUse, PostInvocation, Stop (a `{}` at Stop does not continue: the session ended after
+   one Stop). **An empty answer `{}` denies the tool**: every step failed with "denied by the
+   pre-tool hook" while the probe answered `{}`, so a ported PreToolUse hook must always emit
+   an explicit decision. PostToolUse never fired, because every call was denied first.
+   `injectSteps` from SessionStart did not reach the model (token 0 times in the transcript).
+   The docs' file tools are not the hook's tool names: `write_file` `{Content, Overwrite,
+Path}`, `edit_file` `{Path, Target, Replacement}`, `read_file` `{Path}`, `run_command`
+   `{CommandLine, WaitMsBeforeAsync, toolSummary}`, `call_mcp_tool` `{ServerName, ToolName,
+Arguments}`, the server namespaced `<plugin>_<server>`. Payload keys beyond the docs:
+   `modelName`, `artifactDirectoryPath` (per-conversation folder under
+   `~/.gemini/antigravity-cli/brain/`), `stepIdx` on tool events, `initialNumSteps` and
+   `invocationNum` on the invocation events, `error`, `executionNum`, `fullyIdle` and
+   `terminationReason` on Stop.
+4. Reconfirmed under a fresh throwaway home: root `hooks.json` ran, `hooks/hooks.json` did not.
+   Still open: what Copilot makes of a root `hooks.json` in Antigravity's format, which is what
+   Phase 2 would ship beside Copilot's `hooks/hooks.json`. Run 4 tests it.
+5. **MCP servers get what hooks do not**: `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` are set and
+   expand in `args` and `env`, servers start in the installed plugin folder, and bare script
+   names resolve. The client declares `roots` with `listChanged` and answers `roots/list` with
+   the workspace. **Phase 3 has its way: the server can learn the project directory from
+   `roots/list`.**
+6. Not run (`--home-test` stays off this round: with no sign-in in that home, agy may open a
+   browser).
+7. **`agy plugin install` converts a Claude Code plugin without translating its hooks**: it
+   writes `plugin.json` (name, version, description, author as a string) and copies
+   `hooks/hooks.json` verbatim to a root `hooks.json`, `${CLAUDE_PLUGIN_ROOT}` and the
+   `powershell` twins left in, Antigravity's schema nowhere. The conversion installs skills
+   but cannot run the plugin's hooks, so Phase 2's ports remain.
+
+Run 4, 2026-10-29, same machine, with the probe answering allow at PreToolUse and asking at
+PreInvocation: everything still open above is settled, and no STOP condition occurred.
+
+3. **`{"decision": "allow"}` passes a tool call headless**: the session created, edited and
+   read probe.txt, called the MCP tool and loaded the skill, all in the fresh workspace, with
+   no approval prompts. (`run_command` failed inside agy's own sandbox on this machine,
+   `exebox: creating sandbox: CreateProcessSecurityEnvironment`; the hook had allowed it.)
+   **PostToolUse fires** after an allowed call, with the same `toolCall` payload plus an
+   `error` key (`""` on success). **PreInvocation's `injectSteps` reaches the model** (token
+   found once); SessionStart's still does not. There is no skill tool: the model read the
+   SKILL.md with `read_file`, so matchers need no skill name.
+4. **Copilot tolerates an Antigravity-format root `hooks.json`**: with one beside Copilot's
+   `hooks/hooks.json`, Copilot ran `hooks/hooks.json` and the session answered normally.
+   Claude Code's `--strict` validate passes with the root file present too. So Antigravity's
+   hooks live in a root `hooks.json` in Antigravity's schema, beside `hooks/hooks.json` for
+   Claude Code and Copilot: no `.github/plugin/` manifest and no conversion needed.
+5. A tool call reaches the server carrying `_meta` with
+   `antigravity.google/artifacts_dir`, `antigravity.google/conversation_id`,
+   `antigravity.google/root_conversation_id` and a `progressToken`.
+
+Phase 0 is complete; Phase 2 can start.
+
 ## Phase 2: port the hooks
 
 Order: frontend, writeup, workbench, tutor, css, mcp-hub. Each plugin lands alone, with
@@ -175,21 +240,30 @@ its manifest, so a half-ported plugin is never on Antigravity.
 1. Client shims (`hooks/client.mjs` in css, frontend, workbench, writeup;
    `client.cjs` in mcp-hub; the Copilot branch of tutor's `teach_hook.py`): a third
    branch, selected by a `--antigravity` argument that only the Antigravity `hooks.json`
-   commands pass (no documented environment variable; Phase 0 step 3 may supply one).
-   It maps `toolCall.name` onto the Claude names the scripts match on (`write_to_file` →
-   Write; `replace_file_content` and `multi_replace_file_content` → Edit; `view_file` →
-   Read; `run_command` → Bash), `toolCall.args` onto `filePath`/`written`/`replacement`
-   (`TargetFile`, `CodeContent`, `ReplacementContent` or each chunk of
-   `ReplacementChunks`), `conversationId` onto the session id and `workspacePaths[0]` onto
-   `cwd`. Answers: `deny` → `{decision: 'deny', reason}`,
-   `stopContext` → `{decision: 'continue', reason}`, `context` at `SessionStart` →
-   `injectSteps`.
+   commands pass (`ANTIGRAVITY_CONVERSATION_ID` also marks a hook, but the argument relies
+   on nothing undocumented). It maps `toolCall.name` onto the Claude names the scripts
+   match on (`write_file` → Write; `edit_file` → Edit; `read_file` → Read; `run_command` →
+   Bash; `multi_replace_file_content` → Edit, which the docs name and the probe's model
+   never used, so matchers take it on faith), `toolCall.args` onto `filePath`/`written`/`replacement` (`Path`, `Content`,
+   `Replacement`), `conversationId` onto the session id and `workspacePaths[0]` onto `cwd`.
+   Answers: every path that does not object answers `{decision: 'allow'}` (an empty answer
+   denies), objection → `{decision: 'deny', reason}`,
+   `stopContext` → `{decision: 'continue', reason}`, context → `injectSteps` from
+   `PreInvocation`; SessionStart's `injectSteps` never reaches the model, so a ported
+   SessionStart hook either moves its context to the first PreInvocation or stays out of
+   the Antigravity `hooks.json`.
 2. Findings after a write (css advice, writeup's scan, mcp-hub's post-tool check):
    `PostToolUse` has no context channel, so write them to a per-conversation state file
    and deliver them from a `PreInvocation` hook as an `ephemeralMessage`, then clear it.
+   Run 4 confirmed the channel reaches the model.
 3. workbench's prompt briefs (`UserPromptSubmit`, `UserPromptExpansion`):
-   `PreInvocation`, reading `lastUserInput`, once per user turn.
-4. Each plugin: a root `hooks.json` in Antigravity's schema; `npm run validate` clean;
+   `PreInvocation`, reading `lastUserInput`, once per user turn: PreInvocation fires per
+   model step (9 times for one prompt in the probe), so the state file must mark a brief
+   as delivered and skip the rest.
+4. Each plugin: a root `hooks.json` in Antigravity's schema, its commands relative
+   (`node ./hooks/<script> … --antigravity`: an absolute command never runs, and
+   `${PLUGIN_ROOT}` is unset for hooks), its matchers regexes over agy's tool names
+   (`write_file|edit_file`, not `Write|Edit`); `npm run validate` clean;
    `agy plugin validate` clean of errors; the probe session from Phase 0 repeated with the
    plugin installed.
 5. mcp-hub's three agents list Claude tools (`Read, Grep, Glob, Bash, Skill`). Give

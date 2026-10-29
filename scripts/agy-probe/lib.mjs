@@ -9,6 +9,12 @@ export const TOKEN_HEAD = 'PROBE-SESSIONSTART';
 export const TOKEN_TAIL = '7F3A';
 export const TOKEN = `${TOKEN_HEAD}-${TOKEN_TAIL}`;
 
+// The PreInvocation probe asks the same, with its own halves: Phase 2 plans to deliver
+// findings through PreInvocation, so its injectSteps must reach the model too.
+export const PRE_HEAD = 'PROBE-PREINVOCATION';
+export const PRE_TAIL = '9C2B';
+export const PRE_TOKEN = `${PRE_HEAD}-${PRE_TAIL}`;
+
 const LIMIT = 160;
 const isObject = (value) => value !== null && typeof value === 'object';
 
@@ -64,17 +70,21 @@ const FORMS = {
 const tail = (form, { log }) => (form === 'absolute' ? ` "${log}"` : '');
 
 export function hooksConfig(paths) {
-  const handler = (event, form) => ({
+  const handler = (event, form, answer) => ({
     type: 'command',
-    command: `${FORMS[form](paths)} hook ${event} ${form}${tail(form, paths)}`,
+    command: `${FORMS[form](paths)} hook ${event} ${form}${tail(form, paths)}${
+      answer ? ` ${answer}` : ''
+    }`,
     timeout: 10,
   });
   const both = (event) => Object.keys(FORMS).map((form) => handler(event, form));
-  // Matchers wrap tool events only; the other events take bare handlers.
+  // Matchers wrap tool events only; the other events take bare handlers. PreToolUse answers
+  // allow: an empty answer denies the tool in agy, and every call denied is a call whose
+  // PostToolUse never fires.
   return {
     'agy-probe': {
       SessionStart: both('SessionStart'),
-      PreToolUse: [{ matcher: '', hooks: [handler('PreToolUse', 'relative')] }],
+      PreToolUse: [{ matcher: '', hooks: [handler('PreToolUse', 'relative', 'allow')] }],
       PostToolUse: [{ matcher: '', hooks: both('PostToolUse') }],
       PreInvocation: [handler('PreInvocation', 'relative')],
       PostInvocation: [handler('PostInvocation', 'relative')],
@@ -116,6 +126,17 @@ const fence = (text, lang = '') => ['```' + lang, String(text ?? '').trim() || '
 const json = (value) => fence(JSON.stringify(value, null, 2), 'json');
 const yesNo = (value) => (value ? 'yes' : 'no');
 const unique = (values) => [...new Set(values)];
+
+// A token ask's verdict: found in a transcript means that channel's injectSteps reached the
+// model. `hits` counts the SessionStart token, `preHits` the PreInvocation one.
+const reach = (event, transcripts) => {
+  const hits = transcripts[event === 'SessionStart' ? 'hits' : 'preHits'] ?? 0;
+  return `- injectSteps from ${event} reached the model: ${
+    transcripts.checked
+      ? `${yesNo(hits > 0)} (token found ${hits} times in ${transcripts.checked} transcript(s))`
+      : 'unknown (no transcript found)'
+  }`;
+};
 
 const stepLines = (step, label) => {
   if (!step) return [`- ${label}: not run`];
@@ -202,7 +223,7 @@ function copilotSection(state, records) {
   const steps = state.steps ?? {};
   if (!steps['copilot-session']) return ['Not run: `copilot` was not on PATH.'];
   const fired = (via) => records.some((r) => r.event === 'CopilotSessionStart' && r.via === via);
-  return [
+  const lines = [
     `- Root \`hooks.json\` ran: ${yesNo(fired('root-hooks.json'))}`,
     `- \`hooks/hooks.json\` ran: ${yesNo(fired('hooks-dir'))}`,
     '',
@@ -212,6 +233,21 @@ function copilotSection(state, records) {
     '',
     ...stepLines(steps['copilot-session'], 'Session'),
   ];
+  if (steps['copilot-session-2']) {
+    lines.push(
+      '',
+      // What Phase 2 would ship: Antigravity's hooks at the root, Copilot's in hooks/, in one
+      // plugin. Whether Copilot still runs its hooks beside the foreign file decides that.
+      `- With an Antigravity-format root \`hooks.json\`, \`hooks/hooks.json\` ran: ${yesNo(
+        fired('antigravity-hooks-dir'),
+      )}`,
+      '',
+      ...stepLines(steps['copilot-install-2'], 'Install (antigravity-root)'),
+      '',
+      ...stepLines(steps['copilot-session-2'], 'Session (antigravity-root)'),
+    );
+  }
+  return lines;
 }
 
 function mcpSection(records) {
@@ -279,11 +315,8 @@ export function report({ state, records, transcripts }) {
     '',
     ...stepLines(steps.session, 'The agy session'),
     '',
-    `- injectSteps from SessionStart reached the model: ${
-      transcripts.checked
-        ? `${yesNo(transcripts.hits)} (token found ${transcripts.hits} times in ${transcripts.checked} transcript(s))`
-        : 'unknown (no transcript found)'
-    }`,
+    reach('SessionStart', transcripts),
+    reach('PreInvocation', transcripts),
     '',
     ...hookSection(records),
     '',
