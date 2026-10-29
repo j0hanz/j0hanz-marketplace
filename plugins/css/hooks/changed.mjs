@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { sessionId } from './client.mjs';
 
 const EXTS = 'css scss sass less js jsx cjs mjs ts tsx cts mts vue svelte astro html htm'.split(
   ' ',
@@ -20,8 +21,8 @@ export const MAX_FILES = 40;
 
 const slug = (v) => String(v ?? 'main').replace(/[^\w-]/g, '_');
 
-export const stateFile = (kind, { session_id } = {}) =>
-  join(tmpdir(), `css-pro-${kind}-${slug(session_id)}.txt`);
+export const stateFile = (kind, payload = {}) =>
+  join(tmpdir(), `css-pro-${kind}-${slug(sessionId(payload, 'main'))}.txt`);
 
 // The session mark is compared against file mtimes, which can lag the wall clock.
 const MTIME_SLACK_MS = 1000;

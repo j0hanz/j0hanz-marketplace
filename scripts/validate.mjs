@@ -58,6 +58,7 @@ const entries = (dir) => (existsSync(dir) ? readdirSync(dir, { withFileTypes: tr
 // here. Its loader also cuts a SKILL.md off at 24 KB.
 const ANTIGRAVITY_SKILL_BYTES = 24 * 1024;
 const antigravitySources = [];
+let canonicalClient = null;
 
 for (const { name, source } of catalog.plugins) {
   if (!NAME.test(name) || name.length > 64) fail(`${name}: not a kebab-case name of ≤ 64 chars`);
@@ -70,6 +71,21 @@ for (const { name, source } of catalog.plugins) {
   const claude = JSON.parse(readFileSync(manifest, 'utf8'));
   if (claude.name !== name) {
     fail(`${manifest}: name differs from the catalog entry ${name}`);
+  }
+  const clientCjs = join(source, 'hooks', 'client.cjs');
+  if (existsSync(clientCjs)) {
+    fail(`${clientCjs}: use hooks/client.mjs so all plugins share one client module`);
+  }
+  const clientMjs = join(source, 'hooks', 'client.mjs');
+  if (existsSync(clientMjs)) {
+    const body = readFileSync(clientMjs, 'utf8');
+    if (!canonicalClient) {
+      canonicalClient = { file: clientMjs, body };
+    } else if (body !== canonicalClient.body) {
+      fail(
+        `${clientMjs}: differs from ${canonicalClient.file} (hooks/client.mjs must stay identical across plugins)`,
+      );
+    }
   }
   const antigravity = join(source, '.antigravity-plugin', 'plugin.json');
   const ported = existsSync(antigravity) && JSON.parse(readFileSync(antigravity, 'utf8'));

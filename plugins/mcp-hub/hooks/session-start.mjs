@@ -1,9 +1,16 @@
-const fs = require('fs');
-const path = require('path');
-const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
-const { context, onCopilot } = require('./client.cjs');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { detectMcpProject, escapeContextText } from './mcp-project.mjs';
+import { context, onCopilot } from './client.mjs';
 
-const skillPath = path.join(__dirname, '..', 'skills', 'mcp-router', 'SKILL.md');
+const skillPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'skills',
+  'mcp-router',
+  'SKILL.md',
+);
 
 // Collected, then written once: Copilot reads SessionStart context only as one JSON object.
 const out = [];
@@ -60,4 +67,4 @@ function emitProjectProbe() {
 
 emitRouter();
 emitProjectProbe();
-process.stdout.write(context('SessionStart', out.join('')));
+process.stdout.write(context('SessionStart', out.join(''), { rawSessionStart: true }));

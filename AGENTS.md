@@ -15,7 +15,7 @@ npm run site:data     # rebuilds site/src/data/marketplace.json and rewrites REA
 
 ## Two clients
 
-- Hooks read their payload and write their answer through the plugin's `hooks/client.mjs` (`client.cjs` in mcp-hub): Copilot sends its own tool names (`create`, `edit`) and argument names (`path`, `file_text`, `new_str`), and takes flat `additionalContext` / `permissionDecision` fields, not `hookSpecificOutput`. `COPILOT_PLUGIN_ROOT` is set only under Copilot. Claude Code output must stay unchanged.
+- Hooks read their payload and write their answer through the plugin's `hooks/client.mjs` (kept identical across plugins by `npm run validate`): Copilot sends its own tool names (`create`, `edit`) and argument names (`path`, `file_text`, `new_str`), and takes flat `additionalContext` / `permissionDecision` fields, not `hookSpecificOutput`. `COPILOT_PLUGIN_ROOT` is set only under Copilot. Claude Code output must stay unchanged.
 - Hook stdout is one JSON document under Copilot; plain text is dropped. A `PreToolUse` hook that crashes or exits non-zero denies the tool in Copilot.
 - Tool matchers name both spellings (`Write|Edit|create|edit`, `Skill|skill`); `SessionStart` matchers include Copilot's `new`. Every `node` hook `command` has a `powershell` twin using `$env:CLAUDE_PLUGIN_ROOT`.
 - `SKILL.md` and agent frontmatter must be strict YAML — quote a `description` that contains `: `.

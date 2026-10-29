@@ -9,6 +9,7 @@ import {
   stateFile,
   STYLE_GLOBS,
 } from './changed.mjs';
+import { pass, workspace } from './client.mjs';
 
 function hasStyles(cwd) {
   const dir = cwd.replace(/\\/g, '/');
@@ -28,15 +29,17 @@ function baseline(cwd) {
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
   // A resumed session keeps its mark. Claude's matcher never sends one; Copilot may.
-  if (payload.source === 'resume') process.exit(0);
-  const cwd = payload.cwd || process.cwd();
+  if (payload.source === 'resume') {
+    process.stdout.write(pass());
+    process.exit(0);
+  }
+  const cwd = workspace(payload);
 
   try {
-    writeFileSync(
-      stateFile('session', { session_id: payload.session_id }),
-      hasStyles(cwd) ? baseline(cwd) : sessionStart(),
-    );
+    writeFileSync(stateFile('session', payload), hasStyles(cwd) ? baseline(cwd) : sessionStart());
   } catch {}
+  process.stdout.write(pass());
 } catch {
+  process.stdout.write(pass());
   process.exit(0);
 }

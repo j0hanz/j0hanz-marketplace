@@ -14,7 +14,7 @@ import {
   repoChanges,
   stateFile,
 } from './changed.mjs';
-import { stopContext } from './client.mjs';
+import { pass, stopContext, workspace } from './client.mjs';
 import { CUSTOM_PROPERTY_DECLARED } from './rules.mjs';
 import { blankStrings, LINE_COMMENT_LANGS, stripComments } from './strip.mjs';
 
@@ -153,21 +153,30 @@ export function undeclaredTokens({ cwd, root, git, added, said }) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const payload = JSON.parse((await text(process.stdin)) || '{}');
-    if (payload.stop_hook_active) process.exit(0);
+    if (payload.stop_hook_active) {
+      process.stdout.write(pass());
+      process.exit(0);
+    }
     let startedAt = NaN;
     let before = [];
     try {
       ({ startedAt, before } = parseSessionMark(
-        readFileSync(stateFile('session', { session_id: payload.session_id }), 'utf8'),
+        readFileSync(stateFile('session', payload), 'utf8'),
       ));
     } catch {}
-    if (!(startedAt > 0)) process.exit(0);
+    if (!(startedAt > 0)) {
+      process.stdout.write(pass());
+      process.exit(0);
+    }
 
-    const cwd = payload.cwd || process.cwd();
+    const cwd = workspace(payload);
     const { root, git, added, dropped } = repoChanges(cwd);
-    if (!root) process.exit(0);
+    if (!root) {
+      process.stdout.write(pass());
+      process.exit(0);
+    }
 
-    const ledger = stateFile('sweep', { session_id: payload.session_id });
+    const ledger = stateFile('sweep', payload);
     let said = new Set();
     try {
       said = new Set(readFileSync(ledger, 'utf8').split('\n'));
@@ -203,10 +212,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         appendFileSync(ledger, record.join('\n') + '\n');
       } catch {}
     }
-    if (!parts.length) process.exit(0);
+    if (!parts.length) {
+      process.stdout.write(pass());
+      process.exit(0);
+    }
 
     process.stdout.write(stopContext(payload.hook_event_name || 'Stop', parts.join('\n\n')));
   } catch {
+    process.stdout.write(pass());
     process.exit(0);
   }
 }

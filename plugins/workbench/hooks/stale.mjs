@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { projectRoot } from './effort.mjs';
-import { notice } from './client.mjs';
+import { notice, pass, sessionId } from './client.mjs';
 
 const SKIP = new Set(['node_modules', '.git', '.venv', '__pycache__']);
 // Claude Code caches under plugins/cache/, Copilot CLI under installed-plugins/.
@@ -62,18 +62,28 @@ const stalenessNote = (pluginRoot, project) => {
 
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
-  if (payload.stop_hook_active) process.exit(0);
-  const marker = join(tmpdir(), `workbench-stale-${slug(payload.session_id)}.txt`);
-  if (existsSync(marker)) process.exit(0);
+  if (payload.stop_hook_active) {
+    process.stdout.write(pass());
+    process.exit(0);
+  }
+  const marker = join(tmpdir(), `workbench-stale-${slug(sessionId(payload, 'main'))}.txt`);
+  if (existsSync(marker)) {
+    process.stdout.write(pass());
+    process.exit(0);
+  }
   const note = stalenessNote(
     process.env.COPILOT_PLUGIN_ROOT ?? process.env.CLAUDE_PLUGIN_ROOT,
     projectRoot(payload),
   );
-  if (!note) process.exit(0);
+  if (!note) {
+    process.stdout.write(pass());
+    process.exit(0);
+  }
   try {
     writeFileSync(marker, 'warned\n');
   } catch {}
   notice('Stop', note);
 } catch {
+  process.stdout.write(pass());
   process.exit(0);
 }

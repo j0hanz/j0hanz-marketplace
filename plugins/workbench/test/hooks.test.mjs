@@ -1,10 +1,23 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import {
+  allow,
+  context,
+  deny,
+  drainAdvisory,
+  parkAdvisory,
+  pass,
+  sessionId,
+  stopContext,
+  toolInput,
+  toolName,
+  workspace,
+} from '../hooks/client.mjs';
 
 const hook = (name) => fileURLToPath(new URL(`../hooks/${name}`, import.meta.url));
 
@@ -94,3 +107,74 @@ test('brief: Claude SessionStart keeps hookSpecificOutput', () =>
     assert.equal(out.hookEventName, 'SessionStart');
     assert.match(out.additionalContext, /^workbench effort directory/);
   }));
+
+test('client: all plugins with JS hooks carry byte-identical hooks/client.mjs and no client.cjs', () => {
+  const pluginsRoot = fileURLToPath(new URL('../..', import.meta.url));
+  const canonical = readFileSync(hook('client.mjs'), 'utf8');
+  let count = 0;
+  for (const entry of readdirSync(pluginsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const hooksDir = join(pluginsRoot, entry.name, 'hooks');
+    assert.equal(existsSync(join(hooksDir, 'client.cjs')), false, `${entry.name}/hooks/client.cjs`);
+    const clientMjs = join(hooksDir, 'client.mjs');
+    if (existsSync(clientMjs)) {
+      count++;
+      assert.equal(readFileSync(clientMjs, 'utf8'), canonical, `${entry.name}/hooks/client.mjs`);
+    }
+  }
+  assert.equal(count, 5);
+});
+
+test('client: envelope accessors and answers normalize Claude, Copilot, and Antigravity shapes', () => {
+  assert.equal(toolName({ tool_name: 'Write' }), 'Write');
+  assert.equal(toolName({ toolName: 'create' }), 'Write');
+  assert.equal(toolName({ toolCall: { name: 'write_file' } }), 'Write');
+  assert.equal(toolName({ toolCall: { name: 'run_command' } }), 'Bash');
+
+  assert.deepEqual(
+    toolInput({
+      toolCall: { args: { Path: 'a.md', Content: 'body', CommandLine: 'git status' } },
+    }),
+    {
+      filePath: 'a.md',
+      written: 'body',
+      replacement: undefined,
+      command: 'git status',
+      skill: undefined,
+    },
+  );
+  assert.equal(workspace({ workspacePaths: ['/tmp/ws'] }), '/tmp/ws');
+  assert.equal(sessionId({ conversationId: 'conv-1' }, 'fallback'), 'conv-1');
+  assert.equal(sessionId({}, 'fallback'), 'fallback');
+
+  const prevCopilot = process.env.COPILOT_PLUGIN_ROOT;
+  try {
+    delete process.env.COPILOT_PLUGIN_ROOT;
+    assert.equal(allow(), '');
+    assert.equal(pass(), '');
+    assert.equal(context('SessionStart', 'hello', { rawSessionStart: true }), 'hello');
+    assert.equal(
+      JSON.parse(stopContext('Stop', 'note')).hookSpecificOutput.additionalContext,
+      'note',
+    );
+    assert.equal(JSON.parse(deny('no')).hookSpecificOutput.permissionDecision, 'deny');
+
+    process.env.COPILOT_PLUGIN_ROOT = '/tmp/copilot';
+    assert.equal(
+      JSON.parse(context('SessionStart', 'hello', { rawSessionStart: true })).additionalContext,
+      'hello',
+    );
+    assert.deepEqual(JSON.parse(stopContext('Stop', 'note')), {
+      decision: 'block',
+      reason: 'note',
+    });
+    assert.equal(
+      JSON.parse(parkAdvisory('test-key', { session_id: 's1' }, 'adv')).additionalContext,
+      'adv',
+    );
+    assert.equal(drainAdvisory('test-key', { session_id: 's1' }), '{}');
+  } finally {
+    if (prevCopilot === undefined) delete process.env.COPILOT_PLUGIN_ROOT;
+    else process.env.COPILOT_PLUGIN_ROOT = prevCopilot;
+  }
+});

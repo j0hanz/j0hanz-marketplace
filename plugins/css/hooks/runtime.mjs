@@ -4,9 +4,20 @@ import { text } from 'node:stream/consumers';
 import { AUDITABLE, cap, MAX_BYTES, stateFile, STYLESHEET } from './changed.mjs';
 import { prepare } from './strip.mjs';
 import { ADVISE, BLOCK, DECLARATION, runRules, STYLE_MARKERS } from './rules.mjs';
-import { context, deny, notice, toolInput, toolName } from './client.mjs';
+import {
+  allow,
+  deny,
+  drainAdvisory,
+  notice,
+  parkAdvisory,
+  pass,
+  sessionId,
+  toolInput,
+  toolName,
+} from './client.mjs';
 
 const MODE = process.argv[2];
+const PLUGIN_KEY = 'css-pro-post';
 const ADVISORY_CAP = 3;
 const DEGRADED = '\0degraded';
 
@@ -48,13 +59,27 @@ const firedMessages = (rules, text, path, readFile) =>
 let payload = {};
 try {
   payload = JSON.parse((await text(process.stdin)) || '{}');
+  if (MODE === 'deliver') {
+    process.stdout.write(drainAdvisory(PLUGIN_KEY, payload));
+    process.exit(0);
+  }
+  const out = () => (MODE === 'pre' ? allow() : pass());
   const path = toolInput(payload).filePath;
-  if (!path || !AUDITABLE.test(path)) process.exit(0);
+  if (!path || !AUDITABLE.test(path)) {
+    process.stdout.write(out());
+    process.exit(0);
+  }
 
   const isSheet = STYLESHEET.test(path);
   const raw = addedText(payload);
-  if (!raw) process.exit(0);
-  if (!isSheet && !STYLE_MARKERS.test(raw) && !DECLARATION.test(raw)) process.exit(0);
+  if (!raw) {
+    process.stdout.write(out());
+    process.exit(0);
+  }
+  if (!isSheet && !STYLE_MARKERS.test(raw) && !DECLARATION.test(raw)) {
+    process.stdout.write(out());
+    process.exit(0);
+  }
 
   const added = prepare(raw, path).text;
 
@@ -98,6 +123,8 @@ try {
             'motion-craft the duration and easing values.',
         ),
       );
+    } else {
+      process.stdout.write(allow());
     }
   } else if (MODE === 'post') {
     const said = recall(ledger);
@@ -108,11 +135,14 @@ try {
       const { shown, note } = cap(advisories, ADVISORY_CAP, 'finding(s)');
       remember(ledger, advisories.map(key));
       process.stdout.write(
-        context(
-          'PostToolUse',
+        parkAdvisory(
+          PLUGIN_KEY,
+          payload,
           `css-pro on ${path}:\n` + shown.map((m) => `- ${m}`).join('\n') + note,
         ),
       );
+    } else {
+      process.stdout.write(pass());
     }
   }
 } catch (e) {
@@ -122,7 +152,7 @@ try {
       MODE === 'pre' ? 'PreToolUse' : 'PostToolUse',
       `css-pro: check skipped (${why}). Writes are not being blocked.`,
     );
-  if (payload.session_id) {
+  if (sessionId(payload)) {
     const ledger = stateFile('said', payload);
     if (!recall(ledger).has(DEGRADED)) {
       remember(ledger, [DEGRADED]);

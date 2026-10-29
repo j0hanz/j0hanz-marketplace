@@ -1,7 +1,7 @@
 import { text } from 'node:stream/consumers';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { ARTIFACT, CONVENTION, EFFORT_DIR, effortRoot, projectRoot, stemHome } from './effort.mjs';
-import { deny, notice, toolInput, toolName } from './client.mjs';
+import { allow, deny, notice, toolInput, toolName } from './client.mjs';
 
 const segmentsInside = (from, to) => {
   const rel = relative(from, to);
@@ -41,9 +41,15 @@ const misplacement = (filePath, project) => {
 
 try {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
-  if (toolName(payload) !== 'Write') process.exit(0);
+  if (toolName(payload) !== 'Write') {
+    process.stdout.write(allow());
+    process.exit(0);
+  }
   const verdict = misplacement(toolInput(payload).filePath, projectRoot(payload));
-  if (!verdict) process.exit(0);
+  if (!verdict) {
+    process.stdout.write(allow());
+    process.exit(0);
+  }
   process.stdout.write(deny(verdict.reason));
 } catch (e) {
   const why = String(e?.message ?? e).split('\n')[0];

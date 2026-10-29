@@ -1,9 +1,18 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { detectMcpProject, escapeContextText } = require('./mcp-project.cjs');
-const { context, toolFilePath, toolName } = require('./client.cjs');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { detectMcpProject, escapeContextText } from './mcp-project.mjs';
+import {
+  drainAdvisory,
+  parkAdvisory,
+  pass,
+  sessionId,
+  toolInput,
+  toolName,
+  workspace,
+} from './client.mjs';
 
+const PLUGIN_KEY = 'mcp-hub-post';
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
 const V1_CONTAMINATION_PATTERNS = [
   /@modelcontextprotocol\/sdk(?![\w-])/,
@@ -56,8 +65,8 @@ function scanSourceFile(sourcePath, projectRoot) {
     .map((finding) => ({ ...finding, file: sourcePath, displayPath }));
 }
 
-function emitAdvisories(findings) {
-  if (findings.length === 0) return;
+function formatAdvisories(findings) {
+  if (findings.length === 0) return '';
   const advisories = findings.map((finding) => {
     const rule = ADVISORY_RULES[finding.rule];
     const location = finding.displayPath ? ` at ${finding.displayPath}:${finding.line}` : '';
@@ -66,23 +75,20 @@ function emitAdvisories(findings) {
   const content = advisories.join('\n');
   if (content.includes('</mcp-hub-drift>') || content.includes('<system-reminder')) {
     console.error('mcp-hub: refusing to emit drift content containing reserved sentinels');
-    return;
+    return '';
   }
 
-  // Reflex hooks must return this shape for advisory context to reach the agent.
-  const block = `<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`;
-  process.stdout.write(context('PostToolUse', block));
+  return `<mcp-hub-drift>\n${content}\n</mcp-hub-drift>`;
 }
 
 // Malformed stdin throws out to main()'s catch, which is also a silent no-op.
-function readPostToolUseInput() {
-  const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-  const filePath = toolFilePath(input);
+function readPostToolUseInput(input) {
+  const filePath = toolInput(input).filePath;
   const tool = toolName(input);
   if (typeof filePath !== 'string' || (tool !== 'Write' && tool !== 'Edit')) {
     return null;
   }
-  return { filePath, sessionId: input.session_id };
+  return { filePath, sessionId: sessionId(input) };
 }
 
 function resolveProjectSourceFile(filePath, projectRoot) {
@@ -104,14 +110,14 @@ function resolveProjectSourceFile(filePath, projectRoot) {
 
 // Returns null for an unusable session id; the caller branches on the path.
 // The store lives in os.tmpdir() and is left for the OS to reap.
-function storePath(sessionId) {
-  if (typeof sessionId !== 'string' || sessionId.length === 0) return null;
-  const safeId = sessionId.replace(/[^A-Za-z0-9_-]/g, '_');
+function storePath(id) {
+  if (typeof id !== 'string' || id.length === 0) return null;
+  const safeId = id.replace(/[^A-Za-z0-9_-]/g, '_');
   return path.join(os.tmpdir(), `mcp-hub-drift-${safeId}.json`);
 }
 
-function dedupeFindings(findings, sessionId) {
-  const storeFile = storePath(sessionId);
+function dedupeFindings(findings, id) {
+  const storeFile = storePath(id);
   if (!storeFile) return findings;
   let storedKeys = [];
   try {
@@ -134,27 +140,46 @@ function dedupeFindings(findings, sessionId) {
 }
 
 function main() {
-  const event = readPostToolUseInput();
-  if (!event) return;
-  const { filePath, sessionId } = event;
+  const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+  if (process.argv[2] === 'deliver') {
+    process.stdout.write(drainAdvisory(PLUGIN_KEY, input));
+    return;
+  }
+  const event = readPostToolUseInput(input);
+  if (!event) {
+    process.stdout.write(pass());
+    return;
+  }
+  const { filePath, sessionId: id } = event;
 
-  const projectRoot = process.cwd();
+  const projectRoot = workspace(input);
   const sourcePath = resolveProjectSourceFile(filePath, projectRoot);
-  if (!sourcePath || !SOURCE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) return;
+  if (!sourcePath || !SOURCE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) {
+    process.stdout.write(pass());
+    return;
+  }
   const { hasV1, v2Packages } = detectMcpProject(projectRoot, path.dirname(sourcePath));
-  if (!hasV1 && v2Packages.length === 0) return;
+  if (!hasV1 && v2Packages.length === 0) {
+    process.stdout.write(pass());
+    return;
+  }
 
   const findings = scanSourceFile(sourcePath, projectRoot);
   if (!fs.existsSync(path.join(projectRoot, 'docs', 'mcp-decisions.md'))) {
     findings.push({ rule: 'R7' });
   }
-  if (findings.length === 0) return;
+  if (findings.length === 0) {
+    process.stdout.write(pass());
+    return;
+  }
 
-  emitAdvisories(dedupeFindings(findings, sessionId));
+  const block = formatAdvisories(dedupeFindings(findings, id));
+  process.stdout.write(parkAdvisory(PLUGIN_KEY, input, block));
 }
 
 try {
   main();
 } catch {
+  process.stdout.write(pass());
   // An advisory hook must never block the edit that triggered it.
 }

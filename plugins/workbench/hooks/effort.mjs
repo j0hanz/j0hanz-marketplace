@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { workspace } from './client.mjs';
 
 export const EFFORT_DIR = /^\d{4}-\d{2}-\d{2}-/;
 
@@ -11,8 +12,7 @@ export const CONVENTION =
   'docs/plan/YYYY-MM-DD-<name>/ holds <name>.spec.md, <name>.plan.md, <name>.run.md, ' +
   '<name>.verify.md and the rest of the set';
 
-export const projectRoot = (payload = {}) =>
-  process.env.CLAUDE_PROJECT_DIR || payload.cwd || process.cwd();
+export const projectRoot = (payload = {}) => workspace(payload);
 
 export const effortRoot = (project) => join(project, 'docs', 'plan');
 

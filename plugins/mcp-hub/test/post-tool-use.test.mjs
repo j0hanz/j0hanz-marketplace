@@ -20,7 +20,7 @@ import test from 'node:test';
 // `type:module` parent). Mirrors test/session-start.test.mjs.
 const HOOKS_DIR = fileURLToPath(new URL('../hooks/', import.meta.url));
 
-// Mirrors storePath() in post-tool-use.cjs.
+// Mirrors storePath() in post-tool-use.mjs.
 const storePath = (sessionId) =>
   join(tmpdir(), `mcp-hub-drift-${sessionId.replace(/[^A-Za-z0-9_-]/g, '_')}.json`);
 
@@ -35,8 +35,8 @@ const REACT_PKG = JSON.stringify({ dependencies: { react: '1.0.0' } });
 
 const makeHook = () => {
   const root = mkdtempSync(join(tmpdir(), 'mcphub-drift-'));
-  // Copies the whole hooks/ dir (not just post-tool-use.cjs) so the sibling
-  // mcp-project.cjs module it requires travels with it.
+  // Copies the whole hooks/ dir (not just post-tool-use.mjs) so the sibling
+  // mcp-project.mjs module it imports travels with it.
   cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };
@@ -64,7 +64,7 @@ const payload = (filePath, sessionId = 's1', toolName = 'Write') => ({
 });
 
 const run = (hookRoot, cwd, pl, env = {}) => {
-  const r = spawnSync(process.execPath, [join(hookRoot, 'hooks', 'post-tool-use.cjs')], {
+  const r = spawnSync(process.execPath, [join(hookRoot, 'hooks', 'post-tool-use.mjs')], {
     cwd,
     encoding: 'utf8',
     input: pl == null ? '' : typeof pl === 'string' ? pl : JSON.stringify(pl),

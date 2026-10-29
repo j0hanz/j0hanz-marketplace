@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cjs\"",
-            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/session-start.cjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/session-start.mjs\"",
             "timeout": 5
           }
         ]
@@ -19,8 +19,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.cjs\"",
-            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/post-tool-use.cjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.mjs\"",
+            "powershell": "node \"$env:CLAUDE_PLUGIN_ROOT/hooks/post-tool-use.mjs\"",
             "timeout": 5
           }
         ]

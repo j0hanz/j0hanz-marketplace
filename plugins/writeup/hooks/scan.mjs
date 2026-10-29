@@ -12,16 +12,12 @@
 //         hook that answers injectSteps and clears the file.
 // fails:  any parse or read error -> exit 0, no output; never blocks
 // verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
-import { basename, join, resolve } from 'node:path';
-import { appendFileSync, readFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { basename, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { text as readText } from 'node:stream/consumers';
-import { context, onAntigravity, toolInput, toolName } from './client.mjs';
+import { drainAdvisory, parkAdvisory, pass, toolInput, toolName, workspace } from './client.mjs';
 
-// Antigravity's PostToolUse findings wait here until the PreInvocation deliver pass reads
-// and clears them, keyed by the conversation.
-const stateFile = (id) =>
-  join(tmpdir(), `writeup-unslop-${String(id ?? '').replace(/[^\w-]/g, '_')}.txt`);
+const PLUGIN_KEY = 'writeup-unslop';
 
 const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
 
@@ -183,7 +179,7 @@ export const targets = (payload) => {
       const found = commandKind(words);
       if (!found) return [];
       const [kind, name] = found;
-      const msg = messageFile(words, payload.cwd ?? payload.workspacePaths?.[0]);
+      const msg = messageFile(words, workspace(payload));
       return [msg ? { kind, name: `${name} (${msg.file})`, text: msg.text } : { kind, name, text }];
     });
   }
@@ -205,32 +201,16 @@ if (basename(process.argv[1] ?? '') === 'scan.mjs') {
   try {
     const payload = JSON.parse((await readText(process.stdin)) || '{}');
     if (process.argv[2] === 'deliver') {
-      // Antigravity's PreInvocation pass: findings waiting for this conversation go out as
-      // one ephemeral step, and the state file is spent either way.
-      const file = stateFile(payload.conversationId);
-      let notes = '';
-      try {
-        notes = readFileSync(file, 'utf8');
-        unlinkSync(file);
-      } catch {
-        // nothing waiting
-      }
-      process.stdout.write(notes ? context('PreInvocation', notes.trim()) : '{}');
+      process.stdout.write(drainAdvisory(PLUGIN_KEY, payload));
     } else {
       const blocks = targets(payload).flatMap((t) => {
         const hits = findSlop(t.text);
         return hits.length ? [message(t, hits)] : [];
       });
-      if (onAntigravity()) {
-        if (blocks.length)
-          appendFileSync(stateFile(payload.conversationId), `${blocks.join('\n\n')}\n\n`);
-        process.stdout.write('{}');
-      } else if (blocks.length) {
-        process.stdout.write(context('PostToolUse', blocks.join('\n\n')));
-      }
+      process.stdout.write(parkAdvisory(PLUGIN_KEY, payload, blocks.join('\n\n')));
     }
   } catch {
-    if (onAntigravity()) process.stdout.write('{}');
+    process.stdout.write(pass());
     // fail open: never block a tool on a reflective hook
   }
 }

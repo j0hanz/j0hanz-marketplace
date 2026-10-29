@@ -29,15 +29,15 @@ const makeFixture = (skillContent) => {
   mkdirSync(join(root, 'skills', 'mcp-router'), { recursive: true });
   if (skillContent !== null)
     writeFileSync(join(root, 'skills', 'mcp-router', 'SKILL.md'), skillContent);
-  // Copies the whole hooks/ dir (not just session-start.cjs) so the sibling
-  // mcp-project.cjs module it requires travels with it into the fixture.
+  // Copies the whole hooks/ dir (not just session-start.mjs) so the sibling
+  // mcp-project.mjs module it imports travels with it into the fixture.
   cpSync(HOOKS_DIR, join(root, 'hooks'), { recursive: true });
   return root;
 };
 
 // Run the hook with cwd set to `cwd`, return { stdout, stderr }.
 const run = (fixtureRoot, cwd, env = {}) => {
-  const r = spawnSync(process.execPath, [join(fixtureRoot, 'hooks', 'session-start.cjs')], {
+  const r = spawnSync(process.execPath, [join(fixtureRoot, 'hooks', 'session-start.mjs')], {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, COPILOT_PLUGIN_ROOT: '', ...env },

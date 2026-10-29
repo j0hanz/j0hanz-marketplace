@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 const MCP_PACKAGE_PREFIX = '@modelcontextprotocol/';
 const V1_PACKAGE = '@modelcontextprotocol/sdk';
@@ -9,7 +9,7 @@ const TOOLING_PACKAGES = new Set([
 ]);
 const CONTEXT_UNSAFE_PATTERN = /[<>&\u0000-\u001F]/g;
 
-function escapeContextText(content) {
+export function escapeContextText(content) {
   return content.replace(
     CONTEXT_UNSAFE_PATTERN,
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
@@ -27,7 +27,7 @@ function findNearestPackageJson(startDir, projectRoot) {
   }
 }
 
-function detectMcpProject(cwd, startDir = cwd) {
+export function detectMcpProject(cwd, startDir = cwd) {
   const manifestPath = findNearestPackageJson(startDir, cwd);
   if (!manifestPath) return { hasV1: false, v2Packages: [] };
   const packageJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8').trimStart());
@@ -44,5 +44,3 @@ function detectMcpProject(cwd, startDir = cwd) {
   );
   return { hasV1, v2Packages };
 }
-
-module.exports = { detectMcpProject, escapeContextText };
