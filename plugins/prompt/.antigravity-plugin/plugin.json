@@ -1,0 +1,11 @@
+{
+  "name": "prompt",
+  "version": "1.1.1",
+  "description": "Rewrites a rough, half-formed prompt into one that works on current Claude models.",
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/prompt",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace"
+}

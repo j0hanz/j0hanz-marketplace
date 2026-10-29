@@ -10,6 +10,17 @@ import { basename, dirname, join } from 'node:path';
 const OUT = 'site/src/data/marketplace.json';
 const README = 'README.md';
 
+// Antigravity CLI reads no catalog: it installs a plugin straight from its folder on GitHub,
+// and only once that folder carries an Antigravity manifest. So the file on disk, not a tag,
+// is what puts a plugin on Antigravity.
+const ANTIGRAVITY_MANIFEST = '.antigravity-plugin/plugin.json';
+
+// The one command per client that brings the whole catalog in. Antigravity has none.
+const addCommand = {
+  claude: (repo) => `/plugin marketplace add ${repo}`,
+  copilot: (repo) => `copilot plugin marketplace add ${repo}`,
+};
+
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
 // site.ts carries the same rule for the page. Not shared: importing across the
@@ -148,6 +159,16 @@ export function build() {
     if (!entry.category) {
       throw new Error(`Plugin "${manifest.name}" has no category in its catalog entry.`);
     }
+    // No manifest `homepage` override: a hardcoded one is this same URL until the repo is
+    // forked or renamed, and then it is the one card still pointing at the old place.
+    const folder = `https://github.com/${repo}/tree/main/${root.replace(/^\.\//, '')}`;
+    const claudeOnly = entry.tags?.includes('claude-code-only') ?? false;
+    const ported = existsSync(join(root, ANTIGRAVITY_MANIFEST));
+    if (claudeOnly && ported) {
+      throw new Error(
+        `Plugin "${manifest.name}" is tagged claude-code-only but carries ${ANTIGRAVITY_MANIFEST}.`,
+      );
+    }
     return {
       name: manifest.name,
       displayName: manifest.displayName || manifest.name,
@@ -155,15 +176,14 @@ export function build() {
       category: entry.category,
       // Catalog line is the one-breath pitch, and the only prose the cards show.
       summary: entry.description ?? '',
-      // No manifest `homepage` override: a hardcoded one is this same URL until the repo is
-      // forked or renamed, and then it is the one card still pointing at the old place.
-      homepage: `https://github.com/${repo}/tree/main/${root.replace(/^\.\//, '')}`,
-      installCommand: `/plugin install ${manifest.name}@${catalog.name}`,
-      // Same catalog, second client. A `claude-code-only` tag marks a plugin that installs
-      // under Copilot CLI but has nothing to do there, so it gets no Copilot line.
-      copilotInstallCommand: entry.tags?.includes('claude-code-only')
-        ? null
-        : `copilot plugin install ${manifest.name}@${catalog.name}`,
+      homepage: folder,
+      // One line per client, null where the plugin does not run. A `claude-code-only` tag
+      // marks a plugin that installs under Copilot CLI but has nothing to do there.
+      installs: {
+        claude: `/plugin install ${manifest.name}@${catalog.name}`,
+        copilot: claudeOnly ? null : `copilot plugin install ${manifest.name}@${catalog.name}`,
+        antigravity: ported ? `agy plugin install ${folder}` : null,
+      },
       hookEvents: readHookEvents(root),
       skills: readSkills(root, manifest.name),
       agents: readAgents(root),
@@ -186,25 +206,51 @@ export function build() {
     .join(', ');
   const tagline =
     `${capabilities ? `${capabilities} across ` : ''}` +
-    `${count(plugins.length, 'plugin')} for Claude Code and GitHub Copilot CLI. ` +
+    `${count(plugins.length, 'plugin')} for Claude Code, GitHub Copilot CLI and Antigravity CLI. ` +
     'Install one at a time, no build step.';
 
-  // The first command a visitor actually runs after `marketplace add`. Picked at build
-  // time, so the hero ships its install steps in one import, not a flatMap at render.
-  const mcpPlugin = plugins.find((plugin) => plugin.mcpServers.length > 0);
-  const example =
-    plugins
-      .flatMap((p) =>
-        p.skills.flatMap((s) => (s.command ? { install: p.installCommand, run: s.command } : [])),
-      )
-      .at(0) ?? (mcpPlugin ? { install: mcpPlugin.installCommand, run: '/mcp' } : null);
+  // The first commands a visitor actually runs, per client. Picked at build time, so the
+  // hero ships its install steps in one import, not a flatMap at render. Antigravity names a
+  // plugin's skills `/plugin:skill` as Claude Code does; Copilot lists them by bare name, so
+  // its steps stop at the install.
+  const firstSteps = (client, { run }) => {
+    const ready = plugins.filter((p) => p.installs[client]);
+    const mcpPlugin = ready.find((p) => p.mcpServers.length > 0);
+    const pick =
+      ready
+        .flatMap((p) =>
+          p.skills.flatMap((s) =>
+            s.command ? { install: p.installs[client], run: s.command } : [],
+          ),
+        )
+        .at(0) ?? (mcpPlugin ? { install: mcpPlugin.installs[client], run: '/mcp' } : null);
+    if (!pick) return [];
+    return [
+      { label: 'Install a plugin', value: pick.install },
+      ...(run
+        ? [{ label: pick.run === '/mcp' ? 'Check connection' : 'Run it', value: pick.run }]
+        : []),
+    ];
+  };
+  const steps = {
+    claude: [
+      { label: 'Add the marketplace', value: addCommand.claude(repo) },
+      ...firstSteps('claude', { run: true }),
+    ],
+    copilot: [
+      { label: 'Add the marketplace', value: addCommand.copilot(repo) },
+      ...firstSteps('copilot', { run: false }),
+    ],
+    antigravity: firstSteps('antigravity', { run: true }),
+  };
 
   return {
     name: catalog.name,
     // The catalog line names the marketplace; a <title> has to name what the page
     // is about first. Same words the hero opens with, so the tab and the headline
-    // agree. Marketplace name trails it as the brand.
-    pageTitle: `Plugins for Claude Code and GitHub Copilot · ${catalog.name}`,
+    // agree. Marketplace name trails it as the brand. The clients go unnamed here:
+    // three of them made a four-line headline, and the tagline names them all.
+    pageTitle: `Plugins for coding agents · ${catalog.name}`,
     // Counted rather than authored: the catalog is the description, and one that
     // is written by hand goes stale the first time a plugin ships a skill. Front
     // sentence carries the pitch, so a search engine clipping the tail only ever
@@ -215,11 +261,9 @@ export function build() {
     description: `${tagline} Categories: ${categories.join(', ')}.`,
     repo,
     repoUrl: `https://github.com/${repo}`,
-    addCommand: `/plugin marketplace add ${repo}`,
-    copilotAddCommand: `copilot plugin marketplace add ${repo}`,
     categories,
     plugins,
-    example,
+    steps,
   };
 }
 
@@ -260,9 +304,13 @@ const section = (plugin) =>
     .replace(/\n+$/, ''); // a plugin with no bullets (a mod) would end on a blank line
 
 const REGIONS = {
-  install: (site) => fence(site.plugins.map((p) => p.installCommand)),
+  install: (site) => fence(site.plugins.map((p) => p.installs.claude)),
   copilot: (site) =>
-    fence([site.copilotAddCommand, ...site.plugins.flatMap((p) => p.copilotInstallCommand ?? [])]),
+    fence([
+      addCommand.copilot(site.repo),
+      ...site.plugins.flatMap((p) => p.installs.copilot ?? []),
+    ]),
+  antigravity: (site) => fence(site.plugins.flatMap((p) => p.installs.antigravity ?? [])),
   plugins: (site) => site.plugins.map(section).join('\n\n'),
 };
 

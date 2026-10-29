@@ -15,10 +15,12 @@ import Typography from '@mui/material/Typography';
 import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
+import { clientName } from '../clients';
 import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '../icons';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
-import { countLabel, external, externalLabel, site, type Plugin } from '../site';
-import { accent, drawable, outline, RULE_WIDTH, srOnly, tag } from '../theme/tokens';
+import { type ClientId, countLabel, external, externalLabel, site, type Plugin } from '../site';
+import { accent, drawable, edge, outline, segmented, srOnly, tag } from '../theme/tokens';
+import { ClientPicker } from './ClientPicker';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
 import { RevealOnEnter } from './RevealOnEnter';
@@ -26,8 +28,9 @@ import { Section } from './Section';
 
 const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } };
 
-function PluginCard({ plugin }: { plugin: Plugin }) {
+function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
   const hooks = plugin.hookEvents.join(', ');
+  const command = plugin.installs[client];
   return (
     <Card
       variant="outlined"
@@ -98,15 +101,34 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
         </Stack>
       </CardContent>
 
-      <CardActions disableSpacing sx={{ position: 'relative', flexDirection: 'column', gap: 1 }}>
-        <Command value={plugin.installCommand} />
-        {plugin.copilotInstallCommand && <Command value={plugin.copilotInstallCommand} />}
+      <CardActions disableSpacing sx={{ position: 'relative', flexDirection: 'column' }}>
+        {/* Kept on the page rather than filtered out: a plugin the chosen client cannot
+            run is still worth knowing about, and the dashed bar holds the command's place. */}
+        {command ? (
+          <Command value={command} />
+        ) : (
+          <Typography
+            variant="caption"
+            color="textSecondary"
+            sx={{ alignSelf: 'stretch', px: 1.5, py: 1.5, border: `1px dashed ${edge}` }}
+          >
+            Not available in {clientName(client)}
+          </Typography>
+        )}
       </CardActions>
     </Card>
   );
 }
 
-export function Catalog({ filter }: { filter: CatalogFilter }) {
+export function Catalog({
+  filter,
+  client,
+  onClient,
+}: {
+  filter: CatalogFilter;
+  client: ClientId;
+  onClient: (next: ClientId) => void;
+}) {
   const { visible, category, setCategory, query, setQuery, reset } = filter;
   const searchInput = useRef<HTMLInputElement>(null);
   const pickCategory = (next: string) => {
@@ -172,29 +194,26 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           }}
           sx={{ width: 1, maxWidth: { md: 320 } }}
         />
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={category}
-          onChange={(_, next: string | null) => next && pickCategory(next)}
-          aria-label="Filter plugins by category"
-          sx={{
-            flexWrap: 'wrap',
-            gap: `${RULE_WIDTH}px`,
-            '& .MuiToggleButton-root': { px: 1.5 },
-            '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
-              ml: 0,
-              borderLeft: outline,
-            },
-          }}
-        >
-          <ToggleButton value={ALL}>All</ToggleButton>
-          {site.categories.map((name) => (
-            <ToggleButton key={name} value={name}>
-              {name}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        <Stack direction="row" useFlexGap spacing={2} sx={{ flexWrap: 'wrap' }}>
+          {/* The same choice the hero panel makes, here too so a reader deep in the
+              grid does not scroll back up to switch every card's command. */}
+          <ClientPicker value={client} onChange={onClient} />
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={category}
+            onChange={(_, next: string | null) => next && pickCategory(next)}
+            aria-label="Filter plugins by category"
+            sx={segmented}
+          >
+            <ToggleButton value={ALL}>All</ToggleButton>
+            {site.categories.map((name) => (
+              <ToggleButton key={name} value={name}>
+                {name}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       {visible.length === 0 ? (
@@ -218,7 +237,7 @@ export function Catalog({ filter }: { filter: CatalogFilter }) {
           <Grid container spacing={3}>
             {visible.map((plugin) => (
               <Grid key={plugin.name} size={{ xs: 12, sm: 6, lg: 4 }} data-reveal>
-                <PluginCard plugin={plugin} />
+                <PluginCard plugin={plugin} client={client} />
               </Grid>
             ))}
           </Grid>

@@ -16,6 +16,14 @@ export const rule = `${RULE_WIDTH}px solid ${steelVar}`;
 /** Object outline: cards, command bars, anything sitting inside a frame. */
 export const outline = `1px solid ${edge}`;
 
+/** A ToggleButtonGroup set as separate keys, the ground showing between them. */
+export const segmented = {
+  flexWrap: 'wrap',
+  gap: `${RULE_WIDTH}px`,
+  '& .MuiToggleButton-root': { px: 1.5 },
+  '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { ml: 0, borderLeft: outline },
+} as const;
+
 /** Amber edge marking a frame as live: current section, selected filter, open row. */
 const LIT_OFFSET = {
   top: `0 ${RULE_WIDTH}px`,

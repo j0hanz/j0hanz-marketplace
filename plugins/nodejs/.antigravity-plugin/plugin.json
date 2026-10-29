@@ -1,0 +1,11 @@
+{
+  "name": "nodejs",
+  "version": "0.3.0",
+  "description": "Node.js backend conventions and implementation patterns: framework selection, layered architecture, fail-fast validation, pooled transactions, a single error envelope, graceful drain, plus security and production hardening checklists.",
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/nodejs",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace"
+}

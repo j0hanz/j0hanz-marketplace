@@ -1,7 +1,7 @@
-// Validates the marketplace catalog and every plugin it lists, for both clients.
+// Validates the marketplace catalog and every plugin it lists, for each client.
 // Reads the catalog rather than a hardcoded list, so new plugins are covered
 // the moment they get an entry.
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -53,6 +53,12 @@ const frontmatter = (file) => {
 const names = catalog.plugins.map((p) => p.name);
 const entries = (dir) => (existsSync(dir) ? readdirSync(dir, { withFileTypes: true }) : []);
 
+// Antigravity CLI reads none of the above: it takes a plugin by its own manifest, and nothing
+// generates that file from the Claude one, so what both say about the plugin is held equal
+// here. Its loader also cuts a SKILL.md off at 24 KB.
+const ANTIGRAVITY_SKILL_BYTES = 24 * 1024;
+const antigravitySources = [];
+
 for (const { name, source } of catalog.plugins) {
   if (!NAME.test(name) || name.length > 64) fail(`${name}: not a kebab-case name of ≤ 64 chars`);
   if (typeof source !== 'string') continue;
@@ -61,12 +67,25 @@ for (const { name, source } of catalog.plugins) {
     fail(`${name}: no ${manifest}`);
     continue;
   }
-  if (JSON.parse(readFileSync(manifest, 'utf8')).name !== name) {
+  const claude = JSON.parse(readFileSync(manifest, 'utf8'));
+  if (claude.name !== name) {
     fail(`${manifest}: name differs from the catalog entry ${name}`);
+  }
+  const antigravity = join(source, '.antigravity-plugin', 'plugin.json');
+  const ported = existsSync(antigravity) && JSON.parse(readFileSync(antigravity, 'utf8'));
+  if (ported) {
+    antigravitySources.push(source);
+    for (const key of ['name', 'version', 'description']) {
+      if (ported[key] !== claude[key]) fail(`${antigravity}: ${key} differs from ${manifest}`);
+    }
   }
   for (const skill of entries(join(source, 'skills'))) {
     const file = join(source, 'skills', skill.name, 'SKILL.md');
-    if (skill.isDirectory() && existsSync(file)) frontmatter(file);
+    if (!skill.isDirectory() || !existsSync(file)) continue;
+    frontmatter(file);
+    if (ported && statSync(file).size > ANTIGRAVITY_SKILL_BYTES) {
+      fail(`${file}: over the 24 KB Antigravity CLI loads`);
+    }
   }
   for (const agent of entries(join(source, 'agents'))) {
     if (agent.isFile() && agent.name.endsWith('.md'))
@@ -115,6 +134,19 @@ if (onPath('copilot')) {
   }
 } else {
   console.log('copilot not on PATH: skipped the Copilot CLI install smoke test.');
+}
+
+// Antigravity CLI's own loader rules, through its validator, when it is installed. Not
+// --strict: that fails on the warnings it raises for every other client's files
+// (.claude-plugin/, hooks/hooks.json), which these plugins carry on purpose.
+if (onPath('agy')) {
+  for (const source of antigravitySources) {
+    if (run('agy', ['plugin', 'validate', `"${resolve(source)}"`]).status !== 0) {
+      fail(`agy plugin validate ${source}`);
+    }
+  }
+} else {
+  console.log('agy not on PATH: skipped Antigravity CLI validation.');
 }
 
 process.exit(failed ? 1 : 0);
