@@ -173,6 +173,41 @@ const later = (work: () => Promise<unknown>) => {
   return settled;
 };
 
+/** Ends the running turn. R34: the number is taken with the swap, before any await, so a call
+ * that lands while the turn ends is captured with the next number, matching the file it goes to. */
+async function takeTurn($: EngineInterface) {
+  const turn = buffer;
+  buffer = { calls: [], skills: [], context: null, apiTools: [] };
+  const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
+  const n = hasRecords ? ++turnNo : turnNo;
+  if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
+  return { turn, n, hasRecords };
+}
+
+/** R12: each call's next action, and the values the answer repeats from its result. */
+function labelTurn(
+  turn: Turn,
+  isRunning: (agent: string) => boolean,
+  answer: string | null,
+): Map<string, Done> {
+  const labels = labelCalls(
+    responses,
+    turn.calls.map((call) => ({
+      id: call.id,
+      tool: call.tool,
+      agent: call.agentId ?? 'main',
+      response: call.response,
+    })),
+    isRunning,
+  );
+  return new Map(
+    turn.calls.map((call) => [
+      call.id,
+      { next: labels[call.id] ?? 'aborted', used: usedInAnswer(call.text, answer) },
+    ]),
+  );
+}
+
 async function write($: EngineInterface, name: string, text: string) {
   try {
     if (!rootReady) {
@@ -1093,25 +1128,9 @@ export const register: Register = (on, options) => {
       // A call made after the last turn's end belongs to a turn that never completes;
       // write its records here or they are lost with the process (README, Logs).
       await settled;
-      const turn = buffer;
-      buffer = { calls: [], skills: [], context: null, apiTools: [] };
-      const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
-      const n = hasRecords ? ++turnNo : turnNo; // R34: taken with the swap, like turn.complete
-      if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
+      const { turn, n, hasRecords } = await takeTurn($);
       if (!hasRecords) return next(e);
-      const labels = labelCalls(
-        responses,
-        turn.calls.map((call) => ({
-          id: call.id,
-          tool: call.tool,
-          agent: call.agentId ?? 'main',
-          response: call.response,
-        })),
-        () => false, // the session is over: no agent is still running
-      );
-      const done = new Map(
-        turn.calls.map((call) => [call.id, { next: labels[call.id] ?? 'aborted', used: [] }]),
-      );
+      const done = labelTurn(turn, () => false, null); // the session is over: no agent is still running
       await safe(() => writeLogs($, turn, done, n));
     }
     return next(e);
@@ -1129,13 +1148,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     const r = await next(e);
     if (e.agentId !== undefined) return r;
-    const turn = buffer;
-    buffer = { calls: [], skills: [], context: null, apiTools: [] };
-    // R34: the number is taken with the swap, before any await, so a call that lands while this
-    // turn ends is captured with the next number, matching the file it goes to.
-    const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
-    const n = hasRecords ? ++turnNo : turnNo;
-    if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
+    const { turn, n } = await takeTurn($);
     // R1: MCP calls only, subagent calls included (R2); skills once each.
     const mcp = turn.calls.filter((call) => call.server !== null);
     const line = receipt({
@@ -1149,24 +1162,12 @@ export const register: Register = (on, options) => {
       const liveAgents = new Set(
         (listed ?? []).filter((agent) => agent.status === 'running').map((agent) => agent.id),
       );
-      const labels = labelCalls(
-        responses,
-        turn.calls.map((call) => ({
-          id: call.id,
-          tool: call.tool,
-          agent: call.agentId ?? 'main',
-          response: call.response,
-        })),
+      const done = labelTurn(
+        turn,
         // A list that failed says nothing about who stopped: every subagent then counts as
         // running, so its calls go `pending` and a later turn end settles them (R12 rule 2).
         (agent) => agent !== 'main' && (listed === undefined || liveAgents.has(agent)),
-      );
-      const answer = e.reason === 'answer' ? e.answer : null;
-      const done = new Map(
-        turn.calls.map((call) => [
-          call.id,
-          { next: labels[call.id] ?? 'aborted', used: usedInAnswer(call.text, answer) },
-        ]),
+        e.reason === 'answer' ? e.answer : null,
       );
       return { listed, liveAgents, done };
     });
