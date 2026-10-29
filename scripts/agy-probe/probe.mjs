@@ -1,16 +1,18 @@
 // Runs inside Antigravity CLI as every hook and MCP server of the agy-probe plugin (plan 014,
 // Phase 0), and inside Copilot CLI for the hooks-file check. It records what it was handed and
-// answers as little as it can: `{}` to every hook, except one SessionStart request that shows
-// whether injectSteps reaches the model. phase0.mjs copies it, with lib.mjs and the setup
-// shell's variable names (env-baseline.json), into the probe plugin.
+// answers as little as it can: `{}` to every hook, except SessionStart and PreInvocation, which
+// each ask the model to write a token (whether those asks reach the model is the open question),
+// and PreToolUse, which answers allow when its command says so: an empty answer denies the tool
+// in agy, and a denied call is a call whose PostToolUse never fires. phase0.mjs copies it, with
+// lib.mjs and the setup shell's variable names (env-baseline.json), into the probe plugin.
 //
-//   node probe.mjs hook <event> <form> [log]
+//   node probe.mjs hook <event> <form> [log] [allow]
 //   node probe.mjs mcp <form> [log] [extra args, recorded as given]
 import { appendFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { envOf, logTargets, shrink, TOKEN_HEAD, TOKEN_TAIL } from './lib.mjs';
+import { envOf, logTargets, PRE_HEAD, PRE_TAIL, shrink, TOKEN_HEAD, TOKEN_TAIL } from './lib.mjs';
 
 const [mode, ...rest] = process.argv.slice(2);
 
@@ -51,9 +53,11 @@ const record = (log, entry) => {
 };
 
 // A hook that crashes may deny the tool it guards, so every path ends in valid output.
-function hook([event, form, log]) {
+function hook([event, form, ...rest]) {
   let reply = {};
   try {
+    // The relative form carries no log path; `allow` is the only other word a command adds.
+    const log = rest.find((arg) => arg !== 'allow');
     const raw = readFileSync(0, 'utf8');
     let payload;
     try {
@@ -69,10 +73,31 @@ function hook([event, form, log]) {
       transcript: payload?.transcriptPath,
     });
     if (event === 'SessionStart' && form === 'relative') {
-      const ask =
-        `agy-probe check: in your next reply, write ${TOKEN_HEAD} followed by a hyphen ` +
-        `and ${TOKEN_TAIL}, as one word.`;
-      reply = { injectSteps: [{ ephemeralMessage: ask }] };
+      reply = {
+        injectSteps: [
+          {
+            ephemeralMessage:
+              `agy-probe check: in your next reply, write ${TOKEN_HEAD} followed by a hyphen ` +
+              `and ${TOKEN_TAIL}, as one word.`,
+          },
+        ],
+      };
+    }
+    // PreInvocation is the channel Phase 2 plans to deliver findings through, so its ask must
+    // reach the model too. It fires per model step, so the ask waits for the final summary.
+    if (event === 'PreInvocation') {
+      reply = {
+        injectSteps: [
+          {
+            ephemeralMessage:
+              `agy-probe check: in your final summary, write ${PRE_HEAD} followed by a hyphen ` +
+              `and ${PRE_TAIL}, as one word.`,
+          },
+        ],
+      };
+    }
+    if (event === 'PreToolUse' && rest.includes('allow')) {
+      reply = { decision: 'allow' };
     }
   } catch {
     reply = {};
