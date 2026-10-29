@@ -7,7 +7,7 @@
         "-y",
         "--prefix",
         "${CLAUDE_PLUGIN_ROOT}",
-        "@j0hanz/filesystem-mcp@2.11.0",
+        "@j0hanz/filesystem-mcp@2.12.0",
         "--allow-cwd",
         "--root-boundary",
         "."
