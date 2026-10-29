@@ -3,7 +3,7 @@ import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
-import { drawable, mono } from '../theme/tokens';
+import { drawable, mono, srOnly } from '../theme/tokens';
 import { RevealOnEnter } from './RevealOnEnter';
 
 export function Section({
@@ -44,10 +44,13 @@ export function Section({
           {count && (
             <Box
               component="span"
-              aria-label={count.label}
               sx={{ color: 'text.secondary', fontFamily: mono, fontSize: '1rem' }}
             >
-              {count.total}
+              {/* A role-less span drops its aria-label, so the label is text. */}
+              <span aria-hidden>{count.total}</span>
+              <Box component="span" sx={srOnly}>
+                {count.label}
+              </Box>
             </Box>
           )}
         </Stack>

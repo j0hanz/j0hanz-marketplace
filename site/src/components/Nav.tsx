@@ -123,8 +123,8 @@ export function Nav() {
             {site.name}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {/* The section links are the one navigation landmark on the page;
-                the theme and repo controls beside them are not part of it. */}
+            {/* The section links, and the menu that holds them on narrow screens,
+                are the one navigation landmark; the theme and repo controls are not. */}
             <Stack
               component="nav"
               aria-label="Sections"
@@ -150,6 +150,7 @@ export function Nav() {
                   {link.label}
                 </Button>
               ))}
+              <MobileMenu active={active} />
             </Stack>
             <ModeToggle />
             <IconButton
@@ -161,7 +162,6 @@ export function Nav() {
             >
               <GitHubIcon />
             </IconButton>
-            <MobileMenu active={active} />
           </Stack>
         </Toolbar>
       </Container>

@@ -154,7 +154,11 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                       <Entry key={skill.name} description={skill.description}>
                         {!skill.command && (
                           <Tooltip title={MODEL_LOADED}>
-                            <Tag tabIndex={0} aria-label={`model-loaded. ${MODEL_LOADED}`}>
+                            <Tag
+                              role="note"
+                              tabIndex={0}
+                              aria-label={`model-loaded. ${MODEL_LOADED}`}
+                            >
                               model-loaded
                             </Tag>
                           </Tooltip>

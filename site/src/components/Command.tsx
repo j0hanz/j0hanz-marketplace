@@ -63,7 +63,7 @@ export function Command({ value }: { value: string }) {
         </IconButton>
       </Tooltip>
       <Box component="span" role="status" aria-live="polite" sx={srOnly}>
-        {tip}
+        {status !== 'idle' && tip}
       </Box>
     </Paper>
   );

@@ -91,6 +91,7 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
               <Chip
                 size="small"
                 variant="outlined"
+                role="note"
                 tabIndex={0}
                 icon={<InfoIcon />}
                 label={countLabel(plugin.hookEvents.length, 'hook')}
