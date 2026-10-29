@@ -243,7 +243,8 @@ its manifest, so a half-ported plugin is never on Antigravity.
    commands pass (`ANTIGRAVITY_CONVERSATION_ID` also marks a hook, but the argument relies
    on nothing undocumented). It maps `toolCall.name` onto the Claude names the scripts
    match on (`write_file` → Write; `edit_file` → Edit; `read_file` → Read; `run_command` →
-   Bash), `toolCall.args` onto `filePath`/`written`/`replacement` (`Path`, `Content`,
+   Bash; `multi_replace_file_content` → Edit, which the docs name and the probe's model
+   never used, so matchers take it on faith), `toolCall.args` onto `filePath`/`written`/`replacement` (`Path`, `Content`,
    `Replacement`), `conversationId` onto the session id and `workspacePaths[0]` onto `cwd`.
    Answers: every path that does not object answers `{decision: 'allow'}` (an empty answer
    denies), objection → `{decision: 'deny', reason}`,
