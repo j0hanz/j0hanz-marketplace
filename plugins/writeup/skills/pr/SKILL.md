@@ -3,27 +3,27 @@ name: pr
 description: Use when writing or updating a pull request description, or before running `gh pr create`.
 ---
 
-**REQUIRED:** apply writeup:unslop to all prose, and writeup:show-me for every visual.
+**REQUIRED:** apply writeup:unslop to all prose, writeup:show-me for every visual.
 
 ## Description
 
-Read the branch diff (`git diff <base>...HEAD`) first. Describe each behavior by what triggers it and what it does, not what it guarantees or covers. A PR description has these parts, in this order:
+Read branch diff (`git diff <base>...HEAD`) first. Describe each behavior by trigger and effect, not guarantee or coverage. PR description parts, in order:
 
-1. **Summary line.** One sentence naming the behavior a user gets. Name no part, file or count. The PR title takes the same shape. Name any unrelated change on the branch in one more line.
-2. **Why.** The problem before the change, or what it unblocks, in 1 to 3 lines.
-3. **Visuals.** Made with writeup:show-me, following its "In a pull request" section.
-4. **Testing.** The command you ran and its result, in one or two lines. If you ran nothing, the section is exactly one line saying so and nothing else. In a template checklist, tick an item only for a command you ran.
-5. **Review focus.** Where a reviewer should look first, and what could break. Each item names a risk specific to this change's new behavior, not a test that covers it.
+1. **Summary line.** One sentence naming behavior user gets. No part, file or count. PR title same shape. Unrelated change on branch: one more line.
+2. **Why.** Problem before change, or what it unblocks, 1 to 3 lines.
+3. **Visuals.** Made with writeup:show-me, per its "In a pull request" section.
+4. **Testing.** Command run and result, one or two lines. Ran nothing: section is exactly one line saying so, nothing else. Template checklist: tick item only for command you ran.
+5. **Review focus.** Where reviewer look first, what could break. Each item names risk specific to this change's new behavior, not test covering it.
 
-If the repo has `.github/pull_request_template.md`, use its sections in order and keep its checklist. Put each part above in the template's closest section, visuals included. If the template has no place for review focus, add a short `## Review focus` section after its sections.
+Repo has `.github/pull_request_template.md`: use its sections in order, keep its checklist. Put each part above in template's closest section, visuals included. Template no place for review focus: add short `## Review focus` section after its sections.
 
 ## What to leave out
 
-The reviewer has the diff. Leave out, in prose and in visuals:
+Reviewer has diff. Leave out, in prose and visuals:
 
-- Code in prose: identifiers, string literals, regexes, flags and any number from the code.
-- Edits that follow from the change, such as a catalog entry, a generated region or a file list.
-- Conventions the repo's instructions file requires, even when this change first implements one: no review item, diagram note or feature line. Only a gap in how this change tests one, such as a path tested only by simulation, is a review item.
-- Claims the diff does not support, such as parts from other branches.
+- Code in prose: identifiers, string literals, regexes, flags, any number from code.
+- Edits following from change, e.g. catalog entry, generated region, file list.
+- Conventions repo's instructions file requires, even when this change first implements one: no review item, diagram note or feature line. Only gap in how this change tests one, e.g. path tested only by simulation, is review item.
+- Claims diff not support, e.g. parts from other branches.
 
-Done when the parts above appear in order, every number in the description is a test result or a fact about the problem, and every unrelated change on the branch has its line.
+Done when parts above appear in order, every number in description is test result or fact about problem, every unrelated change on branch has its line.
