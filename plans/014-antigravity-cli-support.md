@@ -126,7 +126,27 @@ The report answers, one section each:
 
 ### Phase 0 answers
 
-(none yet)
+Run 1, 2026-10-29: agy 1.4.10 on Windows. The agy session step was skipped, so the
+payloads, tool names, `injectSteps` and MCP answers (parts of 3, and 5) are still open.
+
+1. **Works.** `agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review`
+   clones the repo and installs review with its skill. The site's and README's lines stand.
+2. `agy plugin validate` exits 0 on notes and warnings and 1 on errors, so validate.mjs's
+   non-strict call is right. A plugin with no Antigravity manifest fails with "This looks
+   like a Claude Code plugin: `plugin install` converts it, but it doesn't load as is".
+   **`agy plugin install` converts Claude Code plugins.** What the conversion makes of
+   `hooks/hooks.json`, `.mcp.json` and agent `tools` is the next thing to see: if it
+   translates them, Phase 2 shrinks. A plugin with no `logo` gets a generic icon.
+3. From the validator alone: **`${PLUGIN_ROOT}` is not set for hook commands; hooks run
+   in the plugin folder**, so commands name scripts as `./hooks/<script>`.
+4. **Copilot runs the root `hooks.json` and skips `hooks/hooks.json`** when a plugin has
+   both. An Antigravity-format root `hooks.json` would replace every Copilot hook in that
+   plugin, so Phase 2 cannot put one there as planned. Ways out, untested: agy's
+   conversion (no root file needed at all), or a Copilot-only manifest
+   (`.github/plugin/plugin.json`, which Copilot reads before `.claude-plugin/`) whose
+   `hooks` field points back at `hooks/hooks.json`.
+5. Open.
+6. Not run.
 
 ## Phase 2: port the hooks
 
@@ -173,8 +193,8 @@ does not run mods.
 
 - `agy` rejects `tree/<branch>/<folder>` URLs: the site's and README's Antigravity lines
   are wrong; fix `scripts/build-site-data.mjs` first.
-- Copilot reads a root `hooks.json` (Phase 0 step 4) and no other location works for
-  Antigravity.
+- Copilot reads a root `hooks.json` (Phase 0 step 4: it does) and neither agy's
+  conversion nor a Copilot-only manifest gives Antigravity its hooks without one.
 - A probe shows `PreToolUse` input other than `toolCall {name, args}`.
 
 ## Done criteria
