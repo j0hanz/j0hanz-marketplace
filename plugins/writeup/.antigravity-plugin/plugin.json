@@ -1,6 +1,6 @@
 {
   "name": "writeup",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
   "author": {
     "name": "j0hanz",

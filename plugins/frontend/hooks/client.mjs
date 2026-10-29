@@ -2,7 +2,7 @@
 // payload envelope, tool names, argument names, and stdout schema, so hooks read their payload
 // and write their answer through here. Copied identically into every plugin that has JS hooks
 // (enforced by scripts/validate.mjs): a plugin installs alone.
-import { appendFileSync, readFileSync, unlinkSync } from 'node:fs';
+import { appendFileSync, readFileSync, renameSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -48,13 +48,19 @@ const asObject = (value) => {
 // Claude: Write {file_path, content}, Edit {file_path, new_string}, Bash {command}, Skill {skill}.
 // Copilot: create {path, file_text}, edit {path, new_str}, bash/powershell {command}, skill {skill}.
 // Antigravity: write_file {Path, Content}, edit_file {Path, Replacement}, run_command {CommandLine},
-// all inside toolCall.args.
+// multi_replace_file_content {TargetFile, ReplacementChunks[].ReplacementContent}, all inside
+// toolCall.args.
 export const toolInput = (payload = {}) => {
   const input = asObject(payload.tool_input ?? payload.toolArgs ?? payload.toolCall?.args);
+  const chunks = Array.isArray(input.ReplacementChunks)
+    ? input.ReplacementChunks.map((c) => c?.ReplacementContent)
+        .filter((c) => typeof c === 'string')
+        .join('\n')
+    : undefined;
   return {
-    filePath: input.file_path ?? input.path ?? input.Path,
+    filePath: input.file_path ?? input.path ?? input.Path ?? input.TargetFile,
     written: input.content ?? input.file_text ?? input.Content,
-    replacement: input.new_string ?? input.new_str ?? input.Replacement,
+    replacement: input.new_string ?? input.new_str ?? input.Replacement ?? chunks,
     command: input.command ?? input.CommandLine,
     skill: input.skill,
   };
@@ -160,9 +166,12 @@ export const parkAdvisory = (pluginKey, payload, text) => {
 
 // PreInvocation pass that delivers and clears advisories parked by parkAdvisory().
 export const drainAdvisory = (pluginKey, payload) => {
-  const file = advisoryFile(pluginKey, payload);
+  // Rename first: it is atomic, so an append lands before it or in a fresh file, never lost.
+  const parked = advisoryFile(pluginKey, payload);
+  const file = `${parked}.${process.pid}`;
   let notes = '';
   try {
+    renameSync(parked, file);
     notes = readFileSync(file, 'utf8');
     unlinkSync(file);
   } catch {

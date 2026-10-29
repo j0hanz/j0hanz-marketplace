@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -430,6 +438,64 @@ test('Antigravity: edit_file Replacement reads as an edit; a clean write leaves 
   } finally {
     rmSync(agyState(id), { force: true });
     rmSync(agyState(clean), { force: true });
+  }
+});
+
+const multiReplace = (id, chunks) =>
+  agy(
+    {
+      conversationId: id,
+      workspacePaths: [tmpdir()],
+      toolCall: {
+        name: 'multi_replace_file_content',
+        args: { TargetFile: 'docs/a.md', ReplacementChunks: chunks },
+      },
+    },
+    ['--antigravity'],
+  );
+
+test('Antigravity: multi_replace_file_content chunks are scanned as one edit', () => {
+  const id = `agytestmulti${process.pid}`;
+  try {
+    multiReplace(id, [{ ReplacementContent: 'Fine.' }, { ReplacementContent: 'We delve.' }]);
+    const out = JSON.parse(agy({ conversationId: id }, ['deliver', '--antigravity']));
+    assert.match(
+      out.injectSteps[0].ephemeralMessage,
+      /^writeup:unslop flagged 1 pattern in an edit to docs\/a\.md:\n- rule 7 "delve" \(line 2 of the edit\)/,
+    );
+  } finally {
+    rmSync(agyState(id), { force: true });
+  }
+});
+
+test('multi_replace without chunks stays silent', () => {
+  const id = `agytestnochunks${process.pid}`;
+  try {
+    assert.equal(multiReplace(id, 'oops'), '{}');
+    assert.equal(agy({ conversationId: id }, ['deliver', '--antigravity']), '{}');
+  } finally {
+    rmSync(agyState(id), { force: true });
+  }
+});
+
+test('deliver leaves no temp file behind', () => {
+  const id = `agytestdrain${process.pid}`;
+  try {
+    agy(
+      {
+        conversationId: id,
+        toolCall: { name: 'write_file', args: { Path: 'docs/a.md', Content: 'We delve.' } },
+      },
+      ['--antigravity'],
+    );
+    agy({ conversationId: id }, ['deliver', '--antigravity']);
+    assert.equal(agy({ conversationId: id }, ['deliver', '--antigravity']), '{}');
+    assert.deepEqual(
+      readdirSync(tmpdir()).filter((f) => f.startsWith(`writeup-unslop-${id}`)),
+      [],
+    );
+  } finally {
+    rmSync(agyState(id), { force: true });
   }
 });
 
