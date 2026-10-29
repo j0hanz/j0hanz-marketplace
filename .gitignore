@@ -16,4 +16,5 @@ plugins/*/.claude-plugin/types
 
 # Tooling scratch
 /.playwright-mcp
+/.agy-probe
 .vercel

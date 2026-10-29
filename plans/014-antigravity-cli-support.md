@@ -58,8 +58,9 @@ subagents), Vercel's port (`vercel/vercel-plugin#356`), MemPalace's investigatio
 - **Hooks**: root `hooks.json`; `hooks/hooks.json` is not read. Top-level keys are hook
   names, each holding `enabled` and event arrays; a Claude-style top-level `"hooks"` key
   loads as one hook named `hooks`. Events: `SessionStart`, `PreToolUse`, `PostToolUse`,
-  `Stop`, `PreInvocation`, `PostInvocation`. Handler `{type: "command", command,
-timeout}` (30 s default). Matchers are regexes over tool names, for tool events only.
+  `Stop`, `PreInvocation`, `PostInvocation`. Handler: `type` (`"command"`), `command`,
+  `timeout` (30 s default). Matchers are regexes over tool names, for tool events only;
+  `""` or `*` matches every tool.
   - stdin, camelCase: `conversationId`, `workspacePaths`, `transcriptPath`,
     `artifactDirectoryPath`, `lastUserInput`; tool events add `toolCall {name, args}`
     and `stepIdx`; `Stop` adds `executionNum`, `terminationReason`, `fullyIdle`.
@@ -67,39 +68,60 @@ timeout}` (30 s default). Matchers are regexes over tool names, for tool events 
     `deny`, `ask`, `auto_approve`, `force_ask`, `deny_unless_prior_grant`.
     `PostToolUse` → `{}`, no context channel. `Stop` → `{decision: "continue", reason}`
     re-enters the loop with `reason` as a system message; Antigravity caps consecutive
-    continuations itself. `SessionStart` and `PreInvocation` → `injectSteps: [{userMessage}
-| {ephemeralMessage} | {toolCall}]`.
-- **MCP**: root `mcp_config.json`, `{mcpServers: {<n>: {command, args, env, cwd} |
-{serverUrl, headers}}}`, `${PLUGIN_ROOT}` and `${PLUGIN_DATA}`; servers are namespaced
-  `<plugin>_<server>`; a relative or unset `cwd` resolves against the plugin folder.
+    continuations itself. `SessionStart` and `PreInvocation` → `injectSteps`, a list of
+    `{userMessage}`, `{ephemeralMessage}` or `{toolCall}`.
+  - File tools and their `args` (hooks docs, "Supported tools"): `write_to_file`
+    `{TargetFile, Overwrite, CodeContent, Description}`; `replace_file_content`
+    `{TargetFile, TargetContent, ReplacementContent, AllowMultiple, StartLine, EndLine}`;
+    `multi_replace_file_content` `{TargetFile, ReplacementChunks[]}`; `view_file`
+    `{AbsolutePath, StartLine?, EndLine?}`. Also `run_command`, `list_dir`,
+    `find_by_name`, `grep_search`, `search_web`, `read_url_content`, `invoke_subagent`.
+    `run_command`'s `args` (reportedly `CommandLine`) and the skill tool's name are not
+    in the excerpts.
+- **MCP**: root `mcp_config.json`: `mcpServers` maps a name to `{command, args, env, cwd}`
+  or `{serverUrl, headers}`; `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` expand; servers are
+  namespaced `<plugin>_<server>`; a relative or unset `cwd` resolves against the plugin
+  folder.
+- **Copilot CLI**, for contrast: a legacy plugin's hooks are `hooks.json` or
+  `hooks/hooks.json` at its root (GitHub's plugin reference), with no stated precedence
+  when both exist. That is why Phase 0 checks it before any root `hooks.json` lands.
 - **Validate**: `agy plugin validate <dir> [--strict] [--json]`. `--strict` fails on the
   warnings it raises for other clients' files, which every plugin here carries.
 
 ## Phase 0: settle what the docs leave open
 
 Needs a machine with `agy` signed in. Its installer lives on antigravity.google, which a
-cloud session may not reach.
+cloud session may not reach. `scripts/agy-probe/` runs all of it:
 
-1. `agy --version`; `agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review`.
-   Confirm the subpath form, then `agy plugin list --json` and `/review:code-quality-review`.
-2. `agy plugin validate plugins/review` and `plugins/mcp-hub`: exit status on warnings
-   only (validate.mjs assumes 0), and what it says about `.claude-plugin/`,
-   `hooks/hooks.json`, `user-invocable`, `disable-model-invocation`, and agent `tools`.
-3. Probe hook: a scratch plugin whose root `hooks.json` registers every event with
-   matcher `.*` and a command that appends stdin, `env`, `pwd` and argv to a log file.
-   Write a file, edit one, run a command, invoke a skill, stop. Record:
-   - the exact tool names for create, edit, multi-edit, read, shell and skill calls, and
-     the keys inside each `toolCall.args`;
-   - whether `${PLUGIN_ROOT}` expands in a hook `command`, and the hook's working directory;
-   - any environment variable that marks the client;
-   - whether `SessionStart` honors `injectSteps`.
-4. Copilot CLI: does it read a root `hooks.json` ahead of `hooks/hooks.json`? If it does,
-   an Antigravity-format root file breaks every Copilot hook, and Phase 2 needs another
-   place for Antigravity's hooks.
-5. filesystem-mcp: does `agy` send MCP roots, or offer a workspace variable for `args` or
-   `cwd`?
-6. Does `agy plugin install <dir>` work non-interactively under a throwaway `HOME`? If so,
-   add an install smoke test to validate.mjs beside Copilot's.
+```text
+node scripts/agy-probe/phase0.mjs setup      # checks, installs, the probe plugin
+# one agy session in the workspace setup prints, with the prompt it prints
+node scripts/agy-probe/phase0.mjs report     # writes .agy-probe/report.md: paste it back
+node scripts/agy-probe/phase0.mjs clean      # uninstalls agy-probe, removes the files
+```
+
+`setup --home-test` adds question 6; with no sign-in in that home, agy may open a browser.
+The probe plugin registers every hook event, answers `{}` (a SessionStart request aside),
+and logs each payload with long strings cut and credential-like variables hidden. It stays
+installed until `clean`, and its hooks run from `.agy-probe/`, so `clean` keeps that
+folder while `agy plugin list` still shows the plugin.
+
+The report answers, one section each:
+
+1. Does `agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review`
+   work? (`review` stays installed.)
+2. What does `agy plugin validate` say about review, mcp-hub, css and tutor, and with what
+   exit status? validate.mjs assumes 0 on warnings alone.
+3. Hooks: every event that fired, the tool names and `toolCall.args` keys, whether
+   `${PLUGIN_ROOT}` and a relative `./probe.mjs` work in a hook `command`, the hook's
+   working directory, variables agy adds (a client marker), and whether `SessionStart`'s
+   `injectSteps` reached the model.
+4. Copilot: which of root `hooks.json` and `hooks/hooks.json` ran, in a throwaway
+   `COPILOT_HOME`. If the session there cannot sign in, the section says so.
+5. MCP: how the servers were launched (cwd, argv, `${PLUGIN_ROOT}` in `args` and `env`),
+   the client's declared capabilities, `roots/list`, and what a tool call carries.
+6. Whether `agy plugin install` runs non-interactively under a throwaway `HOME`. If so,
+   validate.mjs can add an install smoke test beside Copilot's.
 
 ### Phase 0 answers
 
@@ -114,9 +136,12 @@ its manifest, so a half-ported plugin is never on Antigravity.
    `client.cjs` in mcp-hub; the Copilot branch of tutor's `teach_hook.py`): a third
    branch, selected by a `--antigravity` argument that only the Antigravity `hooks.json`
    commands pass (no documented environment variable; Phase 0 step 3 may supply one).
-   It maps `toolCall.name` onto the Claude names the scripts match on, `toolCall.args`
-   onto `filePath`/`written`/`replacement`, `conversationId` onto the session id and
-   `workspacePaths[0]` onto `cwd`. Answers: `deny` → `{decision: 'deny', reason}`,
+   It maps `toolCall.name` onto the Claude names the scripts match on (`write_to_file` →
+   Write; `replace_file_content` and `multi_replace_file_content` → Edit; `view_file` →
+   Read; `run_command` → Bash), `toolCall.args` onto `filePath`/`written`/`replacement`
+   (`TargetFile`, `CodeContent`, `ReplacementContent` or each chunk of
+   `ReplacementChunks`), `conversationId` onto the session id and `workspacePaths[0]` onto
+   `cwd`. Answers: `deny` → `{decision: 'deny', reason}`,
    `stopContext` → `{decision: 'continue', reason}`, `context` at `SessionStart` →
    `injectSteps`.
 2. Findings after a write (css advice, writeup's scan, mcp-hub's post-tool check):
