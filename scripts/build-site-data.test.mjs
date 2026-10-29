@@ -8,7 +8,11 @@ import test from 'node:test';
 
 const script = fileURLToPath(new URL('./build-site-data.mjs', import.meta.url));
 
-function generate(context, mcp, { skill = true, manifest = {}, entry = {} } = {}) {
+function generate(
+  context,
+  mcp,
+  { skill = true, manifest = {}, entry = {}, antigravity = false } = {},
+) {
   const cwd = mkdtempSync(join(tmpdir(), 'marketplace-data-'));
   context.after(() => rmSync(cwd, { recursive: true, force: true }));
   const write = (path, value) => {
@@ -23,9 +27,11 @@ function generate(context, mcp, { skill = true, manifest = {}, entry = {} } = {}
   write('plugins/sample/.claude-plugin/plugin.json', { name: 'sample', ...manifest });
   if (skill) write('plugins/sample/skills/guide/SKILL.md', '---\nname: guide\n---\nGuide.\n');
   if (mcp !== undefined) write('plugins/sample/.mcp.json', mcp);
+  if (antigravity) write('plugins/sample/.antigravity-plugin/plugin.json', { name: 'sample' });
   write(
     'README.md',
     '<!-- install:start -->\n<!-- install:end -->\n<!-- copilot:start -->\n<!-- copilot:end -->\n' +
+      '<!-- antigravity:start -->\n<!-- antigravity:end -->\n' +
       '<!-- plugins:start -->\n<!-- plugins:end -->\n',
   );
   const result = spawnSync(process.execPath, [script], {
@@ -107,25 +113,60 @@ test('an MCP-only catalog offers installation and connection verification', (con
     { skill: false },
   );
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.data().example, {
-    install: '/plugin install sample@example',
-    run: '/mcp',
-  });
+  assert.deepEqual(result.data().steps.claude, [
+    { label: 'Add the marketplace', value: '/plugin marketplace add example/marketplace' },
+    { label: 'Install a plugin', value: '/plugin install sample@example' },
+    { label: 'Check connection', value: '/mcp' },
+  ]);
   assert.match(result.data().tagline, /1 MCP server/);
-  assert.equal(result.data().pageTitle, 'Plugins for Claude Code and GitHub Copilot · example');
+  assert.equal(
+    result.data().pageTitle,
+    'Plugins for Claude Code, GitHub Copilot and Antigravity · example',
+  );
 });
 
 test('every plugin gets a Copilot CLI install line unless tagged claude-code-only', (context) => {
   const result = generate(context);
   assert.equal(result.status, 0, result.stderr);
   const data = result.data();
-  assert.equal(data.copilotAddCommand, 'copilot plugin marketplace add example/marketplace');
-  assert.equal(data.plugins[0].copilotInstallCommand, 'copilot plugin install sample@example');
+  assert.deepEqual(data.steps.copilot, [
+    { label: 'Add the marketplace', value: 'copilot plugin marketplace add example/marketplace' },
+    { label: 'Install a plugin', value: 'copilot plugin install sample@example' },
+  ]);
+  assert.equal(data.plugins[0].installs.copilot, 'copilot plugin install sample@example');
   assert.match(result.readme(), /copilot plugin install sample@example/);
 
   const only = generate(context, undefined, { entry: { tags: ['claude-code-only'] } });
   assert.equal(only.status, 0, only.stderr);
-  assert.equal(only.data().plugins[0].copilotInstallCommand, null);
+  assert.equal(only.data().plugins[0].installs.copilot, null);
   assert.match(only.readme(), /\/plugin install sample@example/);
   assert.doesNotMatch(only.readme(), /copilot plugin install/);
+});
+
+test('a plugin installs in Antigravity CLI from its GitHub folder once it carries a manifest', (context) => {
+  const result = generate(context, undefined, { antigravity: true });
+  assert.equal(result.status, 0, result.stderr);
+  const command =
+    'agy plugin install https://github.com/example/marketplace/tree/main/plugins/sample';
+  assert.equal(result.data().plugins[0].installs.antigravity, command);
+  assert.deepEqual(result.data().steps.antigravity, [
+    { label: 'Install a plugin', value: command },
+    { label: 'Run it', value: '/sample:guide' },
+  ]);
+  assert.match(result.readme(), /<!-- antigravity:start -->\n\n```text\nagy plugin install https:/);
+
+  const unported = generate(context);
+  assert.equal(unported.status, 0, unported.stderr);
+  assert.equal(unported.data().plugins[0].installs.antigravity, null);
+  assert.deepEqual(unported.data().steps.antigravity, []);
+  assert.doesNotMatch(unported.readme(), /agy plugin install/);
+});
+
+test('a claude-code-only plugin carrying an Antigravity manifest is rejected', (context) => {
+  const result = generate(context, undefined, {
+    antigravity: true,
+    entry: { tags: ['claude-code-only'] },
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /tagged claude-code-only but carries \.antigravity-plugin/);
 });

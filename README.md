@@ -2,9 +2,10 @@
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin%20marketplace-D97757)](https://code.claude.com/docs/en/plugin-marketplaces)
 [![GitHub Copilot CLI](https://img.shields.io/badge/GitHub%20Copilot%20CLI-plugin%20marketplace-8957E5)](https://docs.github.com/en/copilot/concepts/agents/copilot-cli/about-cli-plugins)
+[![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-plugins-4285F4)](https://antigravity.google/docs/plugins)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Plugins for Claude Code and GitHub Copilot CLI: skills, agents, and MCP servers you can install into any project. One catalog serves both clients.
+Plugins for Claude Code, GitHub Copilot CLI and Antigravity CLI: skills, agents, and MCP servers you can install into any project. Claude Code and Copilot CLI share one catalog; Antigravity CLI installs each plugin from its folder here.
 
 ## Install in Claude Code
 
@@ -93,6 +94,29 @@ Check with `copilot plugin list`, or `/skills` and `/agent` inside a session. Co
 - `output-styles` is Claude Code only: Copilot has no output styles.
 - Hooks detect the client and answer in its shape. Stop-time notes that Claude shows as a system message surface as a hook warning in Copilot.
 - The Claude `UserPromptExpansion` event does not exist in Copilot, so typed-slash-command briefs fire through `PreToolUse` on the skill tool instead.
+
+## Install in Antigravity CLI
+
+Antigravity CLI reads no third-party catalog, so there is no marketplace to add: each plugin installs straight from its folder in this repo. From a shell:
+
+<!-- antigravity:start -->
+
+```text
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/prompt
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/nodejs
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/typescript-pro
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/groundwork
+```
+
+<!-- antigravity:end -->
+
+Check with `agy plugin list`, or `/plugin` inside a session. Skills run as slash commands namespaced by plugin, as in Claude Code (`/review:code-quality-review`). Remove one with `/plugin uninstall <name>`.
+
+**What differs under Antigravity**
+
+- Only the plugins above install there so far. Antigravity reads hooks, MCP servers and agent tool lists in its own formats, so a plugin that ships any of them waits until they are ported.
+- Antigravity has no switch that keeps the model from picking a skill on its own, so skills that wait for their slash command in Claude Code (`disable-model-invocation`) can also load unasked.
 
 ## Plugins
 
@@ -193,7 +217,7 @@ See how Claude uses your skills and MCP servers: a receipt under each answer, a 
 
 ## Requirements
 
-Claude Code, and nothing else. Plugins install from this repo with no build step and no dependencies.
+Claude Code, GitHub Copilot CLI or Antigravity CLI, and nothing else. Plugins install from this repo with no build step and no dependencies.
 
 ## License
 

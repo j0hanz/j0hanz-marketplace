@@ -17,6 +17,21 @@ interface McpServer {
   transport: string;
 }
 
+export interface Installs {
+  claude: string;
+  /** Null for a plugin tagged `claude-code-only`. */
+  copilot: string | null;
+  /** Null until the plugin carries `.antigravity-plugin/plugin.json`. */
+  antigravity: string | null;
+}
+
+export type ClientId = keyof Installs;
+
+interface Step {
+  label: string;
+  value: string;
+}
+
 export interface Plugin {
   name: string;
   displayName: string;
@@ -24,9 +39,7 @@ export interface Plugin {
   category: string;
   summary: string;
   homepage: string;
-  installCommand: string;
-  /** Null for a plugin tagged `claude-code-only`. */
-  copilotInstallCommand: string | null;
+  installs: Installs;
   hookEvents: string[];
   skills: Skill[];
   agents: Agent[];
@@ -41,11 +54,10 @@ export interface Site {
   description: string;
   repo: string;
   repoUrl: string;
-  addCommand: string;
-  copilotAddCommand: string;
   categories: string[];
   plugins: Plugin[];
-  example: { install: string; run: string } | null;
+  /** The hero's numbered steps, per client: add, install, run, as far as each one goes. */
+  steps: Record<ClientId, Step[]>;
 }
 
 export const site: Site = raw;

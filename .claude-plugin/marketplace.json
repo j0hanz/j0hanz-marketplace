@@ -1,6 +1,6 @@
 {
   "name": "j0hanz-marketplace",
-  "description": "Personal plugin marketplace for Claude Code and GitHub Copilot CLI",
+  "description": "Personal plugin marketplace for Claude Code and GitHub Copilot CLI; Antigravity CLI installs its plugins from their GitHub folders",
   "owner": {
     "name": "j0hanz",
     "email": "l.johansson93@outlook.com"
