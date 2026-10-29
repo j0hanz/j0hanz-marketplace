@@ -117,7 +117,10 @@ const TOOL_EVENTS = new Set(['PreToolUse', 'PostToolUse']);
 function hookSection(records) {
   const hooks = records.filter((r) => r.kind === 'hook' && !r.event.startsWith('Copilot'));
   if (!hooks.length) {
-    return ['No hook ran. Check the probe plugin above: did it validate and install?'];
+    return [
+      'No hook ran. Either the agy session (step 2 of what setup printed) has not happened',
+      'yet, or the probe did not install: see the end of this report.',
+    ];
   }
   const events = unique(hooks.map((r) => r.event));
   const forms = Object.keys(FORMS);
@@ -188,7 +191,7 @@ function copilotSection(state, records) {
 
 function mcpSection(records) {
   const mcp = records.filter((r) => r.kind === 'mcp');
-  if (!mcp.length) return ['Neither probe server started.'];
+  if (!mcp.length) return ['Neither probe server started: they start with the agy session.'];
   const started = mcp.filter((r) => r.event === 'start');
   const first = (event) => mcp.find((r) => r.event === event);
   const roots = first('roots/list result');
