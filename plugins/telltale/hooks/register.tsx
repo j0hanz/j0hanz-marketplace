@@ -13,6 +13,7 @@ import type {
 } from 'claude-code';
 
 import type { Call, CallDetail, Inventory, InventoryRow, NextAction, Totals, View } from '../types';
+import { createPending } from './pending';
 import {
   bandRow,
   callTable,
@@ -148,16 +149,9 @@ let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
 // prune per agent if sessions ever run 100k+ requests.
 const responses: Record<string, Response[]> = {};
 const callResponse = new Map<string, { agent: string; index: number }>();
-// Calls labelled `pending` at their turn end, by id, with their agent (delta R12).
-const pending = new Map<string, string>();
-// Pending ids carried over a reload: their response index belongs to the old module.
-const stale = new Set<string>();
-const forget = (id: string) => {
-  pending.delete(id);
-  stale.delete(id);
-};
+const pending = createPending();
 const savePending = ($: EngineInterface) =>
-  safe(() => update($, pendingIds, () => Object.fromEntries(pending)));
+  safe(() => update($, pendingIds, () => pending.snapshot()));
 const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
 // R50: each real call's permission verdict from the tool.check tiers beneath telltale, by id.
 // The call's own tool.call hook takes the entry out once its `next` settles, so none outlive it.
@@ -324,32 +318,14 @@ async function focusRow($: EngineInterface, id: string | null) {
 
 /** delta R12: a `pending` call's label, once its agent's next complete response arrives. */
 async function relabel($: EngineInterface, agent: string, index: number) {
-  if (![...pending.values()].includes(agent)) return;
+  if (!pending.waitsOn(agent)) return;
   let labels: Record<string, NextAction> = {};
   // Decided inside the updater: a `$.state.get` in this dispatch may read an older moment.
   await update($, calls, (all) => {
-    const waiting = all.filter(
-      (call) =>
-        pending.get(call.id) === agent &&
-        call.next === 'pending' &&
-        (stale.has(call.id) || (call.response !== null && call.response < index)),
-    );
-    labels = labelCalls(
-      responses,
-      // A stale call is labelled from the first complete response since the reload.
-      waiting.map((call) => ({
-        id: call.id,
-        tool: call.tool,
-        agent,
-        response: stale.has(call.id) ? -1 : call.response,
-      })),
-      () => true,
-    );
+    labels = pending.labelWaiting(all, agent, index, responses);
     return all.map((call) => (labels[call.id] ? { ...call, next: labels[call.id]! } : call));
   });
-  for (const [id, label] of Object.entries(labels)) {
-    if (label !== 'pending') forget(id);
-  }
+  pending.settle(labels);
   await savePending($);
 }
 
@@ -903,13 +879,7 @@ export const register: Register = (on, options) => {
         await safe(() => update($, startedIn, () => startDir));
       }
     }
-    const kept = (await safe(() => read($, pendingIds))) ?? {};
-    for (const [id, agent] of Object.entries(kept)) {
-      if (!pending.has(id)) {
-        pending.set(id, agent);
-        stale.add(id);
-      }
-    }
+    pending.restore((await safe(() => read($, pendingIds))) ?? {});
     for (const entry of (await safe(() => $.fs.list(folder))) ?? []) {
       const turn = /^turn-(\d+)/.exec(entry.name);
       const context = /^context-(\d+)\.json$/.exec(entry.name);
@@ -1110,7 +1080,6 @@ export const register: Register = (on, options) => {
     if (e.reason === 'clear') {
       pendingReason = 'clear';
       pending.clear(); // the cleared rows can never be relabelled
-      stale.clear();
       // R26: work queued before the clear lands first, so nothing from before it counts after.
       await later(async () => {
         details.clear();
@@ -1201,25 +1170,22 @@ export const register: Register = (on, options) => {
             return found ? { ...call, next: found.next } : call;
           }),
         );
-        for (const call of turn.calls) {
-          if (done.get(call.id)!.next === 'pending') pending.set(call.id, call.agentId ?? 'main');
-        }
+        pending.track(turn.calls, done);
         await savePending($);
         // A subagent response that completed while the labels were written still relabels.
-        for (const agent of new Set(pending.values())) {
+        for (const agent of pending.agents()) {
           await relabel($, agent, responses[agent]?.length ?? 0);
         }
         // R12 rule 2: a pending call whose agent has stopped with no next response is aborted.
-        // Only on a list that answered: a failed call says nothing about who stopped.
-        const stopped = listed ? [...pending].filter(([, agent]) => !liveAgents.has(agent)) : [];
+        const stopped = pending.stopped(liveAgents, listed !== undefined);
         if (stopped.length > 0) {
-          const ids = new Set(stopped.map(([id]) => id));
+          const ids = new Set(stopped);
           await update($, calls, (list) =>
             list.map((call) =>
               ids.has(call.id) && call.next === 'pending' ? { ...call, next: 'aborted' } : call,
             ),
           );
-          for (const id of ids) forget(id);
+          pending.forget(ids);
           await savePending($);
         }
       });
