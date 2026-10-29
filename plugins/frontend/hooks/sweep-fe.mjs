@@ -3,7 +3,7 @@ import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { text } from 'node:stream/consumers';
-import { notice } from './client.mjs';
+import { notice, onAntigravity } from './client.mjs';
 
 const FE_EXT = new Set([
   '.tsx',
@@ -103,12 +103,13 @@ const listing = (files) =>
 const main = async () => {
   const payload = JSON.parse((await text(process.stdin)) || '{}');
   if (payload.stop_hook_active) return;
-  const cwd = payload.cwd || process.cwd();
+  // Antigravity names the workspace workspacePaths and the session conversationId.
+  const cwd = payload.cwd || payload.workspacePaths?.[0] || process.cwd();
   const root = git(cwd, ['rev-parse', '--show-toplevel']).trim();
   if (!root) return;
   const dirty = dirtyFrontendFiles(cwd).sort();
   if (dirty.length === 0) return;
-  const ledger = ledgerFile(payload.session_id || process.ppid);
+  const ledger = ledgerFile(payload.session_id || payload.conversationId || process.ppid);
   const said = alreadySaid(ledger);
   const files = dirty.filter((f) => !said.has(ledgerKey(root, f)));
   if (files.length === 0) return;
@@ -117,13 +118,17 @@ const main = async () => {
     ledger,
     files.slice(0, MAX_SHOWN).map((f) => ledgerKey(root, f)),
   );
-  const message = `frontend: ${files.length} changed FE file${files.length === 1 ? '' : 's'} — run frontend:guidelines\n${listing(files)}`;
-  notice('Stop', message);
+  return `frontend: ${files.length} changed FE file${files.length === 1 ? '' : 's'} — run frontend:guidelines\n${listing(files)}`;
 };
 
 try {
-  await main();
+  const message = await main();
+  if (message) notice('Stop', message);
+  // Antigravity leaves a session's end undecided when its Stop hook prints nothing, so
+  // every silent path answers {} there; the other hosts read no output as silence.
+  else if (onAntigravity()) process.stdout.write('{}');
 } catch {
+  if (onAntigravity()) process.stdout.write('{}');
   // fail open — never block a turn on a reflective hook
 }
 // Bare exit keeps the 2 a Copilot notice sets; otherwise it is 0.

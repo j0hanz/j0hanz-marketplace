@@ -1,0 +1,11 @@
+{
+  "frontend": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ./hooks/sweep-fe.mjs --antigravity",
+        "timeout": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "frontend",
+  "version": "0.3.0",
+  "description": "Designs and reviews frontend UI: invents art-directed page direction from a brief (one self-contained HTML page, no build step), shapes perceived wait with the right loading pattern, and audits UI code against web interface guidelines.",
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/frontend",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace"
+}

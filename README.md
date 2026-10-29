@@ -102,6 +102,7 @@ Antigravity CLI reads no third-party catalog, so there is no marketplace to add:
 <!-- antigravity:start -->
 
 ```text
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/frontend
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/prompt
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/nodejs

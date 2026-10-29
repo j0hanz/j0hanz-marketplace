@@ -6,6 +6,9 @@
 // Copilot sets COPILOT_PLUGIN_ROOT for plugin hooks; Claude Code never does.
 export const onCopilot = () => Boolean(process.env.COPILOT_PLUGIN_ROOT);
 
+// Antigravity's hooks.json commands pass --antigravity; no documented env variable marks it.
+export const onAntigravity = () => process.argv.includes('--antigravity');
+
 // Copilot runtime tool names, as the Claude names the hooks already match on.
 const CLAUDE_TOOL = {
   create: 'Write',
@@ -78,9 +81,19 @@ export const stopContext = (event, text) =>
 
 // A note for the user, not a decision. Copilot has no systemMessage: it shows the stderr of
 // a hook that exits 2 — except on PreToolUse, where exit 2 denies the call, so there the
-// note rides additionalContext instead.
+// note rides additionalContext instead. Antigravity has no systemMessage either: at Stop the
+// note re-enters once as the reason the model relays (agy caps consecutive continuations),
+// and elsewhere it rides an ephemeral step, which only PreInvocation may answer.
 export const notice = (event, message) => {
-  if (!onCopilot()) {
+  if (onAntigravity()) {
+    process.stdout.write(
+      JSON.stringify(
+        event === 'Stop'
+          ? { decision: 'continue', reason: message }
+          : { injectSteps: [{ ephemeralMessage: message }] },
+      ),
+    );
+  } else if (!onCopilot()) {
     process.stdout.write(JSON.stringify({ systemMessage: message }));
   } else if (event === 'PreToolUse') {
     process.stdout.write(JSON.stringify({ additionalContext: message }));
