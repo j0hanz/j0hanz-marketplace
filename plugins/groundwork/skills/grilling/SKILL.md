@@ -29,4 +29,6 @@ Each answered round reshapes tree: settled decisions push frontier outward, unbl
 
 Finding _facts_ is your job, never user's. When frontier question needs fact from environment (filesystem, tools, etc.), dispatch sub-agent to find it; don't ask user for anything you could look up. Don't block: running exploration = unsettled prerequisite, so only questions downstream of it wait for sub-agent report; ask rest of frontier now. _Decisions_ are user's: put each to them, wait.
 
+Decision user can't settle on paper (state model must be felt, layout must be seen)? Offer to answer it with `groundwork:prototype`, then resume tree with verdict.
+
 Session done when frontier empty: every branch of design tree visited, nothing silently assumed. Don't act until user confirms shared understanding reached.

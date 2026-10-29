@@ -82,7 +82,7 @@
     {
       "name": "groundwork",
       "source": "./plugins/groundwork",
-      "description": "The thinking before the code: grill a plan, keep the domain model in GLOSSARY.md and ADRs, design deep modules, surface deepening opportunities, research primary sources",
+      "description": "The thinking before the code: grill a plan, keep the domain model in GLOSSARY.md and ADRs, design deep modules, surface deepening opportunities, prototype logic and layouts, research primary sources",
       "category": "development"
     },
     {
