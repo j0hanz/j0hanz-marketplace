@@ -1,4 +1,5 @@
 import AppBar from '@mui/material/AppBar';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Fade from '@mui/material/Fade';
@@ -123,14 +124,15 @@ export function Nav() {
             {site.name}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {/* The section links, and the menu that holds them on narrow screens,
-                are the one navigation landmark; the theme and repo controls are not. */}
+            {/* The section links are the navigation landmark: inline from md up,
+                in the menu below it. One shows per breakpoint, so the menu keeps
+                its place at the end of the bar. Theme and repo controls are not part of it. */}
             <Stack
               component="nav"
               aria-label="Sections"
               direction="row"
               spacing={1}
-              sx={{ alignItems: 'center' }}
+              sx={{ alignItems: 'center', display: { xs: 'none', md: 'flex' } }}
             >
               {navLinks.map((link) => (
                 <Button
@@ -139,7 +141,6 @@ export function Nav() {
                   color="inherit"
                   aria-current={active === link.href ? 'true' : undefined}
                   sx={{
-                    display: { xs: 'none', md: 'inline-flex' },
                     color: 'text.secondary',
                     // The same bar the category filter and the open row wear:
                     // one width for one meaning, held transparent until lit.
@@ -150,7 +151,6 @@ export function Nav() {
                   {link.label}
                 </Button>
               ))}
-              <MobileMenu active={active} />
             </Stack>
             <ModeToggle />
             <IconButton
@@ -162,6 +162,9 @@ export function Nav() {
             >
               <GitHubIcon />
             </IconButton>
+            <Box component="nav" aria-label="Sections" sx={{ display: { md: 'none' } }}>
+              <MobileMenu active={active} />
+            </Box>
           </Stack>
         </Toolbar>
       </Container>
