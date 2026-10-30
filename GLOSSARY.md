@@ -12,6 +12,10 @@ _Avoid_: Host, platform, harness, runner
 A self-contained folder under `plugins/<name>/` that ships skills, agents, hooks, or MCP servers for one or more clients.
 _Avoid_: Package, extension, addon
 
+**Capability**:
+A skill, agent, or MCP server a plugin ships; the site enumerates, counts, and searches them as one list.
+_Avoid_: Feature, offering, item
+
 **Catalog**:
 The central listing at `.claude-plugin/marketplace.json` from which Claude Code, GitHub Copilot CLI, the landing page, and the README derive available plugins.
 _Avoid_: Registry, index, manifest list
