@@ -5,53 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Architecture review: REPO</title>
     <style>
-      /* Survey-drawing look. Sections follow the report top to bottom; HTML-REPORT.md has the markup. */
+      /* Architectural review report. Tonal surfaces, zero box-border clutter; HTML-REPORT.md has the markup. */
 
-      /* 1. Tokens: theme colours, fonts, and the scales every rule draws from */
+      /* 1. Tokens: tonal surfaces, semantic accents, typography, and spacing scale */
       :root {
         color-scheme: light dark;
-        --surface-page: #e9ede6;
-        --surface-raised: #f6f8f4;
-        --surface-sunken: #dce2d8;
-        --text: #18211d;
-        --text-muted: #46534c;
-        --border: #a9b4ab;
-        --accent: #234a9c; /* interface, links, focus: nothing else */
-        --leak: #a8231b;
-        --caution: #7a5200; /* ADR callout */
-        --font-display:
-          Bahnschrift, 'DIN Alternate', 'Roboto Condensed', 'Arial Narrow', sans-serif;
-        --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
-        --small: 0.8rem;
-        --space-xs: 0.25rem;
-        --space-s: 0.5rem;
-        --space-m: 1rem;
+        --surface-page: #f2f4f3;
+        --surface-raised: #ffffff;
+        --surface-sunken: #e5eae7;
+        --surface-deep: #d3e0da;
+        --text: #141a17;
+        --text-muted: #526059;
+        --border: #cbd4cf;
+        --border-strong: #7c8c84;
+        --accent: #1d4ed8; /* interface, links, focus, primary recommendation */
+        --accent-soft: #dbeafe;
+        --leak: #b91c1c;
+        --leak-soft: #fee2e2;
+        --caution: #92400e; /* ADR callout */
+        --caution-soft: #fef3c7;
+        --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace; /* taste-skill-ignore */
+        --small: 0.8125rem;
+        --space-xs: 0.375rem;
+        --space-s: 0.625rem;
+        --space-m: 1.125rem;
         --space-l: 2rem;
-        --radius: 2px;
-        --rule: 1px solid var(--border);
-        --heavy: 3px; /* heavy line = deep module, leak, title block */
-        --hatch: repeating-linear-gradient(
-          135deg,
-          var(--text-muted) 0 1px,
-          transparent 1px 6px
-        ); /* = implementation */
+        --radius: 6px;
+        --radius-lg: 10px;
+        --heavy: 3px;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --surface-page: #121815;
-          --surface-raised: #1a221e;
-          --surface-sunken: #0d120f;
-          --text: #e3e9e4;
-          --text-muted: #a3b0a8;
-          --border: #3a4741;
-          --accent: #8fb0f0;
-          --leak: #f08a80;
-          --caution: #e0b860;
+          --surface-page: #0f1412;
+          --surface-raised: #171f1c;
+          --surface-sunken: #0b0f0d;
+          --surface-deep: #22302a;
+          --text: #e7ece9;
+          --text-muted: #9aa8a1;
+          --border: #2a3530;
+          --border-strong: #52635a;
+          --accent: #60a5fa;
+          --accent-soft: #172554;
+          --leak: #f87171;
+          --leak-soft: #3b1219;
+          --caution: #fbbf24;
+          --caution-soft: #2e210b;
         }
       }
 
-      /* 2. Base, then the shared roles: label, quiet, mono, row, list, frame */
+      /* 2. Base typography, shared roles, and borderless surface primitives */
       *,
       *::before,
       *::after {
@@ -61,7 +65,9 @@
         margin: 0;
         background: var(--surface-page);
         color: var(--text);
-        font: 1rem / 1.5 var(--font-body);
+        font: 1rem / 1.55 var(--font-body);
+        font-variant-numeric: tabular-nums;
+        -webkit-font-smoothing: antialiased;
         overflow-wrap: break-word;
       }
       :is(h1, h2, h3, p, ul, ol, dl, dd, figure, pre) {
@@ -69,17 +75,19 @@
       }
       :is(h1, h2) {
         font-family: var(--font-display);
-        font-weight: 600;
-        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
       }
       h1 {
-        font-size: clamp(1.953rem, 5vw, 2.441rem);
+        font-size: clamp(1.5rem, 2.5vw, 1.875rem);
       }
       h2 {
-        font-size: 1.563rem;
+        font-size: clamp(1.1875rem, 1.8vw, 1.375rem);
       }
       a {
         color: var(--accent);
+        text-decoration-thickness: 1px;
         text-underline-offset: 0.2em;
       }
       a:hover {
@@ -98,17 +106,13 @@
           transition: color 150ms;
         }
       }
+      .label,
       .caps,
       dt,
-      figure h3,
-      [data-strength] {
+      figure h3 {
         font: 600 var(--small) / 1.4 var(--font-display);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        color: var(--text-muted);
       }
-      .caps,
-      dt,
-      figure h3,
       main > header .row,
       .files,
       figcaption,
@@ -126,17 +130,15 @@
       }
       code,
       pre,
-      .files,
-      .box,
-      figure ol {
-        font-family: var(--font-mono);
-        overflow-wrap: anywhere; /* long identifiers break instead of widening the page */
+      .files {
+        font-family: var(--font-mono); /* taste-skill-ignore */
+        overflow-wrap: anywhere;
       }
       .row {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: var(--space-s) var(--space-m);
+        gap: var(--space-xs) var(--space-m);
       }
       main > header ul,
       .files,
@@ -144,90 +146,137 @@
         list-style: none;
         padding: 0;
       }
-      article,
-      .row > code,
-      figure > section {
-        border: var(--rule);
-        border-radius: var(--radius);
-      }
 
-      /* 3. Page and title block: four cells, ruled by a 1px gap over the border colour */
+      /* 3. Page container and borderless masthead */
       main {
         max-width: 72rem;
         margin-inline: auto;
-        padding: clamp(var(--space-m), 4vw, 3rem);
+        padding: clamp(var(--space-m), 4vw, 2.5rem);
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: var(--space-l);
       }
       main > header {
         display: grid;
-        gap: 1px;
-        background: var(--border);
-        border: var(--heavy) solid var(--text);
-        border-radius: var(--radius);
+        gap: var(--space-m);
       }
       main > header > * {
         display: grid;
-        gap: var(--space-s);
+        gap: var(--space-xs);
         align-content: start;
-        padding: var(--space-m);
+        padding: clamp(1rem, 2.2vw, 1.375rem);
         background: var(--surface-raised);
+        border-radius: var(--radius-lg);
+      }
+      #top-recommendation {
+        border-left: 4px solid var(--accent);
+      }
+      #top-recommendation h2 {
+        font-size: 1.1875rem;
       }
       nav ul {
         display: grid;
-        gap: var(--space-s);
+        gap: var(--space-xs);
       }
-      #top-recommendation {
+      nav li.row {
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: var(--space-s);
+        padding: var(--space-xs) var(--space-s);
+        background: var(--surface-page);
+        border-radius: var(--radius);
+      }
+      main > header > :last-child {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-s) var(--space-m);
+        padding: 0.75rem 1.25rem;
         background: var(--surface-sunken);
       }
-      #top-recommendation h2 {
-        font-size: 1.25rem;
-      }
       @media (min-width: 48rem) {
-        /* from here the four cells hold their content two by two */
         main > header {
-          grid-template-columns: 3fr 2fr;
+          grid-template-columns: 1fr 1fr;
+        }
+        main > header > :first-child {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: var(--space-s) var(--space-l);
         }
       }
 
-      /* 4. Candidate card */
+      /* 4. Candidate card: tonal surface, chip rows, two-column lower deck */
       article {
         container-type: inline-size;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: var(--space-m);
-        padding: clamp(var(--space-m), 3vw, var(--space-l));
+        padding: clamp(1.25rem, 3vw, 1.75rem);
         background: var(--surface-raised);
+        border-radius: var(--radius-lg);
         scroll-margin-top: var(--space-m);
       }
-      article > :is(dl, ul, aside),
-      figcaption {
-        max-width: 65ch;
-      }
       .row > code {
-        padding: 0 var(--space-s);
+        padding: 0.2rem 0.55rem;
+        background: var(--surface-sunken);
+        color: var(--text);
+        border-radius: var(--radius);
       }
       .files {
-        line-height: 1.6;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+      }
+      .files > li {
+        padding: 0.15rem 0.55rem;
+        background: var(--surface-sunken);
+        border-radius: 4px;
       }
       dl {
         display: grid;
-        gap: var(--space-m);
+        gap: var(--space-s);
+        align-content: start;
+      }
+      dl > div {
+        display: grid;
+        gap: 0.15rem;
+      }
+      article > ul:not(.files) {
+        display: grid;
+        gap: var(--space-xs);
+        align-content: start;
+        padding: var(--space-m) 1.25rem 1.125rem 2.25rem;
+        background: var(--surface-page);
+        border-radius: var(--radius);
       }
       aside {
         padding: var(--space-s) var(--space-m);
-        border-left: var(--heavy) solid var(--caution);
-        background: var(--surface-sunken);
+        border-left: 4px solid var(--caution);
+        border-radius: 0 var(--radius) var(--radius) 0;
+        background: var(--caution-soft);
       }
       aside strong {
         color: var(--caution);
       }
+      @media (min-width: 48rem) {
+        article {
+          grid-template-columns: 3fr 2fr;
+        }
+        article > :is(h2, .row, .files, figure, aside) {
+          grid-column: 1 / -1;
+        }
+      }
 
-      /* 5. Before / after: panes stack, then sit side by side once the card is 36rem */
+      /* 5. Before / after diagram panes */
       figure {
         display: grid;
         gap: var(--space-m);
+        align-items: stretch;
       }
       figure > section {
         display: grid;
@@ -235,145 +284,211 @@
         gap: var(--space-s);
         padding: var(--space-m);
         background: var(--surface-page);
+        border-radius: var(--radius);
         overflow-x: auto;
+      }
+      figure > section:nth-of-type(2) {
+        background: var(--surface-sunken);
+      }
+      figure > section:nth-of-type(2) > h3 {
+        color: var(--accent);
+      }
+      figcaption {
+        max-width: 75ch;
+        line-height: 1.5;
       }
       @container (min-width: 36rem) {
         figure {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        figure > section {
-          min-height: 20rem;
-        }
         figcaption {
           grid-column: 1 / -1;
         }
       }
-      /* Mermaid draws at full size; a wide diagram scrolls inside its pane */
+
+      /* Mermaid: draws at natural size; wide diagrams scroll cleanly inside the pane */
       pre.mermaid {
         display: grid;
         place-items: safe center;
         color: var(--text-muted);
       }
-      /* core sample: the column is interface (accent) over implementation (hatch) */
+
+      /* Core sample: proportional interface cap (::before) over implementation body (::after) */
       .cores {
         display: flex;
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: space-around;
         align-items: end;
-        gap: var(--space-m) var(--space-l);
+        gap: var(--space-s) var(--space-m);
+        padding-block: var(--space-xs);
       }
       .core {
-        display: grid;
-        justify-items: center;
-        gap: var(--space-s);
-        max-inline-size: 8rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-inline-size: 7rem;
         text-align: center;
+        font-weight: 500;
+        color: var(--text);
       }
       .core::before {
-        --split: calc(var(--iface) / (var(--iface) + var(--impl)) * 100%);
         content: '';
-        inline-size: 4rem;
-        block-size: calc(min(var(--iface) + var(--impl), 14) * 1rem);
-        border: 1px solid var(--text);
-        border-radius: var(--radius);
-        background:
-          linear-gradient(
-            var(--accent) var(--split),
-            var(--text) 0 calc(var(--split) + 1px),
-            transparent 0
-          ),
-          var(--hatch);
+        order: -2;
+        inline-size: 3.75rem;
+        block-size: max(0.375rem, calc(min(var(--iface), 14) * 0.7rem));
+        background: var(--accent);
+        border-radius: 5px 5px 2px 2px;
+        margin-block-end: 2px;
       }
-      /* cross-section: one band per layer a call passes through */
+      .core::after {
+        content: '';
+        order: -1;
+        inline-size: 3.75rem;
+        block-size: max(0.375rem, calc(min(var(--impl), 14) * 0.7rem));
+        background: var(--surface-deep);
+        border-left: var(--heavy) solid var(--border-strong);
+        border-radius: 2px 2px 5px 5px;
+        margin-block-end: var(--space-xs);
+      }
+      .core[data-kind='deep'] {
+        font-weight: 700;
+      }
+      .core[data-kind='deep']::before {
+        inline-size: 4.75rem;
+      }
+      .core[data-kind='deep']::after {
+        inline-size: 4.75rem;
+        background: var(--surface-deep);
+        border-left: 4px solid var(--accent);
+      }
+
+      /* Cross-section: stacked pass-through strata vs consolidated deep stratum */
       figure ol {
         display: grid;
         gap: var(--space-xs);
-        align-content: start;
+        align-content: center;
       }
       figure ol > li {
-        padding: var(--space-xs) var(--space-s);
-        border-left: var(--heavy) solid var(--text-muted);
-        background: var(--surface-raised);
-      }
-      /* collapse: one deep box, its now-internal calls inside */
-      .box {
-        display: grid;
-        gap: var(--space-s);
-        align-content: start;
-        align-self: start;
-        padding: var(--space-s);
-        border: 1px solid var(--text);
+        padding: 0.5rem 0.875rem;
+        border-left: var(--heavy) solid var(--border-strong);
         border-radius: var(--radius);
         background: var(--surface-raised);
+        font-weight: 500;
+      }
+      figure ol > li:not(:last-child)::after {
+        content: '↓';
+        float: right;
+        color: var(--text-muted);
+      }
+      figure ol > [data-kind='deep'] {
+        padding: 1.25rem 1rem;
+        border-left: 4px solid var(--accent);
+        background: var(--surface-deep);
+        font: 650 0.9375rem / 1.4 var(--font-display);
       }
 
-      /* 6. Marks: data-kind on the thing it marks. Each mark lives in one rule.
-         outline = module, heavy = deep, hatch = implementation, dashed = internal, red = leak */
+      /* Collapse: nested tonal containment hierarchy */
+      .box {
+        display: grid;
+        gap: var(--space-xs);
+        align-content: start;
+        align-self: center;
+        padding: 0.75rem 0.875rem;
+        border-left: var(--heavy) solid var(--border-strong);
+        border-radius: var(--radius);
+        background: var(--surface-raised);
+        font-weight: 500;
+      }
+      .box .box {
+        background: var(--surface-sunken);
+      }
+      .box[data-kind='deep'] {
+        padding: 1rem;
+        border-left: 4px solid var(--accent);
+        background: var(--surface-deep);
+        font-weight: 650;
+      }
+      .box[data-kind='leak'] {
+        border-left: 4px solid var(--leak);
+        background: var(--leak-soft);
+        color: var(--leak);
+        font-weight: 600;
+      }
+      .box[data-kind='internal'] {
+        border-left: 2px dashed var(--border-strong);
+        background: var(--surface-raised);
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      /* 6. Strength pills and diagram key swatches */
       [data-strength],
       main > header li[data-kind] {
         display: inline-flex;
         align-items: center;
-        gap: var(--space-s);
+        gap: 0.4rem;
       }
-      [data-strength]::before,
+      [data-strength] {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font: 600 var(--small) / 1.3 var(--font-display);
+      }
+      [data-strength]::before {
+        content: '';
+        flex: none;
+        inline-size: 0.5rem;
+        block-size: 0.5rem;
+        border-radius: 999px;
+      }
+      [data-strength='strong'] {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      [data-strength='strong']::before {
+        background: var(--accent);
+      }
+      [data-strength='worth'] {
+        background: var(--surface-sunken);
+        color: var(--text);
+      }
+      [data-strength='worth']::before {
+        border: 2px solid var(--accent);
+      }
+      [data-strength='speculative'] {
+        background: var(--surface-sunken);
+        color: var(--text-muted);
+      }
+      [data-strength='speculative']::before {
+        border: 1.5px dashed var(--text-muted);
+      }
       main > header li[data-kind]::before {
         content: '';
         flex: none;
-        inline-size: 0.75rem;
+        inline-size: 1.25rem;
         block-size: 0.75rem;
-        border: 1px solid var(--text);
+        border-radius: 2px;
       }
-      [data-strength='strong']::before {
-        background: var(--text);
-      }
-      [data-strength='worth']::before {
-        background: linear-gradient(90deg, var(--text) 50%, transparent 0);
-      }
-      [data-strength='speculative']::before {
-        border-style: dashed;
-      }
-      main > header li[data-kind]::before {
-        inline-size: 1.5rem;
+      main > header li[data-kind='module']::before {
+        background: var(--surface-raised);
+        border-left: var(--heavy) solid var(--border-strong);
       }
       main > header li[data-kind='deep']::before {
-        border: var(--heavy) solid var(--text);
-        background: var(--hatch);
+        background: var(--surface-deep);
+        border-left: 4px solid var(--accent);
       }
       main > header li[data-kind='interface']::before {
-        border: 0;
+        block-size: 0.45rem;
         background: var(--accent);
       }
       main > header li[data-kind='seam']::before {
         block-size: 0;
-        border: 0;
-        border-top: var(--heavy) dashed var(--text-muted);
+        border-top: 2.5px dashed var(--border-strong);
       }
       main > header li[data-kind='leak']::before {
-        block-size: 0;
-        border: 0;
-        border-top: var(--heavy) solid var(--leak);
-      }
-      .core[data-kind='deep']::before,
-      .box[data-kind='deep'] {
-        border-width: var(--heavy);
-      }
-      .box[data-kind='leak'] {
-        border: var(--heavy) solid var(--leak);
-      }
-      .box[data-kind='internal'] {
-        border: 1px dashed var(--text-muted);
-        background: none;
-        color: var(--text-muted);
-      }
-      figure ol > [data-kind='deep'] {
-        padding-block: var(--space-l);
-        border: var(--heavy) solid var(--text);
-        background: var(--hatch), var(--surface-raised);
-        font: 600 1rem / 1.4 var(--font-display);
-      }
-      figure ol > [data-kind='deep'] span {
-        padding: 0 var(--space-s);
-        background: var(--surface-raised);
+        block-size: 0.35rem;
+        background: var(--leak);
       }
     </style>
     <script type="module">
@@ -389,17 +504,17 @@
           background: token('--surface-page'),
           primaryColor: token('--surface-raised'),
           primaryTextColor: token('--text'),
-          primaryBorderColor: token('--text'),
+          primaryBorderColor: token('--border-strong'),
           lineColor: token('--text-muted'),
           textColor: token('--text'),
           noteBkgColor: token('--surface-sunken'),
           noteTextColor: token('--text'),
           noteBorderColor: token('--border'),
           clusterBkg: token('--surface-sunken'),
-          clusterBorder: token('--border'),
+          clusterBorder: token('--border-strong'),
           edgeLabelBackground: token('--surface-page'),
           fontFamily: token('--font-body'),
-          fontSize: '12.8px', // = --small
+          fontSize: '13.5px',
         },
       });
       // Mermaid's parser rejects var(); swap tokens in so diagrams follow the theme

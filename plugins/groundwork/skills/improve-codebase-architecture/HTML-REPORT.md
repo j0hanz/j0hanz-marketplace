@@ -4,9 +4,9 @@ Architectural review = one HTML file in OS temp dir, self-contained except pinne
 
 ## Direction
 
-Glossary already geological: **depth**, **seam**, **layer**, **leak**. Report borrows survey-drawing look to match. Title block names drawing. Each module drawn as **core sample**: solid interface band over hatched implementation band, so shallow module reads as stubby core, deep one as tall core with thin cap.
+Glossary already geological: **depth**, **seam**, **layer**, **leak**. Report uses tonal surfaces and structural left/top bars instead of box-border grids so diagrams carry the visual weight. Each module in a **core sample** renders as two proportional bands: a solid blue interface cap over a tonal implementation body, so a shallow module reads as a top-heavy stubby core and a deep one as a tall column under a thin cap.
 
-Blue = interface. Red = leak. Hatching = implementation. Heavy outline = deep module. Dark mode follows reader's system setting.
+Blue = interface and target deepened state. Red = leak. Deep tonal fill + heavy bar = deep module. Dashed stroke = seam or absorbed internal call. Dark mode follows reader's system setting.
 
 ## Build
 
@@ -22,9 +22,9 @@ All classes and `data-` attributes stylesheet knows. Use no others, no inline st
 
 | Markup                    | Means                            |
 | :------------------------ | :------------------------------- |
-| `class="caps"`            | Small uppercase label            |
+| `class="label"`           | Muted section label              |
 | `class="row"`             | Items in wrapping line           |
-| `class="files"`           | File path list                   |
+| `class="files"`           | File path chip list              |
 | `class="cores"`           | Holds core samples               |
 | `class="core"`            | One core sample                  |
 | `class="box"`             | One module in collapse diagram   |
@@ -46,24 +46,23 @@ Plain elements carry rest. In card: `<dt>` = label, `<code>` in badge row = depe
 
 ## Title block
 
-First screen answers "which one do I explore?" Title block holds four cells, in order: identity, top recommendation, candidate index, key. No intro paragraph.
+First screen answers "which one do I explore?" Title block holds four sections, in order: identity bar, top recommendation, candidate index, diagram key. No intro paragraph.
 
 ```html
 <header>
   <div>
-    <p class="caps">Architecture review</p>
     <h1>{{repo name}}</h1>
     <p class="row">
       <span>2026-10-27</span><span>Scope: src/orders, src/pricing</span><span>3 candidates</span>
     </p>
   </div>
   <section id="top-recommendation" aria-labelledby="top-title">
-    <p class="caps">Start with</p>
+    <p class="label">Start with</p>
     <h2 id="top-title"><a href="#order-intake">Collapse the Order intake pipeline</a></h2>
     <p>Pricing leaks across four seams; one deep module ends it.</p>
   </section>
   <nav aria-label="Candidates">
-    <p class="caps">Candidates</p>
+    <p class="label">Candidates</p>
     <ul>
       <li class="row">
         <a href="#order-intake">Collapse the Order intake pipeline</a>
@@ -72,7 +71,7 @@ First screen answers "which one do I explore?" Title block holds four cells, in 
     </ul>
   </nav>
   <div>
-    <p class="caps">Key</p>
+    <p class="label">Diagram key</p>
     <ul class="row">
       <li data-kind="module">module</li>
       <li data-kind="deep">deep module</li>
@@ -97,7 +96,7 @@ Each candidate = one `<article>` with `id` title block links to. Keep parts in o
 - **Files**: `<ul class="files">`, one path per item.
 - **Before / After**: `<figure>` with two `<section>` panes + `<figcaption>`. See diagram patterns below.
 - **Problem** and **Solution**: one sentence each, in `<dl>` with one `<div>` per term.
-- **Wins**: plain `<ul>`, max 6 words per bullet.
+- **Wins**: plain `<ul>`, max 6 words per bullet. Sits beside `<dl>` on wide screens.
 - **ADR callout**, if applies.
 
 ```html
@@ -156,9 +155,9 @@ Pick pattern fitting each candidate, vary across report. Panes stack on phone, s
 
 Use when point is "interface as wide as implementation". Count module's names:
 
-- `--iface` = number of exported names.
-- `--impl` = number of internal names: non-exported functions and methods.
-  Column is `--iface + --impl` rem tall, capped at 14. If any module in figure passes 14, divide every count in that figure by same factor so heights still compare. Both bands use same unit, so proportion tells truth. Text inside core = its label.
+- `--iface` = number of exported names (top blue cap).
+- `--impl` = number of internal names: non-exported functions and methods (bottom tonal body).
+  Each band scales at `0.75rem` per count, capped at 14. If any module in figure passes 14, divide every count in that figure by same factor so heights still compare. Both bands use same unit, so proportion tells truth. Text inside core = its label.
 
 ```html
 <div class="cores">
@@ -176,7 +175,7 @@ In flowchart:
 
 - Leaking edge gets label `leak` (`A -- leak --> B`). Then colour with `linkStyle`. Edge indexes count from 0 in source order, so recount before writing index.
 - Dashed edge (`-.->`) = seam.
-- Deep module gets `classDef deep stroke-width:3px` and `class <node> deep`.
+- Deep module gets `classDef deep fill:var(--surface-deep),stroke:var(--accent),stroke-width:3px` and `class <node> deep`.
 
 Write colours as `var(--token)`. Template swaps in theme value before Mermaid parses diagram.
 
@@ -188,26 +187,26 @@ flowchart LR
   A["OrderHandler"] --> B["OrderValidator"]
   B --> C["OrderRepo#lt;Order#gt;"]
   C -- leak --> D["PricingClient"]
-  classDef leak stroke:var(--leak),stroke-width:3px,color:var(--leak)
+  classDef leak fill:var(--leak-soft),stroke:var(--leak),stroke-width:2px,color:var(--leak)
   class D leak
-  linkStyle 2 stroke:var(--leak),stroke-width:3px
+  linkStyle 2 stroke:var(--leak),stroke-width:2.5px
 </pre>
 ```
 
 ### Cross-section (layered shallowness)
 
-One `<ol>` per pane, right after `<h3>`, one `<li>` per layer call passes through. Thin band = plain text. After pane: consolidated responsibility = one deep band, label wrapped in `<span>`. Cross-section has no leak mark.
+One `<ol>` per pane, right after `<h3>`, one `<li>` per layer call passes through. Shallow pass-through band = plain text (renders with downward flow arrow `↓`). After pane: consolidated responsibility = one deep band with `data-kind="deep"`. Cross-section has no leak mark.
 
 ```html
 <ol>
   <li>OrderHandler</li>
-  <li data-kind="deep"><span>Order intake: validate, price, store</span></li>
+  <li data-kind="deep">Order intake: validate, price, store</li>
 </ol>
 ```
 
 ### Collapse (call graph folds into one module)
 
-Box contains boxes it calls. Each box opens with name: plain text, or `<span class="caps">` on deep box. Before: mark leaking module with `data-kind="leak"`. After: one deep box, now-internal calls inside it.
+Box contains boxes it calls. Each box opens with module name. Before: mark leaking module with `data-kind="leak"`. After: one deep box (`data-kind="deep"`), with its absorbed now-internal calls (`data-kind="internal"`) inside it.
 
 ```html
 <div class="box">
@@ -216,7 +215,7 @@ Box contains boxes it calls. Each box opens with name: plain text, or `<span cla
 </div>
 
 <div class="box" data-kind="deep">
-  <span class="caps">Order intake</span>
+  Order intake
   <div class="box" data-kind="internal">PricingClient</div>
 </div>
 ```
