@@ -1,8 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { categoriesFor, commandFor } from '../catalog';
-import { type ClientId, capabilities, type Plugin, site } from '../site';
-
-export const ALL = 'all';
+import { ALL, filterCatalog } from '../catalog';
+import { type ClientId, site } from '../site';
 
 const readSearch = (key: string) => {
   try {
@@ -12,20 +10,6 @@ const readSearch = (key: string) => {
   }
 };
 
-const haystacks = (() => {
-  const map = new Map<Plugin, string>();
-  for (const plugin of site.plugins) {
-    map.set(
-      plugin,
-      [plugin.displayName, plugin.summary, plugin.hookEvents.join(' ')]
-        .concat(...capabilities(plugin).map((capability) => capability.searchTerms))
-        .join(' ')
-        .toLowerCase(),
-    );
-  }
-  return map;
-})();
-
 export function useCatalogFilter(client: ClientId) {
   const [chosen, setCategory] = useState(() => {
     const value = readSearch('category');
@@ -33,10 +17,11 @@ export function useCatalogFilter(client: ClientId) {
   });
   const [query, setQuery] = useState(() => readSearch('q') ?? '');
   const deferred = useDeferredValue(query);
-  const categories = useMemo(() => categoriesFor(site.plugins, site.categories, client), [client]);
-  // A choice the client has no plugins for falls back without being forgotten,
-  // so switching back to a client that has them restores it.
-  const category = categories.includes(chosen) ? chosen : ALL;
+
+  const { visible, needle, categories, category } = useMemo(
+    () => filterCatalog(site.plugins, site.categories, { client, chosen, query: deferred }),
+    [client, chosen, deferred],
+  );
 
   useEffect(() => {
     const next = new URLSearchParams(location.search);
@@ -47,20 +32,6 @@ export function useCatalogFilter(client: ClientId) {
     const search = next.toString();
     history.replaceState(null, '', `${location.pathname}${search && '?'}${search}${location.hash}`);
   }, [category, deferred]);
-
-  const needle = deferred.trim().toLowerCase();
-
-  const visible = useMemo(
-    () =>
-      site.plugins.filter((plugin) => {
-        // A plugin the chosen client cannot install has nothing to offer there.
-        if (!commandFor(plugin, client)) return false;
-        if (category !== ALL && plugin.category !== category) return false;
-        if (needle && !(haystacks.get(plugin) ?? '').includes(needle)) return false;
-        return true;
-      }),
-    [client, category, needle],
-  );
 
   return {
     visible,
