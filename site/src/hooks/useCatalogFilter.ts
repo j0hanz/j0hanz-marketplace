@@ -2,6 +2,9 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ALL, filterCatalog } from '../catalog';
 import { type ClientId, site } from '../site';
 
+// The filter's one address: callers get the sentinel and the hook together.
+export { ALL };
+
 const readSearch = (key: string) => {
   try {
     return new URLSearchParams(location.search).get(key);

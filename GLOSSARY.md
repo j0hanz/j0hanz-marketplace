@@ -20,6 +20,10 @@ _Avoid_: Feature, offering, item
 The central listing at `.claude-plugin/marketplace.json` from which Claude Code, GitHub Copilot CLI, the landing page, and the README derive available plugins.
 _Avoid_: Registry, index, manifest list
 
+**Filter**:
+What the visitor narrows the catalog by: the chosen client, the chosen category, and the search needle.
+_Avoid_: View, query state
+
 **Mod**:
 A Claude Code-only plugin whose `hooks/hooks.json` loads a TypeScript module rather than shell command hooks.
 _Avoid_: Extension, native plugin
