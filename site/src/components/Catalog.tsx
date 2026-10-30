@@ -16,6 +16,7 @@ import { useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Box from '@mui/material/Box';
 import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '../icons';
+import { commandFor } from '../catalog';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { type ClientId, countLabel, external, externalLabel, type Plugin } from '../site';
 import { accent, drawable, outline, segmented, srOnly, tag } from '../theme/tokens';
@@ -29,8 +30,7 @@ const stretch = { '&::after': { content: '""', position: 'absolute', inset: 0 } 
 
 function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
   const hooks = plugin.hookEvents.join(', ');
-  // The catalog filter drops plugins the client cannot install.
-  const command = plugin.installs[client]!;
+  const command = commandFor(plugin, client);
   return (
     <Card
       variant="outlined"
@@ -103,7 +103,7 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
       </CardContent>
 
       <CardActions disableSpacing sx={{ position: 'relative', flexDirection: 'column' }}>
-        <Command value={command} />
+        {command && <Command value={command} />}
       </CardActions>
     </Card>
   );

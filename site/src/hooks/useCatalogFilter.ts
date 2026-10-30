@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { categoriesFor } from '../catalog';
+import { categoriesFor, commandFor } from '../catalog';
 import { type ClientId, type Plugin, site } from '../site';
 
 export const ALL = 'all';
@@ -58,7 +58,7 @@ export function useCatalogFilter(client: ClientId) {
     () =>
       site.plugins.filter((plugin) => {
         // A plugin the chosen client cannot install has nothing to offer there.
-        if (!plugin.installs[client]) return false;
+        if (!commandFor(plugin, client)) return false;
         if (category !== ALL && plugin.category !== category) return false;
         if (needle && !(haystacks.get(plugin) ?? '').includes(needle)) return false;
         return true;
