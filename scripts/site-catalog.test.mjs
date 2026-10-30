@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ALL, commandFor, filterCatalog } from '../site/src/catalog.ts';
-import { capabilities } from '../site/src/site.ts';
 
 const plugin = (category, { copilot = 'c', antigravity = 'a' } = {}) => ({
   category,
@@ -76,18 +75,4 @@ test('the needle is trimmed and lowercased, and matches capability text', () => 
     categories: ['learning', 'frontend'],
     category: ALL,
   });
-});
-
-const rich = {
-  skills: [{ name: 'audit', description: 'check css' }],
-  agents: [],
-  mcpServers: [{ name: 'fs', transport: 'stdio' }],
-};
-
-test('capabilities lists each kind with its label, count and search terms', () => {
-  assert.deepEqual(capabilities(rich), [
-    { kind: 'skills', label: 'skill', count: 1, searchTerms: ['audit', 'check css'] },
-    { kind: 'agents', label: 'agent', count: 0, searchTerms: [] },
-    { kind: 'mcpServers', label: 'MCP server', count: 1, searchTerms: ['fs', 'stdio', 'mcp'] },
-  ]);
 });

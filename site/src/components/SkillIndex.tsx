@@ -10,32 +10,14 @@ import Typography, { type TypographyProps } from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { type ReactNode, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { capabilities, countLabel, type Plugin } from '../site';
+import { capabilities, summary, totals as totalsFor } from '../capability';
+import { countLabel, type Plugin } from '../site';
 import { codeSx, lit, outline, tag } from '../theme/tokens';
 import { CountChips } from './CountChips';
 import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
 
 const MODEL_LOADED = 'The agent auto-loads this skill. It is not a user-facing slash command.';
-
-/** Totals per capability kind across the given plugins, in capabilities order. */
-const totalsFor = (plugins: Plugin[]) => {
-  const totals = new Map<string, { label: string; total: number }>();
-  for (const plugin of plugins) {
-    for (const { kind, label, count } of capabilities(plugin)) {
-      const total = totals.get(kind) ?? { label, total: 0 };
-      total.total += count;
-      totals.set(kind, total);
-    }
-  }
-  return [...totals.values()];
-};
-
-const counts = (plugin: Plugin) =>
-  capabilities(plugin)
-    .filter((capability) => capability.count > 0)
-    .map((capability) => countLabel(capability.count, capability.label))
-    .join(', ');
 
 const tagSx = { ...tag, py: 0.5 } as const;
 
@@ -72,7 +54,7 @@ function Entry({ description, children }: { description: string; children: React
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
   // A plugin that ships only hooks has nothing to list, and its row would open on nothing.
-  const listed = visible.filter((plugin) => capabilities(plugin).some((c) => c.count > 0));
+  const listed = visible.filter((plugin) => summary(plugin) !== '');
   const firstPluginName = listed[0]?.name;
   // The visitor's own open and close choices, dropped when a search starts or ends
   // so every row follows the new default. Controlled rather than re-keyed: a
@@ -125,7 +107,7 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
               >
                 <AccordionSummary
                   expandIcon={<ExpandMoreIcon />}
-                  aria-label={`${plugin.displayName}: ${counts(plugin)}`}
+                  aria-label={`${plugin.displayName}: ${summary(plugin)}`}
                   sx={{
                     px: { xs: 1.5, sm: 2 },
                     '& .MuiAccordionSummary-content': { flexWrap: 'wrap', gap: 1, minWidth: 0 },
@@ -150,44 +132,32 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 </AccordionSummary>
                 <AccordionDetails sx={{ px: { xs: 1.5, sm: 2 }, pt: 0 }}>
                   <List disablePadding>
-                    {plugin.skills.map((skill) => (
-                      <Entry key={skill.name} description={skill.description}>
-                        {!skill.command && (
-                          <Tooltip title={MODEL_LOADED}>
-                            <Tag
-                              role="note"
-                              tabIndex={0}
-                              aria-label={`model-loaded. ${MODEL_LOADED}`}
-                            >
-                              model-loaded
+                    {capabilities(plugin).flatMap(({ kind, entries }) =>
+                      entries.map((entry) => (
+                        <Entry key={`${kind}:${entry.name}`} description={entry.description}>
+                          {entry.note === 'model-loaded' && (
+                            <Tooltip title={MODEL_LOADED}>
+                              <Tag
+                                role="note"
+                                tabIndex={0}
+                                aria-label={`model-loaded. ${MODEL_LOADED}`}
+                              >
+                                model-loaded
+                              </Tag>
+                            </Tooltip>
+                          )}
+                          <Typography component="code" variant="body2" sx={codeSx}>
+                            {entry.name}
+                          </Typography>
+                          {entry.hint && (
+                            <Tag component="code" sx={codeSx}>
+                              {entry.hint}
                             </Tag>
-                          </Tooltip>
-                        )}
-                        <Typography component="code" variant="body2" sx={codeSx}>
-                          {skill.command ?? skill.name}
-                        </Typography>
-                        {skill.argumentHint && (
-                          <Tag component="code" sx={codeSx}>
-                            {skill.argumentHint}
-                          </Tag>
-                        )}
-                      </Entry>
-                    ))}
-                    {plugin.agents.map((agent) => (
-                      <Entry key={agent.name} description={agent.description}>
-                        <Typography component="code" variant="body2" sx={codeSx}>
-                          {agent.name}
-                        </Typography>
-                        <Tag>agent</Tag>
-                      </Entry>
-                    ))}
-                    {plugin.mcpServers.map((server) => (
-                      <Entry key={server.name} description={`MCP server (${server.transport})`}>
-                        <Typography component="code" variant="body2" sx={codeSx}>
-                          {server.name}
-                        </Typography>
-                      </Entry>
-                    ))}
+                          )}
+                          {entry.tag && <Tag>{entry.tag}</Tag>}
+                        </Entry>
+                      )),
+                    )}
                   </List>
                 </AccordionDetails>
               </Accordion>

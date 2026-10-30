@@ -1,5 +1,6 @@
 import Chip from '@mui/material/Chip';
-import { capabilities, countLabel, type Plugin } from '../site';
+import { capabilities } from '../capability';
+import { countLabel, type Plugin } from '../site';
 
 export function CountChips({ plugin }: { plugin: Plugin }) {
   return (

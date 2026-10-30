@@ -1,6 +1,7 @@
 // The .ts extension keeps node --test resolving this value import; tsc and
 // vite accept it via allowImportingTsExtensions.
-import { type ClientId, capabilities, type Plugin } from './site.ts';
+import { capabilities } from './capability.ts';
+import type { ClientId, Plugin } from './site.ts';
 
 /** The sentinel category that shows every plugin the client installs. */
 export const ALL = 'all';
