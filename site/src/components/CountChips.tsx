@@ -1,21 +1,13 @@
 import Chip from '@mui/material/Chip';
-import { countLabel, type Plugin } from '../site';
+import { capabilities, countLabel, type Plugin } from '../site';
 
 export function CountChips({ plugin }: { plugin: Plugin }) {
   return (
     <>
-      {plugin.skills.length > 0 && (
-        <Chip size="small" variant="outlined" label={countLabel(plugin.skills.length, 'skill')} />
-      )}
-      {plugin.agents.length > 0 && (
-        <Chip size="small" variant="outlined" label={countLabel(plugin.agents.length, 'agent')} />
-      )}
-      {plugin.mcpServers.length > 0 && (
-        <Chip
-          size="small"
-          variant="outlined"
-          label={countLabel(plugin.mcpServers.length, 'MCP server')}
-        />
+      {capabilities(plugin).map(({ kind, label, count }) =>
+        count > 0 ? (
+          <Chip key={kind} size="small" variant="outlined" label={countLabel(count, label)} />
+        ) : null,
       )}
     </>
   );

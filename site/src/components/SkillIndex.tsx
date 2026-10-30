@@ -10,7 +10,7 @@ import Typography, { type TypographyProps } from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { type ReactNode, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
-import { countLabel, type Plugin } from '../site';
+import { capabilities, countLabel, type Plugin } from '../site';
 import { codeSx, lit, outline, tag } from '../theme/tokens';
 import { CountChips } from './CountChips';
 import { RevealOnEnter } from './RevealOnEnter';
@@ -18,16 +18,23 @@ import { Section } from './Section';
 
 const MODEL_LOADED = 'The agent auto-loads this skill. It is not a user-facing slash command.';
 
-const sum = (plugins: Plugin[], of: (plugin: Plugin) => number) =>
-  plugins.reduce((n, plugin) => n + of(plugin), 0);
+/** Totals per capability kind across the given plugins, in capabilities order. */
+const totalsFor = (plugins: Plugin[]) => {
+  const totals = new Map<string, { label: string; total: number }>();
+  for (const plugin of plugins) {
+    for (const { kind, label, count } of capabilities(plugin)) {
+      const total = totals.get(kind) ?? { label, total: 0 };
+      total.total += count;
+      totals.set(kind, total);
+    }
+  }
+  return [...totals.values()];
+};
 
 const counts = (plugin: Plugin) =>
-  [
-    plugin.skills.length && countLabel(plugin.skills.length, 'skill'),
-    plugin.agents.length && countLabel(plugin.agents.length, 'agent'),
-    plugin.mcpServers.length && countLabel(plugin.mcpServers.length, 'MCP server'),
-  ]
-    .filter(Boolean)
+  capabilities(plugin)
+    .filter((capability) => capability.count > 0)
+    .map((capability) => countLabel(capability.count, capability.label))
     .join(', ');
 
 const tagSx = { ...tag, py: 0.5 } as const;
@@ -65,9 +72,7 @@ function Entry({ description, children }: { description: string; children: React
 export function SkillIndex({ visible, searching }: { visible: Plugin[]; searching: boolean }) {
   const isDesktop = useMediaQuery((t) => t.breakpoints.up('md'));
   // A plugin that ships only hooks has nothing to list, and its row would open on nothing.
-  const listed = visible.filter(
-    (plugin) => plugin.skills.length + plugin.agents.length + plugin.mcpServers.length > 0,
-  );
+  const listed = visible.filter((plugin) => capabilities(plugin).some((c) => c.count > 0));
   const firstPluginName = listed[0]?.name;
   // The visitor's own open and close choices, dropped when a search starts or ends
   // so every row follows the new default. Controlled rather than re-keyed: a
@@ -79,22 +84,17 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
     setOpened({});
   }
 
-  const skills = sum(visible, (plugin) => plugin.skills.length);
-  const agents = sum(visible, (plugin) => plugin.agents.length);
-  const mcpServers = sum(visible, (plugin) => plugin.mcpServers.length);
+  const totals = totalsFor(visible);
 
   return (
     <Section
       id="skills"
       title="Capabilities"
       count={{
-        total: skills + agents + mcpServers,
-        label: [
-          skills && countLabel(skills, 'skill'),
-          agents && countLabel(agents, 'agent'),
-          mcpServers && countLabel(mcpServers, 'MCP server'),
-        ]
-          .filter(Boolean)
+        total: totals.reduce((n, { total }) => n + total, 0),
+        label: totals
+          .filter(({ total }) => total > 0)
+          .map(({ label, total }) => countLabel(total, label))
           .join(', '),
       }}
     >

@@ -1,4 +1,4 @@
-import raw from './data/marketplace.json';
+import raw from './data/marketplace.json' with { type: 'json' };
 
 interface Skill {
   name: string;
@@ -56,6 +56,36 @@ export interface Site {
 }
 
 export const site: Site = raw;
+
+export interface Capability {
+  kind: 'skills' | 'agents' | 'mcpServers';
+  /** The singular word the count labels and chips print. */
+  label: string;
+  count: number;
+  searchTerms: string[];
+}
+
+/** The capability kinds a plugin ships, enumerated once for chips, counts and search. */
+export const capabilities = (plugin: Plugin): Capability[] => [
+  {
+    kind: 'skills',
+    label: 'skill',
+    count: plugin.skills.length,
+    searchTerms: plugin.skills.flatMap((skill) => [skill.name, skill.description]),
+  },
+  {
+    kind: 'agents',
+    label: 'agent',
+    count: plugin.agents.length,
+    searchTerms: plugin.agents.flatMap((agent) => [agent.name, agent.description]),
+  },
+  {
+    kind: 'mcpServers',
+    label: 'MCP server',
+    count: plugin.mcpServers.length,
+    searchTerms: plugin.mcpServers.flatMap((server) => [server.name, server.transport, 'mcp']),
+  },
+];
 
 export const countLabel = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? '' : 's'}`;

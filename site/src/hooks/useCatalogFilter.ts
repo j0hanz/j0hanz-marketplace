@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { categoriesFor, commandFor } from '../catalog';
-import { type ClientId, type Plugin, site } from '../site';
+import { type ClientId, capabilities, type Plugin, site } from '../site';
 
 export const ALL = 'all';
 
@@ -18,11 +18,7 @@ const haystacks = (() => {
     map.set(
       plugin,
       [plugin.displayName, plugin.summary, plugin.hookEvents.join(' ')]
-        .concat(
-          plugin.skills.flatMap((skill) => [skill.name, skill.description]),
-          plugin.agents.flatMap((agent) => [agent.name, agent.description]),
-          plugin.mcpServers.flatMap((server) => [server.name, server.transport, 'mcp']),
-        )
+        .concat(...capabilities(plugin).map((capability) => capability.searchTerms))
         .join(' ')
         .toLowerCase(),
     );
