@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { appendFileSync, readFileSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { AUDITABLE, cap, MAX_BYTES, stateFile, STYLESHEET } from './changed.mjs';
 import { prepare } from './strip.mjs';
@@ -14,6 +15,7 @@ import {
   sessionId,
   toolInput,
   toolName,
+  workspace,
 } from './client.mjs';
 
 const MODE = process.argv[2];
@@ -82,12 +84,13 @@ try {
   }
 
   const added = prepare(raw, path).text;
+  const diskPath = resolve(workspace(payload), path);
 
   let cached;
   const readFile = () => {
     if (cached === undefined) {
       try {
-        cached = prepare(readFileSync(path, 'utf8'), path).text;
+        cached = prepare(readFileSync(diskPath, 'utf8'), path).text;
       } catch {
         cached = null;
       }
@@ -101,7 +104,7 @@ try {
 
   function baselineExistingAdvisories() {
     try {
-      if (statSync(path).size <= MAX_BYTES) {
+      if (statSync(diskPath).size <= MAX_BYTES) {
         const before = readFile();
         if (before !== null)
           remember(ledger, firedMessages(ADVISE, before, path, readFile).map(key));

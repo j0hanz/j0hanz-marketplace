@@ -113,6 +113,13 @@ test('an artifact nested below an effort directory, outside tickets/, is denied'
     assert.equal(out.permissionDecision, 'deny');
   }));
 
+test('a relative file_path is resolved against the project root even from another cwd', () =>
+  inProject((project) => {
+    const out = denial(gate('payments.spec.md', project));
+    assert.equal(out.permissionDecision, 'deny');
+    assert.match(out.permissionDecisionReason, /docs\/plan\//);
+  }));
+
 test('a write outside the project is not gated', () =>
   inProject((project) => {
     const elsewhere = mkdtempSync(join(tmpdir(), 'workbench-gate-elsewhere-'));

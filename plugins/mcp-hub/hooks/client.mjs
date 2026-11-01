@@ -149,10 +149,12 @@ export const notice = (event, message) => {
   }
 };
 
-const advisoryFile = (pluginKey, payload) => {
-  const id = String(sessionId(payload)).replace(/[^\w-]/g, '_');
-  return join(tmpdir(), `${pluginKey}-${id}.txt`);
-};
+const slug = (v) => String(v).replace(/[^\w-]/g, '_');
+
+export const stateFile = (prefix, payload = {}, fallback = '', ext = 'txt') =>
+  join(tmpdir(), `${prefix}-${slug(sessionId(payload, fallback))}.${ext}`);
+
+const advisoryFile = (pluginKey, payload) => stateFile(pluginKey, payload);
 
 // PostToolUse advisory output. Antigravity has no PostToolUse context channel, so advisories
 // wait in a per-plugin, per-conversation temp file for drainAdvisory() on PreInvocation.

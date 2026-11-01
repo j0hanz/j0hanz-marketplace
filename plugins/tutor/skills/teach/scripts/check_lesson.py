@@ -389,10 +389,10 @@ def resolve_local(html_dir, ref, self_mode):
     if not p:
         return None
     full = os.path.normpath(os.path.join(html_dir, p))
-    # --self validates templates/lesson.html, whose ../assets/x lives next to
-    # the template instead. Same fallback the linked-CSS resolution uses.
+    # --self validates templates/lesson.html, whose ../assets/x lives in
+    # templates/assets/ next to the template. Same fallback _linked_css uses.
     if not os.path.isfile(full) and self_mode:
-        sib = os.path.join(html_dir, os.path.basename(p))
+        sib = os.path.join(html_dir, "assets", os.path.basename(p))
         if os.path.isfile(sib):
             return sib
     return full
@@ -1032,11 +1032,13 @@ def _linked_css(parser, html_dir, self_mode):
         p = href.split("#")[0].split("?")[0]
         if p.startswith(("http://", "https://", "//")):
             continue  # flagged as offline-stylesheet in verify
-        # --self validates templates/lesson.html, whose ./assets/styles.css
-        # lives next to the template instead — same fallback resolve_local uses
+        # --self validates templates/lesson.html, whose ./assets/x lives in
+        # templates/assets/ next to the template — same fallback resolve_local uses
         candidates = [os.path.normpath(os.path.join(html_dir, p))]
         if self_mode:
-            candidates.append(os.path.join(html_dir, "styles.css"))
+            candidates.append(
+                os.path.join(html_dir, "assets", os.path.basename(p))
+            )
         css_text = None
         for cand in candidates:
             try:

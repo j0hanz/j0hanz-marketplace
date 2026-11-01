@@ -36,9 +36,10 @@ const makeFixture = (skillContent) => {
 };
 
 // Run the hook with cwd set to `cwd`, return { stdout, stderr }.
-const run = (fixtureRoot, cwd, env = {}) => {
+const run = (fixtureRoot, cwd, env = {}, input = '') => {
   const r = spawnSync(process.execPath, [join(fixtureRoot, 'hooks', 'session-start.mjs')], {
     cwd,
+    input,
     encoding: 'utf8',
     env: { ...process.env, COPILOT_PLUGIN_ROOT: '', ...env },
   });
@@ -229,6 +230,23 @@ test('invalid JSON package.json stays silent (fail open)', () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('payload cwd overrides process.cwd() when probing package.json', () => {
+  const root = makeFixture(SKILL_FIXTURE);
+  const emptyCwd = projCwd(null);
+  const realProject = projCwd(
+    JSON.stringify({ dependencies: { '@modelcontextprotocol/server': '2.0.0' } }),
+  );
+  try {
+    const { stdout } = run(root, emptyCwd, {}, JSON.stringify({ cwd: realProject }));
+    assert.match(stdout, /<mcp-hub-probe>/);
+    assert.match(stdout, /Found v2 packages \(@modelcontextprotocol\/server\)/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(emptyCwd, { recursive: true, force: true });
+    rmSync(realProject, { recursive: true, force: true });
   }
 });
 

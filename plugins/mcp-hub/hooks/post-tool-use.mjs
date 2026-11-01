@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { detectMcpProject, escapeContextText } from './mcp-project.mjs';
 import {
@@ -7,6 +6,7 @@ import {
   parkAdvisory,
   pass,
   sessionId,
+  stateFile,
   toolInput,
   toolName,
   workspace,
@@ -110,11 +110,10 @@ function resolveProjectSourceFile(filePath, projectRoot) {
 
 // Returns null for an unusable session id; the caller branches on the path.
 // The store lives in os.tmpdir() and is left for the OS to reap.
-function storePath(id) {
-  if (typeof id !== 'string' || id.length === 0) return null;
-  const safeId = id.replace(/[^A-Za-z0-9_-]/g, '_');
-  return path.join(os.tmpdir(), `mcp-hub-drift-${safeId}.json`);
-}
+const storePath = (id) =>
+  typeof id === 'string' && id.length > 0
+    ? stateFile('mcp-hub-drift', { session_id: id }, '', 'json')
+    : null;
 
 function dedupeFindings(findings, id) {
   const storeFile = storePath(id);

@@ -1,9 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { text } from 'node:stream/consumers';
-import { notice, pass, sessionId, workspace } from './client.mjs';
+import { notice, pass, stateFile, workspace } from './client.mjs';
 
 const FE_EXT = new Set([
   '.tsx',
@@ -73,9 +72,6 @@ const dirtyFrontendFiles = (cwd) =>
     .map((entry) => entry.slice(3))
     .filter((name) => FE_EXT.has(extname(name).toLowerCase()));
 
-const ledgerFile = (id) =>
-  join(tmpdir(), `frontend-sweep-${String(id).replace(/[^\w-]/g, '_')}.txt`);
-
 const ledgerKey = (root, file) => `${root}\t${file}`;
 
 const alreadySaid = (ledger) => {
@@ -108,7 +104,7 @@ const main = async () => {
   if (!root) return;
   const dirty = dirtyFrontendFiles(cwd).sort();
   if (dirty.length === 0) return;
-  const ledger = ledgerFile(sessionId(payload, process.ppid));
+  const ledger = stateFile('frontend-sweep', payload, process.ppid);
   const said = alreadySaid(ledger);
   const files = dirty.filter((f) => !said.has(ledgerKey(root, f)));
   if (files.length === 0) return;

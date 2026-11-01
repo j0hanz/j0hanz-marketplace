@@ -18,7 +18,7 @@ const misplacement = (filePath, project) => {
   const match = base.match(ARTIFACT);
   if (!match) return null;
 
-  const abs = resolve(filePath);
+  const abs = resolve(project, filePath);
   if (!segmentsInside(project, abs)) return null;
 
   const root = effortRoot(project);

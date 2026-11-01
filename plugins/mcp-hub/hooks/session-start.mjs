@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectMcpProject, escapeContextText } from './mcp-project.mjs';
-import { context, onCopilot } from './client.mjs';
+import { context, onCopilot, workspace } from './client.mjs';
 
 const skillPath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,9 +52,17 @@ function projectProbeMessage({ hasV1, v2Packages }) {
   return `Found v2 packages (${v2Packages.map(escapeContextText).join(', ')}). /mcp routes MCP work to the matching specialist skill.`;
 }
 
-function emitProjectProbe() {
+function readPayload() {
   try {
-    const message = projectProbeMessage(detectMcpProject(process.cwd()));
+    return JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function emitProjectProbe(payload) {
+  try {
+    const message = projectProbeMessage(detectMcpProject(workspace(payload)));
     if (!message) return;
     line('<mcp-hub-probe>');
     line('Scope: auto-detected MCP packages in this project package.json.');
@@ -65,6 +73,7 @@ function emitProjectProbe() {
   }
 }
 
+const payload = readPayload();
 emitRouter();
-emitProjectProbe();
+emitProjectProbe(payload);
 process.stdout.write(context('SessionStart', out.join(''), { rawSessionStart: true }));

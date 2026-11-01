@@ -165,4 +165,13 @@ if (onPath('agy')) {
   console.log('agy not on PATH: skipped Antigravity CLI validation.');
 }
 
+const py = onPath('python') ? 'python' : onPath('python3') ? 'python3' : null;
+if (py) {
+  if (run(py, ['plugins/tutor/skills/teach/scripts/test_teach.py']).status !== 0) {
+    fail('plugins/tutor: test_teach.py');
+  }
+} else {
+  console.log('python not on PATH: skipped tutor Python tests.');
+}
+
 process.exit(failed ? 1 : 0);

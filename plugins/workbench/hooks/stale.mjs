@@ -1,16 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { projectRoot } from './effort.mjs';
-import { notice, pass, sessionId } from './client.mjs';
+import { notice, pass, stateFile } from './client.mjs';
 
 const SKIP = new Set(['node_modules', '.git', '.venv', '__pycache__']);
 // Claude Code caches under plugins/cache/, Copilot CLI under installed-plugins/.
 const CACHED = /[\\/](?:plugins[\\/]cache|installed-plugins)[\\/]/;
 const MAX_DEPTH = 8;
-
-const slug = (v) => String(v ?? 'main').replace(/[^\w-]/g, '_');
 
 const newestMtime = (dir, depth = 0) => {
   if (depth > MAX_DEPTH) return 0;
@@ -66,7 +63,7 @@ try {
     process.stdout.write(pass());
     process.exit(0);
   }
-  const marker = join(tmpdir(), `workbench-stale-${slug(sessionId(payload, 'main'))}.txt`);
+  const marker = stateFile('workbench-stale', payload, 'main');
   if (existsSync(marker)) {
     process.stdout.write(pass());
     process.exit(0);

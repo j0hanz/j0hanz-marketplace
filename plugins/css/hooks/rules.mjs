@@ -275,8 +275,9 @@ function splitTopLevel(s, stop) {
 const splitSelectorList = (s) => splitTopLevel(s, (c) => c === ',');
 
 function focusableMissingFocusVisible(added, readFile) {
-  if (!/:focus-visible/i.test(added)) return [];
+  if (!/cursor\s*:\s*pointer/i.test(added)) return [];
   const scope = readFile?.() ?? added;
+  if (!/:focus-visible/i.test(scope)) return [];
   const focused = new Set();
   for (const rule of parseRules(scope))
     if (rule.selector.includes(':focus-visible'))
