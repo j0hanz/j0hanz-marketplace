@@ -13,15 +13,12 @@ export const RULE_WIDTH = 3;
 /** Structural frame: nav, footer, section headers, skip link, menu paper, panels. */
 export const rule = `${RULE_WIDTH}px solid ${steelVar}`;
 
-/** Object outline: cards, command bars, anything sitting inside a frame. */
-export const outline = `1px solid ${edge}`;
-
-/** A ToggleButtonGroup set as separate keys, the ground showing between them. */
+/** A ToggleButtonGroup set as separate filled keys, the ground showing between them. */
 export const segmented = {
   flexWrap: 'wrap',
   gap: `${RULE_WIDTH}px`,
   '& .MuiToggleButton-root': { px: 1.5 },
-  '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { ml: 0, borderLeft: outline },
+  '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { ml: 0 },
 } as const;
 
 /** Amber edge marking a frame as live: current section, selected filter, open row. */
@@ -80,7 +77,7 @@ export const codeSx = { fontFamily: mono, overflowWrap: 'anywhere' } as const;
  * else; anything that names a thing instead (category, version, kind of entry)
  * is set in this. Two classes, so a version stops reading as a fourth count.
  */
-export const tag = { fontFamily: mono } as const;
+export const tag = { fontFamily: sans } as const;
 
 export const srOnly = {
   position: 'absolute',

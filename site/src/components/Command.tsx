@@ -44,7 +44,7 @@ export function Command({ value }: { value: string }) {
 
   return (
     <Paper
-      variant="outlined"
+      elevation={0}
       sx={{
         display: 'flex',
         alignItems: 'center',

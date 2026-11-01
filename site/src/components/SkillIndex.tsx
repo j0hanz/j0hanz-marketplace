@@ -12,7 +12,7 @@ import { type ReactNode, useState } from 'react';
 import { ExpandMoreIcon } from '../icons';
 import { capabilities, summary, totals as totalsFor } from '../capability';
 import { countLabel, type Plugin } from '../site';
-import { codeSx, lit, outline, tag } from '../theme/tokens';
+import { codeSx, lit, tag } from '../theme/tokens';
 import { CountChips } from './CountChips';
 import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
@@ -81,7 +81,11 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
       }}
     >
       {listed.length === 0 ? (
-        <Typography variant="body1" color="textSecondary" sx={{ py: 6, px: 3, border: outline }}>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+          sx={{ py: 6, px: 3, bgcolor: 'background.paper' }}
+        >
           Nothing to list while the plugins above are filtered out.
         </Typography>
       ) : (
@@ -98,9 +102,8 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                 elevation={0}
                 data-reveal
                 sx={{
-                  bgcolor: 'transparent',
-                  borderTop: outline,
-                  '&:last-of-type': { borderBottom: outline },
+                  bgcolor: 'background.paper',
+                  mb: 0.5,
                   '&::before': { display: 'none' },
                   '&.Mui-expanded': { boxShadow: lit('left') },
                 }}

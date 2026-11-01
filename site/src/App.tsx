@@ -5,6 +5,7 @@ import { useClient } from './hooks/useClient';
 import { Catalog } from './components/Catalog';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
+import { Inside } from './components/Inside';
 import { Nav } from './components/Nav';
 import { SkillIndex } from './components/SkillIndex';
 import { SkipLink } from './components/SkipLink';
@@ -25,6 +26,7 @@ export function App() {
       <Nav />
       <Box component="main" id="main" tabIndex={-1}>
         <Hero client={client} onClient={setClient} />
+        <Inside client={client} />
         <Catalog filter={filter} client={client} onClient={setClient} />
         <SkillIndex visible={filter.visible} searching={Boolean(filter.needle)} />
       </Box>

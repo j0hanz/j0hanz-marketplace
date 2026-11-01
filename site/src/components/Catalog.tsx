@@ -19,7 +19,7 @@ import { CloseIcon, ExternalIcon, InfoIcon, NoResultsIcon, SearchIcon } from '..
 import { commandFor } from '../catalog';
 import { ALL, type CatalogFilter } from '../hooks/useCatalogFilter';
 import { type ClientId, countLabel, external, externalLabel, type Plugin } from '../site';
-import { accent, drawable, outline, segmented, srOnly, tag } from '../theme/tokens';
+import { accent, drawable, segmented, srOnly, tag } from '../theme/tokens';
 import { ClientPicker } from './ClientPicker';
 import { Command } from './Command';
 import { CountChips } from './CountChips';
@@ -33,7 +33,6 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
   const command = commandFor(plugin, client);
   return (
     <Card
-      variant="outlined"
       data-lit
       sx={{
         height: 1,
@@ -90,7 +89,6 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
             <Tooltip title={hooks}>
               <Chip
                 size="small"
-                variant="outlined"
                 role="note"
                 tabIndex={0}
                 icon={<InfoIcon />}
@@ -206,7 +204,10 @@ export function Catalog({
       </Stack>
 
       {visible.length === 0 ? (
-        <Stack spacing={2} sx={{ py: 6, px: 3, alignItems: 'flex-start', border: outline }}>
+        <Stack
+          spacing={2}
+          sx={{ py: 6, px: 3, alignItems: 'flex-start', bgcolor: 'background.paper' }}
+        >
           <NoResultsIcon fontSize="large" sx={{ color: 'text.secondary' }} aria-hidden />
           <Typography variant="body1" color="textSecondary">
             {query ? `No plugins match “${query}”.` : 'No plugins in this category.'}

@@ -55,9 +55,11 @@ export function Hero({
                 Browse plugins
               </Button>
               <Button
-                variant="outlined"
+                variant="contained"
                 size="large"
                 color="inherit"
+                disableElevation
+                sx={{ bgcolor: 'background.paper' }}
                 href={site.repoUrl}
                 {...external}
                 aria-label={externalLabel('GitHub')}

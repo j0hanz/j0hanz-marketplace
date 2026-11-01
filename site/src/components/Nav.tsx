@@ -14,7 +14,7 @@ import { CloseIcon, ExternalIcon, GitHubIcon, MarkIcon, MenuIcon } from '../icon
 import { useActiveSection } from '../hooks/useActiveSection';
 import { usePressedKey } from '../hooks/usePressedKey';
 import { external, externalLabel, site } from '../site';
-import { accent, activeSx, drawable, litIdle, mono, rule } from '../theme/tokens';
+import { accent, activeSx, drawable, litIdle, rule } from '../theme/tokens';
 import { ModeToggle } from './ModeToggle';
 
 const navLinks = [
@@ -24,9 +24,7 @@ const navLinks = [
 const hrefs = navLinks.map((link) => link.href);
 
 const menuItemSx = {
-  fontFamily: mono,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.02857em',
+  fontWeight: 600,
 };
 
 const mobileMenuId = 'nav-mobile-menu';
@@ -115,8 +113,7 @@ export function Nav() {
               gap: 1,
               color: 'inherit',
               textDecoration: 'none',
-              fontSize: { xs: '0.8125rem', sm: '1rem' },
-              letterSpacing: { xs: 0, sm: '0.05em' },
+              fontSize: '1rem',
               py: 1,
             }}
           >
