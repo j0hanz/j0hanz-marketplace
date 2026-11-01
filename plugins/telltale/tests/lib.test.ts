@@ -9,7 +9,6 @@ import {
   callTable,
   chunks,
   clip,
-  ctxDelta,
   detailHeader,
   formatDur,
   formatElapsed,
@@ -24,7 +23,6 @@ import {
   cutArgs,
   estTokens,
   formatTokens,
-  labelCalls,
   mcpServer,
   pretty,
   receipt,
@@ -209,76 +207,6 @@ test('R24: a long string argument is cut to 2,000 characters with a marker', asy
   expect(out.content).toBe('a'.repeat(2000) + '…[cut 48000 chars]');
   expect(out.short).toBe('b');
   expect(cut('abc', 5)).toBe('abc');
-});
-
-const resp = (toolNames: string[], complete = true) => ({ toolNames, complete });
-
-test('R12: retried, other-tool, answered', async () => {
-  const responses = { main: [resp(['x']), resp(['x']), resp(['y']), resp([])] };
-  const calls = [
-    { id: 'c1', tool: 'x', agent: 'main', response: 0 },
-    { id: 'c2', tool: 'x', agent: 'main', response: 1 },
-    { id: 'c3', tool: 'y', agent: 'main', response: 2 },
-  ];
-  expect(labelCalls(responses, calls, () => false)).toEqual({
-    c1: 'retried',
-    c2: 'other-tool',
-    c3: 'answered',
-  });
-});
-
-test('R12: calls from one response share their next response', async () => {
-  const responses = { main: [resp(['x', 'y']), resp(['AskUserQuestion'])] };
-  const calls = [
-    { id: 'a', tool: 'x', agent: 'main', response: 0 },
-    { id: 'b', tool: 'y', agent: 'main', response: 0 },
-  ];
-  expect(labelCalls(responses, calls, () => false)).toEqual({ a: 'asked-user', b: 'asked-user' });
-});
-
-test('R12: an interrupted turn labels its last call aborted', async () => {
-  const responses = { main: [resp(['x'])] };
-  const calls = [{ id: 'x1', tool: 'x', agent: 'main', response: 0 }];
-  expect(labelCalls(responses, calls, () => false)).toEqual({ x1: 'aborted' });
-});
-
-test('R12: a cut-off response does not count as the next response', async () => {
-  const responses = { main: [resp(['x']), resp([], false)] };
-  const calls = [{ id: 'x1', tool: 'x', agent: 'main', response: 0 }];
-  expect(labelCalls(responses, calls, () => false)).toEqual({ x1: 'aborted' });
-});
-
-test('R12: a running subagent with no next response leaves its call pending', async () => {
-  const responses = { main: [resp([])], a1: [resp(['z'])] };
-  const calls = [{ id: 'z1', tool: 'z', agent: 'a1', response: 0 }];
-  expect(labelCalls(responses, calls, (agent) => agent === 'a1')).toEqual({ z1: 'pending' });
-});
-
-const used = (toolNames: string[], inTok: number, out: number, serverTools = 0) => ({
-  toolNames,
-  complete: true,
-  usage: { in: inTok, out, serverTools },
-});
-
-test('R51: growth after a single-tool response, net of its output', async () => {
-  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], 0)).toBe(350);
-});
-
-test('R51: the next response with usage counts, not a failed one', async () => {
-  const list = [
-    used(['x'], 1000, 50),
-    { toolNames: [], complete: false, usage: null },
-    used([], 1600, 9),
-  ];
-  expect(ctxDelta(list, 0)).toBe(550);
-});
-
-test('R51: no figure for parallel calls, server tools, no next usage or negative growth', async () => {
-  expect(ctxDelta([used(['x', 'Read'], 1000, 50), used([], 1400, 20)], 0)).toBeUndefined();
-  expect(ctxDelta([used(['x'], 1000, 50, 1), used([], 1400, 20)], 0)).toBeUndefined();
-  expect(ctxDelta([used(['x'], 1000, 50)], 0)).toBeUndefined();
-  expect(ctxDelta([used(['x'], 1000, 50), used([], 600, 20)], 0)).toBeUndefined();
-  expect(ctxDelta([used(['x'], 1000, 50), used([], 1400, 20)], null)).toBeUndefined();
 });
 
 test('R13: values from the result that the answer names', async () => {

@@ -19,7 +19,6 @@ import {
   callTable,
   chunks,
   clip,
-  ctxDelta,
   cutArgs,
   detailHeader,
   estTokens,
@@ -27,7 +26,6 @@ import {
   formatTokens,
   isAbsolute,
   isJson,
-  labelCalls,
   logsPath,
   mcpServer,
   pct,
@@ -45,7 +43,6 @@ import {
   toolName,
   usageText,
   usedInAnswer,
-  type Response,
 } from './lib';
 
 const PANE = 'telltale';
@@ -92,7 +89,6 @@ type Captured = {
   tool: string;
   server: string | null;
   agentId: string | null;
-  response: number | null;
   ms: number;
   args: Record<string, unknown>;
   text: string;
@@ -145,10 +141,6 @@ let rootReady = false;
 let warned = false;
 let pendingReason: 'clear' | 'compact' | null = null;
 let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
-// ponytail: responses and callResponse grow ~200 B per model request for the process life;
-// prune per agent if sessions ever run 100k+ requests.
-const responses: Record<string, Response[]> = {};
-const callResponse = new Map<string, { agent: string; index: number }>();
 const pending = createPending();
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => pending.snapshot()));
@@ -184,16 +176,7 @@ function labelTurn(
   isRunning: (agent: string) => boolean,
   answer: string | null,
 ): Map<string, Done> {
-  const labels = labelCalls(
-    responses,
-    turn.calls.map((call) => ({
-      id: call.id,
-      tool: call.tool,
-      agent: call.agentId ?? 'main',
-      response: call.response,
-    })),
-    isRunning,
-  );
+  const labels = pending.labelTurn(turn.calls, isRunning);
   return new Map(
     turn.calls.map((call) => [
       call.id,
@@ -225,23 +208,21 @@ async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>
   const records = [
     ...turn.calls.map((call) => {
       const text = redact(call.text) as string;
-      const from = callResponse.get(call.id);
-      const issued = from ? responses[from.agent]?.[from.index] : undefined;
-      const delta = ctxDelta(responses[call.agentId ?? 'main'] ?? [], call.response);
+      const meta = pending.callMeta(call.id);
       return JSON.stringify({
         type: 'call',
         tool: call.tool,
         server: call.server,
         agentId: call.agentId,
-        model: issued?.model ?? null,
-        effort: issued?.effort ?? null,
+        model: meta.model,
+        effort: meta.effort,
         ms: call.ms,
         permission: call.permission ?? null, // R50: null when no verdict was seen
         ...(call.rule ? { permissionRule: redact(call.rule) } : {}),
         args: cutArgs(redact(call.args)),
         chars: call.text.length,
         estTokens: estTokens(call.text.length),
-        ...(delta === undefined ? {} : { ctxDelta: delta }), // R51
+        ...(meta.ctxDelta === undefined ? {} : { ctxDelta: meta.ctxDelta }), // R51
         isError: call.isError,
         blocks: call.blocks,
         head: text.slice(0, 300),
@@ -317,12 +298,12 @@ async function focusRow($: EngineInterface, id: string | null) {
 }
 
 /** delta R12: a `pending` call's label, once its agent's next complete response arrives. */
-async function relabel($: EngineInterface, agent: string, index: number) {
+async function relabel($: EngineInterface, agent: string) {
   if (!pending.waitsOn(agent)) return;
   let labels: Record<string, NextAction> = {};
   // Decided inside the updater: a `$.state.get` in this dispatch may read an older moment.
   await update($, calls, (all) => {
-    labels = pending.labelWaiting(all, agent, index, responses);
+    labels = pending.labelWaiting(all, agent);
     return all.map((call) => (labels[call.id] ? { ...call, next: labels[call.id]! } : call));
   });
   pending.settle(labels);
@@ -907,18 +888,13 @@ export const register: Register = (on, options) => {
 
   on('turn.step', async function* ($, e, next) {
     const agent = e.agentId ?? 'main';
-    const list = (responses[agent] ??= []);
-    const index =
-      list.push({ toolNames: [], complete: false, model: e.model, effort: e.effort }) - 1;
+    const recorded = pending.startStep(e.agentId, { model: e.model, effort: e.effort });
     const stream = next(e);
     let step = await stream.next();
     try {
       while (!step.done) {
         const chunk = step.value;
-        if (chunk.kind === 'tool') {
-          list[index]!.toolNames.push(chunk.name);
-          callResponse.set(chunk.id, { agent, index });
-        }
+        if (chunk.kind === 'tool') recorded.tool(chunk.id, chunk.name);
         yield chunk;
         step = await stream.next();
       }
@@ -927,19 +903,7 @@ export const register: Register = (on, options) => {
       if (!step.done) await stream.return?.(undefined as never);
     }
     const r = step.value;
-    // R4: the model that answered (a fallback, or a model a hook above rewrote) beats the request's.
     await safe(() => {
-      if (r?.usage?.model) list[index]!.model = r.usage.model;
-      // R51: what the request cost as the API reported it; read by `ctxDelta` at log time.
-      const usage = r?.usage;
-      if (usage) {
-        list[index]!.usage = {
-          in:
-            usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens,
-          out: usage.output_tokens,
-          serverTools: r?.serverToolUses?.length ?? 0,
-        };
-      }
       // R49: tools the API ran itself raise no tool.call. Logged into the running turn (as R2
       // does for subagent calls), never counted: the API exposes no result to size.
       for (const use of r?.serverToolUses ?? []) {
@@ -957,9 +921,7 @@ export const register: Register = (on, options) => {
           });
       }
     });
-    // A null stopReason is a request that failed or was cut off: not a response (delta R12).
-    list[index]!.complete = r?.stopReason != null;
-    if (list[index]!.complete) await safe(() => relabel($, agent, index));
+    if (recorded.finish(r)) await safe(() => relabel($, agent));
     return r;
   });
 
@@ -978,7 +940,7 @@ export const register: Register = (on, options) => {
     // on a state write (R3).
     const counted =
       mcpServer(e.tool) !== null &&
-      (next.origin.plugin === 'engine' || callResponse.has(e.tool_use_id));
+      (next.origin.plugin === 'engine' || pending.hasCall(e.tool_use_id));
     if (counted) {
       void later(() => startRunning($, e.tool_use_id, e.tool, started));
       // R29, R30: an abandoned dispatch leaves flight too; a second stop changes nothing.
@@ -1000,7 +962,7 @@ export const register: Register = (on, options) => {
     // R1: only calls Claude made. Another plugin's `$.tool.call` is not Claude's: it gets its
     // own id, which no `turn.step` streamed. A subagent a plugin spawned carries that plugin's
     // origin too, but its model streams each call first, so those stay counted (R2).
-    if (next.origin.plugin !== 'engine' && !callResponse.has(e.tool_use_id)) return r;
+    if (next.origin.plugin !== 'engine' && !pending.hasCall(e.tool_use_id)) return r;
     try {
       const ms = ((await safe(() => $.clock.now())) ?? started) - started;
       const { tool, tool_use_id: id, agentId, ...args } = e;
@@ -1010,7 +972,6 @@ export const register: Register = (on, options) => {
         tool,
         server: mcpServer(tool),
         agentId: agentId ?? null,
-        response: callResponse.get(id)?.index ?? null,
         ms,
         args,
         text,
@@ -1170,11 +1131,10 @@ export const register: Register = (on, options) => {
             return found ? { ...call, next: found.next } : call;
           }),
         );
-        pending.track(turn.calls, done);
         await savePending($);
         // A subagent response that completed while the labels were written still relabels.
         for (const agent of pending.agents()) {
-          await relabel($, agent, responses[agent]?.length ?? 0);
+          await relabel($, agent);
         }
         // R12 rule 2: a pending call whose agent has stopped with no next response is aborted.
         const stopped = pending.stopped(liveAgents, listed !== undefined);

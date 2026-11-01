@@ -6,7 +6,6 @@ export type Call = {
   tool: string;
   server: string | null; // MCP server, null for built-in tools
   agentId: string | null;
-  response: number | null; // index of the issuing response within its agent's list
   ms: number;
   argsChars: number;
   textChars: number;

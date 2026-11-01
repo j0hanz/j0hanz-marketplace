@@ -1,8 +1,6 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
 // directly. Requirement IDs (R1 to R51) are indexed in ../README.md, "Requirements index".
 
-import type { NextAction } from '../types';
-
 /** The server out of `mcp__<server>__<tool>`, or null for a built-in tool. */
 export const mcpServer = (tool: string): string | null => {
   if (!tool.startsWith('mcp__')) return null;
@@ -134,61 +132,6 @@ const mapStrings = (value: unknown, fn: (s: string) => string): unknown => {
 
 /** R24: every string inside the (already redacted) arguments cut to 2,000 characters. */
 export const cutArgs = (args: unknown): unknown => mapStrings(args, (s) => cut(s, 2000));
-
-export type Response = {
-  toolNames: string[];
-  complete: boolean;
-  model?: string; // R4: the model that answered, else the one the request named
-  effort?: string | number; // R4: as the request asked; absent for a model without effort
-  /** R51: API-reported input (all three input counts summed) and output, and server tool uses. */
-  usage?: { in: number; out: number; serverTools: number } | null;
-};
-export type LabelCall = { id: string; tool: string; agent: string; response: number | null };
-
-/** R12: each call's next action, read from the next complete response of its agent. */
-export const labelCalls = (
-  responses: Record<string, Response[]>,
-  calls: LabelCall[],
-  isRunning: (agent: string) => boolean,
-): Record<string, NextAction> => {
-  const labels: Record<string, NextAction> = {};
-  for (const call of calls) {
-    const list = responses[call.agent] ?? [];
-    const next =
-      call.response === null
-        ? undefined
-        : list.slice(call.response + 1).find((response) => response.complete);
-    labels[call.id] = !next
-      ? isRunning(call.agent)
-        ? 'pending'
-        : 'aborted'
-      : next.toolNames.length === 0
-        ? 'answered'
-        : next.toolNames.includes(call.tool)
-          ? 'retried'
-          : next.toolNames.includes('AskUserQuestion')
-            ? 'asked-user'
-            : 'other-tool';
-  }
-  return labels;
-};
-
-/**
- * R51: how much the agent's context grew after response `k`: the next response with usage, its
- * input minus k's input and k's output. Only when k asked for exactly one tool (any tool, built-in
- * included) and no server tool, and the growth is not negative (a compaction ran between them).
- * Clearing old tool results in between shrinks the input without going negative: the figure is
- * then understated, not dropped.
- */
-// ponytail: no split for parallel or mixed calls; attribute by chars share if anyone asks.
-export const ctxDelta = (list: Response[], k: number | null): number | undefined => {
-  const at = k === null ? undefined : list[k];
-  if (!at?.usage || at.toolNames.length !== 1 || at.usage.serverTools > 0) return undefined;
-  const next = list.slice(k! + 1).find((response) => response.usage)?.usage;
-  if (!next) return undefined;
-  const delta = next.in - at.usage.in - at.usage.out;
-  return delta >= 0 ? delta : undefined;
-};
 
 const values = (text: string): string[] =>
   text
