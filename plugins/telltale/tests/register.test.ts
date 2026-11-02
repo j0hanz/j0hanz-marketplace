@@ -2385,7 +2385,9 @@ test('R35: the Inventory ends with its key row', async ($, on) => {
 
 // v0.3: the transcript line, the docked pane and drawing faults (R44, R45, R46).
 
-const ENGINE_ROW = { type: 'Text', children: [''] };
+// 2.1.299 tags each ui.render tree root in claude plugin test with part: { plugin }
+// naming the mod whose answer it is; the stub's engine row is the test plugin's root.
+const ENGINE_ROW = { type: 'Text', children: [''], part: { plugin: 'test' } };
 const toolRow = async ($: never, id: string, tool: string, isRunning = false) =>
   ($ as { ui: { render: (e: unknown) => Promise<unknown> } }).ui.render({
     component: 'ToolUse',
