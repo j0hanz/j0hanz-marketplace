@@ -1,3 +1,4 @@
+import Box from '@mui/material/Box';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
@@ -24,10 +25,13 @@ export function ClientPicker({
       aria-label="Show install commands for"
       sx={segmented}
     >
-      {CLIENTS.map(({ id, name, Icon }) => (
+      {CLIENTS.map(({ id, name, shortName, Icon }) => (
         <Tooltip key={id} title={name}>
           <ToggleButton value={id} aria-label={name}>
             <Icon fontSize="small" />
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              {shortName}
+            </Box>
           </ToggleButton>
         </Tooltip>
       ))}

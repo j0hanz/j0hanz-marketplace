@@ -89,8 +89,6 @@ function PluginCard({ plugin, client }: { plugin: Plugin; client: ClientId }) {
             <Tooltip title={hooks}>
               <Chip
                 size="small"
-                role="note"
-                tabIndex={0}
                 icon={<InfoIcon />}
                 label={countLabel(plugin.hookEvents.length, 'hook')}
                 aria-label={`${countLabel(plugin.hookEvents.length, 'hook')}: ${hooks}`}
@@ -160,7 +158,6 @@ export function Catalog({
               endAdornment: query ? (
                 <InputAdornment position="end">
                   <IconButton
-                    size="small"
                     edge="end"
                     aria-label="Clear search"
                     onClick={() => {

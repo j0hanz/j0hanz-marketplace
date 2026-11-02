@@ -91,7 +91,9 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
       ) : (
         <RevealOnEnter>
           {listed.map((plugin) => {
-            const openByDefault = searching || (isDesktop && plugin.name === firstPluginName);
+            const openByDefault = searching
+              ? plugin.name === firstPluginName
+              : isDesktop && plugin.name === firstPluginName;
             return (
               <Accordion
                 key={plugin.name}
@@ -140,13 +142,7 @@ export function SkillIndex({ visible, searching }: { visible: Plugin[]; searchin
                         <Entry key={`${kind}:${entry.name}`} description={entry.description}>
                           {entry.note === 'model-loaded' && (
                             <Tooltip title={MODEL_LOADED}>
-                              <Tag
-                                role="note"
-                                tabIndex={0}
-                                aria-label={`model-loaded. ${MODEL_LOADED}`}
-                              >
-                                model-loaded
-                              </Tag>
+                              <Tag aria-label={`model-loaded. ${MODEL_LOADED}`}>model-loaded</Tag>
                             </Tooltip>
                           )}
                           <Typography component="code" variant="body2" sx={codeSx}>

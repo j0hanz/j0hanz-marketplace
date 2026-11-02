@@ -24,7 +24,7 @@ export function Hero({
       {/* Both columns start on the same line, so the panel's lit top rule sits
           with the headline's first cap rather than floating against its middle. */}
       <Grid container spacing={{ xs: 5, md: 2 }} sx={{ alignItems: 'start' }}>
-        <Grid size={{ xs: 12, md: 7 }}>
+        <Grid size={{ xs: 12, md: 7 }} sx={{ order: { xs: 2, md: 1 } }}>
           <Stack spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'flex-start' }}>
             <Typography variant="h2" component="h1" data-hero sx={{ '--i': 0 }}>
               Plugins for coding agents
@@ -55,11 +55,9 @@ export function Hero({
                 Browse plugins
               </Button>
               <Button
-                variant="contained"
+                variant="outlined"
                 size="large"
-                color="inherit"
                 disableElevation
-                sx={{ bgcolor: 'background.paper' }}
                 href={site.repoUrl}
                 {...external}
                 aria-label={externalLabel('GitHub')}
@@ -71,7 +69,7 @@ export function Hero({
           </Stack>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid size={{ xs: 12, md: 5 }} sx={{ order: { xs: 1, md: 2 } }}>
           {/* The picker heads the panel because it decides every command below it, and
               the catalog's cards follow the same choice. */}
           <Stack spacing={2.5} sx={{ p: 2, bgcolor: 'background.paper', border: rule }}>

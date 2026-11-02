@@ -17,7 +17,8 @@ export function useActiveSection(hrefs: readonly string[]) {
           if (entry.isIntersecting) onScreen.add(href);
           else onScreen.delete(href);
         }
-        setActive(hrefs.findLast((href) => onScreen.has(href)) ?? '');
+        // Array.prototype.findLast needs Safari 18+; reverse a copy for older browsers
+        setActive([...hrefs].reverse().find((href) => onScreen.has(href)) ?? '');
       },
       { rootMargin: `-${scrollOffset}px 0px -60% 0px` },
     );

@@ -58,7 +58,7 @@ export function Command({ value }: { value: string }) {
         {value}
       </Typography>
       <Tooltip title={tip}>
-        <IconButton onClick={copy} aria-label={`Copy ${value}`}>
+        <IconButton onClick={copy} aria-label="Copy install command">
           <Icon key={swap.key} fontSize="small" color={iconColor} data-swap-in={swap.pressed} />
         </IconButton>
       </Tooltip>

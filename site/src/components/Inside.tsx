@@ -3,7 +3,7 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import { capabilities } from '../capability';
 import { commandFor } from '../catalog';
-import { codeSx } from '../theme/tokens';
+import { brand, codeSx, ground, ink } from '../theme/tokens';
 import { countLabel, site, type ClientId, type Plugin } from '../site';
 import { RevealOnEnter } from './RevealOnEnter';
 import { Section } from './Section';
@@ -20,11 +20,10 @@ function Pane({ plugin, command }: { plugin: Plugin; command: string }) {
     .join(' · ');
   return (
     <Box
-      data-ui
       data-reveal
-      sx={{ bgcolor: '#0E1116', color: '#E7EBF0', p: 3, height: 1, minHeight: 240, ...codeSx }}
+      sx={{ bgcolor: ground.dark, color: ink.dark, p: 3, height: 1, minHeight: 240, ...codeSx }}
     >
-      <Typography component="p" sx={{ color: '#F5A524', fontSize: 16, fontWeight: 700, mb: 2 }}>
+      <Typography component="p" sx={{ color: brand.dark, fontSize: 16, fontWeight: 700, mb: 2 }}>
         {plugin.displayName} · {counts}
       </Typography>
       <Box component="pre" sx={{ ...codeSx, m: 0, fontSize: 14, whiteSpace: 'pre-wrap' }}>

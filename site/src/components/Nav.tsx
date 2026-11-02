@@ -68,7 +68,7 @@ function MobileMenu({ active }: { active: string }) {
             component="a"
             href={link.href}
             onClick={close}
-            aria-current={active === link.href ? 'true' : undefined}
+            aria-current={active === link.href ? 'page' : undefined}
             sx={{ ...menuItemSx, ...(active === link.href && activeSx('left')) }}
           >
             {link.label}
@@ -114,7 +114,7 @@ export function Nav() {
               color: 'inherit',
               textDecoration: 'none',
               fontSize: '1rem',
-              py: 1,
+              py: 1.5,
             }}
           >
             <MarkIcon />
@@ -136,7 +136,7 @@ export function Nav() {
                   key={link.href}
                   href={link.href}
                   color="inherit"
-                  aria-current={active === link.href ? 'true' : undefined}
+                  aria-current={active === link.href ? 'page' : undefined}
                   sx={{
                     color: 'text.secondary',
                     // The same bar the category filter and the open row wear:
@@ -159,7 +159,7 @@ export function Nav() {
             >
               <GitHubIcon />
             </IconButton>
-            <Box component="nav" aria-label="Sections" sx={{ display: { md: 'none' } }}>
+            <Box component="nav" aria-label="Sections menu" sx={{ display: { md: 'none' } }}>
               <MobileMenu active={active} />
             </Box>
           </Stack>

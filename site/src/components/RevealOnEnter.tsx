@@ -16,6 +16,12 @@ export function RevealOnEnter({ children }: { children: ReactNode }) {
     );
     if (pending.length === 0) return;
 
+    // IO missing (old webviews): show everything, never leave it hidden.
+    if (!('IntersectionObserver' in window)) {
+      for (const el of pending) el.dataset['shown'] = '';
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {

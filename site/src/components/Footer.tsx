@@ -7,7 +7,7 @@ import { ExternalIcon, MarkIcon } from '../icons';
 import { external, site } from '../site';
 import { RevealOnEnter } from './RevealOnEnter';
 
-const hitArea = { py: 0.3 };
+const hitArea = { py: 1 };
 
 export function Footer() {
   return (

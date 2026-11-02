@@ -26,7 +26,7 @@ const categoriesFor = (
 /** The lowercase blob the search needle matches against. */
 const haystack = (plugin: Plugin) =>
   [plugin.displayName, plugin.summary, plugin.hookEvents.join(' ')]
-    .concat(...capabilities(plugin).map((capability) => capability.searchTerms))
+    .concat(capabilities(plugin).flatMap((capability) => capability.searchTerms))
     .join(' ')
     .toLowerCase();
 
