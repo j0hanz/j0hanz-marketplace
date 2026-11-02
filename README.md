@@ -5,7 +5,7 @@
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-plugins-4285F4)](https://antigravity.google/docs/plugins)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Plugins for Claude Code, GitHub Copilot CLI and Antigravity CLI: skills, agents, and MCP servers you can install into any project. Claude Code and Copilot CLI share one catalog; Antigravity CLI installs each plugin from its folder here.
+Plugins for Claude Code, GitHub Copilot CLI (also usable in VS Code's Copilot harness), and Antigravity CLI: skills, agents, and MCP servers you can install into any project. Claude Code and Copilot CLI share one catalog; Antigravity CLI installs each plugin from its folder here.
 
 ## Install in Claude Code
 
@@ -94,6 +94,12 @@ Check with `copilot plugin list`, or `/skills` and `/agent` inside a session. Co
 - `output-styles` is Claude Code only: Copilot has no output styles.
 - Hooks detect the client and answer in its shape. Stop-time notes that Claude shows as a system message surface as a hook warning in Copilot.
 - The Claude `UserPromptExpansion` event does not exist in Copilot, so typed-slash-command briefs fire through `PreToolUse` on the skill tool instead.
+
+## Use GitHub Copilot in VS Code
+
+VS Code's Copilot harness can use plugins from this marketplace. In VS Code, open **Chat: Open Customizations**, choose **Browse** > **Configure Marketplaces** > **Add Marketplace**, and add `j0hanz/j0hanz-marketplace`. Then browse and install the plugins you want.
+
+Alternatively, install plugins with GitHub Copilot CLI as above; VS Code discovers those CLI-installed plugins automatically. This is another way to use the existing Copilot support, not a separate marketplace integration. Plugin components can vary by agent harness, so verify them in the VS Code Copilot session where you plan to use them.
 
 ## Install in Antigravity CLI
 
