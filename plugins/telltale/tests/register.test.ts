@@ -913,7 +913,7 @@ test('R11: a row opens its detail, and b returns with the same call selected', a
   await press($ as never, 'row:a');
   const detail = await draw($ as never);
   expect(detail.text).toContain('{\n  "a": 1\n}');
-  expect(detail.text).toContain('duration includes any permission prompt');
+  expect(detail.text).toContain('no permission dialog or classifier in this time');
   await press($ as never, 'back');
   expect(focusOf((await draw($ as never)).buttons)).toBe('row:a');
 });
@@ -2714,10 +2714,15 @@ test('R50: an allowed call says its duration has no permission wait', async ($, 
   );
 });
 
-test('R50: a call with no verdict logs permission null', async ($, on) => {
+// 2.1.299+: $.tool.call raises tool.check and the engine's own tier answers allow
+// where it once gave no verdict, so a call of a current engine always carries one;
+// null is only for an engine that raises no tool.check at all (R50).
+test('R50: a call nothing beneath answers is allowed by the engine and logs no rule', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);
   await callThrough($ as never, world, 'a');
   await endTurn($ as never, world);
-  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]!.permission).toBeNull();
+  const [record] = lines(world, `${DIR}/turn-1.jsonl`);
+  expect(record!.permission).toBe('allow');
+  expect(Object.keys(record!)).not.toContain('permissionRule');
 });
