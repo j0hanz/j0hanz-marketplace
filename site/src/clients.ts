@@ -7,16 +7,14 @@ interface Client {
   id: ClientId;
   /** What the icon stands for: the picker's accessible name and its tooltip. */
   name: string;
-  /** Short label shown next to the icon on wider screens. */
-  shortName: string;
   Icon: ComponentType<SvgIconProps>;
 }
 
 /** Picker order. The first is the default, and the one every plugin installs in. */
 export const CLIENTS: readonly Client[] = [
-  { id: 'claude', name: 'Claude Code', shortName: 'Claude', Icon: ClaudeCodeIcon },
-  { id: 'copilot', name: 'GitHub Copilot CLI', shortName: 'Copilot', Icon: CopilotIcon },
-  { id: 'antigravity', name: 'Antigravity CLI', shortName: 'Antigravity', Icon: AntigravityIcon },
+  { id: 'claude', name: 'Claude Code', Icon: ClaudeCodeIcon },
+  { id: 'copilot', name: 'GitHub Copilot CLI', Icon: CopilotIcon },
+  { id: 'antigravity', name: 'Antigravity CLI', Icon: AntigravityIcon },
 ];
 
 export const clientName = (id: ClientId) => CLIENTS.find((client) => client.id === id)?.name ?? id;
