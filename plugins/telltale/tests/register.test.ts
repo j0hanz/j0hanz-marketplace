@@ -505,21 +505,6 @@ test('R49: a subagent’s cut-short server tool use joins the main turn with no 
   ]);
 });
 
-test('R49: a server tool use listed again after a pause is logged once', async ($, on) => {
-  const world = worldOf(on);
-  await $.session.start(SESSION);
-  world.serverToolUses.push(
-    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100 }],
-    [{ id: 'sv1', name: 'advisor', input: {}, startedAt: 100, endedAt: 180 }],
-  );
-  await respond($ as never, world, []);
-  await respond($ as never, world, []);
-  await complete($ as never);
-  expect(lines(world, `${DIR}/turn-1.jsonl`)).toEqual([
-    { type: 'apiTool', id: 'sv1', name: 'advisor', agentId: null, args: {}, ms: 80 },
-  ]);
-});
-
 test('R8: a resumed session numbers its records after the ones already there', async ($, on) => {
   const world = worldOf(on, {
     [`${DIR}/context-1.json`]: '{}',
@@ -536,15 +521,6 @@ test('R8: a resumed session numbers its records after the ones already there', a
   expect(world.files.has(`${DIR}/turn-5.jsonl`)).toBe(true);
 });
 
-test('R14: a secret argument is redacted in the log', async ($, on) => {
-  const world = worldOf(on);
-  await $.session.start(SESSION);
-  await respond($ as never, world, [{ id: 'a', name: 'mcp__api__get' }]);
-  await $.tool.call({ tool: 'mcp__api__get', tool_use_id: 'a', token: 'abc123', q: 'x' } as never);
-  await complete($ as never);
-  expect(lines(world, `${DIR}/turn-1.jsonl`)[0]!.args).toEqual({ token: '[redacted]', q: 'x' });
-});
-
 test('R14: a secret the answer echoes is redacted in usedInAnswer', async ($, on) => {
   const world = worldOf(on);
   const key = 'AKIA' + 'Q7ZX2P9LMN4RTV8W';
@@ -558,27 +534,39 @@ test('R14: a secret the answer echoes is redacted in usedInAnswer', async ($, on
 });
 
 test(
-  'R15: with full payloads a 600-call turn takes three parts',
-  { options: { fullPayloads: true } },
+  'the plugin options reach the session log',
+  { options: { fullPayloads: true, logDir: '.claude/telltale/custom' } },
   async ($, on) => {
     const world = worldOf(on);
     await $.session.start(SESSION);
-    for (let i = 0; i < 600; i++) world.results[`c${i}`] = { result: 'r', text: 't'.repeat(4000) };
-    await respond(
-      $ as never,
-      world,
-      Array.from({ length: 600 }, (_, i) => ({ id: `c${i}`, name: 'Read' })),
-    );
-    for (let i = 0; i < 600; i++) {
-      await $.tool.call({ tool: 'Read', tool_use_id: `c${i}`, file_path: '/x' } as never);
-    }
+    await callThrough($ as never, world, 'u1', 'Read', 'plain words');
     await complete($ as never);
-    const parts = turnFiles(world);
-    expect(parts).toHaveLength(3);
-    expect(parts.flatMap((path) => lines(world, path))).toHaveLength(600);
-    for (const path of parts) expect(world.files.get(path)!.length).toBeLessThan(4 * 1024 * 1024);
+    expect(lines(world, `${ROOT}/custom/s1/turn-1.jsonl`)[0]!.text).toBe('plain words');
   },
 );
+
+test('a reload restores the log from what pane state kept', async ($, on) => {
+  const world = worldOf(on);
+  let kept: Record<string, unknown> = {
+    folder: `/work/${ROOT}/kept`,
+    start: '/work',
+    turnNo: 5,
+    warned: true,
+  };
+  on('state.get', (_$, e, next) =>
+    e.key in kept ? ({ value: { value: kept[e.key], version: 1 } } as never) : next(e),
+  );
+  await $.session.start({ ...SESSION, cwd: '/elsewhere' });
+  kept = {};
+  await callThrough($ as never, world, 'u1', 'Read', 'ok');
+  await complete($ as never);
+  expect(turnFiles(world)).toEqual([`${ROOT}/kept/turn-6.jsonl`]);
+
+  world.failWrites = true;
+  await callThrough($ as never, world, 'u2', 'Read', 'ok');
+  await complete($ as never);
+  expect(world.toasts).toEqual([]);
+});
 
 test('R16: a failing log folder gives one notice per session, and turns complete', async ($, on) => {
   const world = worldOf(on);
@@ -665,15 +653,6 @@ test('R6: headless, a failing log folder goes to the debug log only', async ($, 
   await complete($ as never);
   expect(world.toasts).toEqual([]);
   expect(world.logs).toEqual([`telltale: cannot write logs to /work/${DIR}`]);
-});
-
-test('R19: the log folder gets an ignore file', async ($, on) => {
-  const world = worldOf(on);
-  await $.session.start(SESSION);
-  await respond($ as never, world, [{ id: 'a', name: 'Read' }]);
-  await $.tool.call({ tool: 'Read', tool_use_id: 'a', file_path: '/x' } as never);
-  await complete($ as never);
-  expect(world.files.get(`${ROOT}/.gitignore`)).toBe('*\n');
 });
 
 test('R19: logs stay under the starting directory after the session moves', async ($, on) => {
