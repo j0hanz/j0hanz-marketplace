@@ -1,6 +1,15 @@
 // Pure helpers for the telltale mod: no `$`, no I/O, so `claude plugin test` checks them
 // directly. Requirement IDs (R1 to R51) are indexed in ../README.md, "Requirements index".
 
+/** R3: the work's result, or undefined when it threw. */
+export const safe = async <T>(work: () => Promise<T> | T): Promise<T | undefined> => {
+  try {
+    return await work();
+  } catch {
+    return undefined;
+  }
+};
+
 /** The server out of `mcp__<server>__<tool>`, or null for a built-in tool. */
 export const mcpServer = (tool: string): string | null => {
   if (!tool.startsWith('mcp__')) return null;

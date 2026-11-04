@@ -14,17 +14,17 @@ import type {
 
 import type { Call, CallDetail, Inventory, InventoryRow, NextAction, Totals, View } from '../types';
 import { createPending } from './pending';
+import { createSessionLog } from './session-log';
+import type { CallOutcome, Captured, KeptLog, LogPort, Turn } from './session-log';
 import {
   bandRow,
   callTable,
   chunks,
   clip,
-  cutArgs,
   detailHeader,
   estTokens,
   formatDur,
   formatTokens,
-  isAbsolute,
   isJson,
   logsPath,
   mcpServer,
@@ -32,14 +32,13 @@ import {
   permissionNote,
   plural,
   pretty,
+  safe,
   receipt,
-  redact,
   serverHeading,
   serverTool,
   show,
   skillGroup,
   statusLine,
-  toParts,
   toolName,
   usageText,
   usedInAnswer,
@@ -84,42 +83,6 @@ const deferredToast = atom({ plugin: 'telltale', key: 'deferred' } as const, nul
 const toastedNames = atom({ plugin: 'telltale', key: 'toastedNames' } as const, []);
 const message = atom({ plugin: 'telltale', key: 'message' } as const, null);
 
-type Captured = {
-  id: string;
-  tool: string;
-  server: string | null;
-  agentId: string | null;
-  ms: number;
-  args: Record<string, unknown>;
-  text: string;
-  isError: boolean;
-  blocks: string[];
-  turn: number; // R34
-  permission?: 'allow' | 'ask' | 'deny'; // R50
-  rule?: string; // R50: the settings rule that decided, raw; logged redacted, never put in state
-};
-type Done = { next: NextAction; used: string[] };
-type Turn = {
-  calls: Captured[];
-  skills: { skill: string; chars: number }[];
-  context: { reason: string; files: { path: string; kind: string; chars: number }[] } | null;
-  apiTools: {
-    id: string;
-    name: string;
-    agentId: string | null;
-    input: unknown;
-    ms: number | null;
-  }[];
-};
-
-const safe = async <T,>(work: () => Promise<T> | T): Promise<T | undefined> => {
-  try {
-    return await work();
-  } catch {
-    return undefined;
-  }
-};
-
 const blockKinds = (result: unknown): string[] => {
   const content = (result as { content?: unknown } | null)?.content;
   return Array.isArray(content)
@@ -127,24 +90,12 @@ const blockKinds = (result: unknown): string[] => {
     : [];
 };
 
-// Session state. A reload runs the module afresh; session.start restores the folder, the
-// start directory and the turn counter from `$.state`.
-let logDir = '.claude/telltale';
-let root = '';
-let fullPayloads = false;
+// Session state. A reload runs the module afresh; session.start restores the log from `$.state`.
 let interactive = true;
-let folder = '';
-let startDir = '';
-let turnNo = 0;
-let contextNo = 0;
-let rootReady = false;
-let warned = false;
-let pendingReason: 'clear' | 'compact' | null = null;
-let buffer: Turn = { calls: [], skills: [], context: null, apiTools: [] };
+let log: ReturnType<typeof createSessionLog>;
 const pending = createPending();
 const savePending = ($: EngineInterface) =>
   safe(() => update($, pendingIds, () => pending.snapshot()));
-const described = new Map<string, { server: string | null; chars: number; deferred: boolean }>();
 // R50: each real call's permission verdict from the tool.check tiers beneath telltale, by id.
 // The call's own tool.call hook takes the entry out once its `next` settles, so none outlive it.
 const verdicts = new Map<string, { decision: 'allow' | 'ask' | 'deny'; rule?: string }>();
@@ -159,15 +110,25 @@ const later = (work: () => Promise<unknown>) => {
   return settled;
 };
 
-/** Ends the running turn. R34: the number is taken with the swap, before any await, so a call
- * that lands while the turn ends is captured with the next number, matching the file it goes to. */
+/** The session log's engine port, from the calling `$`. */
+const logPort = ($: EngineInterface): LogPort => ({
+  sessionId: () => $.session.id(),
+  exists: (path) => $.fs.exists(path),
+  write: (path, text) => $.fs.write(path, text),
+  list: (path) => $.fs.list(path),
+  version: async () => (await $.session.version()).version,
+  onWriteFailed: async (notice) => {
+    await safe(() => update($, warnedOnce, () => true));
+    if (interactive) await safe(() => $.ui.toast(notice));
+    else await safe(() => $.ui.log(notice, { to: 'debug' })); // delta R6
+  },
+});
+
+/** Ends the running turn; `log.take` swaps before any await (R34). */
 async function takeTurn($: EngineInterface) {
-  const turn = buffer;
-  buffer = { calls: [], skills: [], context: null, apiTools: [] };
-  const hasRecords = turn.calls.length + turn.skills.length + turn.apiTools.length > 0;
-  const n = hasRecords ? ++turnNo : turnNo;
-  if (hasRecords) await safe(() => update($, turnCount, () => n)); // R47: kept across a reload
-  return { turn, n, hasRecords };
+  const taken = log.take();
+  if (taken.hasRecords) await safe(() => update($, turnCount, () => taken.n)); // R47: kept across a reload
+  return taken;
 }
 
 /** R12: each call's next action, and the values the answer repeats from its result. */
@@ -175,95 +136,18 @@ function labelTurn(
   turn: Turn,
   isRunning: (agent: string) => boolean,
   answer: string | null,
-): Map<string, Done> {
+): Map<string, CallOutcome> {
   const labels = pending.labelTurn(turn.calls, isRunning);
   return new Map(
     turn.calls.map((call) => [
       call.id,
-      { next: labels[call.id] ?? 'aborted', used: usedInAnswer(call.text, answer) },
+      {
+        next: labels[call.id] ?? 'aborted',
+        used: usedInAnswer(call.text, answer),
+        ...pending.callMeta(call.id),
+      },
     ]),
   );
-}
-
-async function write($: EngineInterface, name: string, text: string) {
-  try {
-    if (!rootReady) {
-      if (!(await $.fs.exists(`${root}/.gitignore`))) await $.fs.write(`${root}/.gitignore`, '*\n'); // R19
-      rootReady = true;
-    }
-    await $.fs.write(`${folder}/${name}`, text);
-  } catch {
-    // R16: one notice per session, also across a reload.
-    if (warned || (await safe(() => read($, warnedOnce)))) return;
-    warned = true;
-    await safe(() => update($, warnedOnce, () => true));
-    const notice = `telltale: cannot write logs to ${folder}`;
-    if (interactive) await safe(() => $.ui.toast(notice));
-    else await safe(() => $.ui.log(notice, { to: 'debug' })); // delta R6
-  }
-}
-
-/** R4, R5, R7, R8, R15, R51: one turn's records, and its context record when it has one. */
-async function writeLogs($: EngineInterface, turn: Turn, done: Map<string, Done>, n: number) {
-  const records = [
-    ...turn.calls.map((call) => {
-      const text = redact(call.text) as string;
-      const meta = pending.callMeta(call.id);
-      return JSON.stringify({
-        type: 'call',
-        tool: call.tool,
-        server: call.server,
-        agentId: call.agentId,
-        model: meta.model,
-        effort: meta.effort,
-        ms: call.ms,
-        permission: call.permission ?? null, // R50: null when no verdict was seen
-        ...(call.rule ? { permissionRule: redact(call.rule) } : {}),
-        args: cutArgs(redact(call.args)),
-        chars: call.text.length,
-        estTokens: estTokens(call.text.length),
-        ...(meta.ctxDelta === undefined ? {} : { ctxDelta: meta.ctxDelta }), // R51
-        isError: call.isError,
-        blocks: call.blocks,
-        head: text.slice(0, 300),
-        tail: text.slice(-300),
-        next: done.get(call.id)!.next,
-        usedInAnswer: redact(done.get(call.id)!.used), // R14: the pane keeps the raw values (R25)
-        ...(fullPayloads ? { text } : {}),
-      });
-    }),
-    ...turn.skills.map((skill) =>
-      JSON.stringify({ type: 'skill', ...skill, estTokens: estTokens(skill.chars) }),
-    ),
-    ...turn.apiTools.map((use) =>
-      JSON.stringify({
-        type: 'apiTool',
-        id: use.id,
-        name: use.name,
-        agentId: use.agentId,
-        args: cutArgs(redact(use.input)),
-        ms: use.ms,
-      }),
-    ),
-  ];
-  if (records.length > 0) {
-    const parts = toParts(records);
-    for (const [k, part] of parts.entries()) {
-      const name = parts.length === 1 ? `turn-${n}.jsonl` : `turn-${n}-part${k + 1}.jsonl`;
-      await write($, name, `${part.join('\n')}\n`);
-    }
-  }
-  if (turn.context) {
-    contextNo += 1;
-    const tools = [...described].map(([tool, info]) => ({ tool, ...info }));
-    // R8: which Claude Code built this context, so logs compare across versions.
-    const version = (await safe(() => $.session.version()))?.version;
-    await write(
-      $,
-      `context-${contextNo}.json`,
-      JSON.stringify({ ...turn.context, version, tools }),
-    );
-  }
 }
 
 /** R10, R11, R25: a call's pane row and detail, keeping the newest 200. */
@@ -753,8 +637,8 @@ async function drawCalls($: EngineInterface, frame: Frame, list: Call[], chosen:
   const { e, width, tabs, keyRow } = frame;
   const { Box, Text, Button } = $.ui.resolve(e);
   if (list.length === 0) {
-    const at = (await read($, logFolder)) || folder;
-    const start = (await read($, startedIn)) || startDir;
+    const at = (await read($, logFolder)) || log.location().folder;
+    const start = (await read($, startedIn)) || log.location().startDir;
     return (
       <Box flexDirection="column">
         {tabs}
@@ -829,9 +713,7 @@ async function drawCalls($: EngineInterface, frame: Frame, list: Call[], chosen:
 }
 
 export const register: Register = (on, options) => {
-  logDir =
-    typeof options.logDir === 'string' && options.logDir ? options.logDir : '.claude/telltale';
-  fullPayloads = options.fullPayloads === true;
+  log = createSessionLog(options);
 
   on('session.start', async ($, e, next) => {
     interactive = e.isInteractive;
@@ -842,33 +724,16 @@ export const register: Register = (on, options) => {
         argumentHint: '[calls|inventory]',
       }),
     );
-    // R19: anchored to where the session started, and kept in state so a reload or a later
-    // `cd` never moves it. One folder per session id, kept across /clear and resume.
-    folder = (await safe(() => read($, logFolder))) || '';
-    startDir = (await safe(() => read($, startedIn))) || '';
-    if (!folder) {
-      startDir = e.cwd.replace(/[\\/]+$/, '');
-      root = isAbsolute(logDir) ? logDir : `${startDir}/${logDir}`;
-      folder = `${root}/${(await safe(() => $.session.id())) ?? 'session'}`;
-      await safe(() => update($, logFolder, () => folder));
-      await safe(() => update($, startedIn, () => startDir));
-    } else {
-      root = folder.slice(0, folder.lastIndexOf('/'));
-      // A folder kept by v0.2, which kept no start directory: this session's directory stands in.
-      if (!startDir) {
-        startDir = e.cwd.replace(/[\\/]+$/, '');
-        await safe(() => update($, startedIn, () => startDir));
-      }
-    }
+    const kept: KeptLog = {
+      folder: await safe(() => read($, logFolder)),
+      startDir: await safe(() => read($, startedIn)),
+      turnNo: await safe(() => read($, turnCount)),
+      warned: await safe(() => read($, warnedOnce)),
+    };
+    const { folder, startDir } = await log.restore(logPort($), { cwd: e.cwd, kept });
+    if (folder !== kept.folder) await safe(() => update($, logFolder, () => folder));
+    if (startDir !== kept.startDir) await safe(() => update($, startedIn, () => startDir));
     pending.restore((await safe(() => read($, pendingIds))) ?? {});
-    for (const entry of (await safe(() => $.fs.list(folder))) ?? []) {
-      const turn = /^turn-(\d+)/.exec(entry.name);
-      const context = /^context-(\d+)\.json$/.exec(entry.name);
-      if (turn) turnNo = Math.max(turnNo, Number(turn[1]));
-      if (context) contextNo = Math.max(contextNo, Number(context[1]));
-    }
-    // R34: a failed write uses up its number, which only the kept counter remembers.
-    turnNo = Math.max(turnNo, (await safe(() => read($, turnCount))) ?? 0);
     // A call in flight across a reload never completes in this module (README, Known limits).
     await safe(() => update($, running, () => ({})));
     await showStatus($); // R47: the entry comes back after a reload
@@ -908,17 +773,13 @@ export const register: Register = (on, options) => {
       // does for subagent calls), never counted: the API exposes no result to size.
       for (const use of r?.serverToolUses ?? []) {
         const ms = use.endedAt === undefined ? null : use.endedAt - use.startedAt;
-        // A paused turn may list the same use again when it continues: one record per id.
-        const seen = buffer.apiTools.find((t) => t.id === use.id);
-        if (seen) seen.ms ??= ms;
-        else
-          buffer.apiTools.push({
-            id: use.id,
-            name: use.name,
-            agentId: e.agentId ?? null,
-            input: use.input,
-            ms,
-          });
+        log.addApiTool({
+          id: use.id,
+          name: use.name,
+          agentId: e.agentId ?? null,
+          input: use.input,
+          ms,
+        });
       }
     });
     if (recorded.finish(r)) await safe(() => relabel($, agent));
@@ -977,13 +838,12 @@ export const register: Register = (on, options) => {
         text,
         isError: r.isError === true || r.deny !== undefined,
         blocks: blockKinds(r.result),
-        // R34: the number this call's turn file will get (a call between turns joins the next).
-        turn: turnNo + 1,
+        turn: log.currentTurn(),
         permission: verdict?.decision,
         rule: verdict?.rule,
       };
-      // Before the return: the turn end reads `buffer` for its log.
-      buffer.calls.push(call);
+      // Before the return: the turn end takes it for its log.
+      log.addCall(call);
       void later(async () => {
         await listCall($, call);
         await addTotals($, call);
@@ -998,7 +858,7 @@ export const register: Register = (on, options) => {
 
   on('skill.prompt', async ($, e, next) => {
     const r = await next(e);
-    await safe(() => buffer.skills.push({ skill: e.skill, chars: r.text.length }));
+    await safe(() => log.addSkill(e.skill, r.text.length));
     void later(async () => {
       await update($, totals, (t) =>
         t.skills.includes(e.skill) ? t : { ...t, skills: [...t.skills, e.skill] },
@@ -1012,7 +872,7 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     await safe(() => {
       const plugin = e.provider.plugin;
-      described.set(e.tool, {
+      log.describeTool(e.tool, {
         server: plugin.startsWith('mcp:') ? plugin.slice(4) : null,
         chars: r.description.length,
         deferred: (r.isDeferred ?? e.isDeferred) === true,
@@ -1024,22 +884,20 @@ export const register: Register = (on, options) => {
   on('prompt.context', async ($, e, next) => {
     const r = await next(e);
     await safe(() => {
-      buffer.context = {
-        reason: pendingReason ?? 'start',
-        files: (r.instructionFiles ?? []).map((file) => ({
+      log.noteContext(
+        (r.instructionFiles ?? []).map((file) => ({
           path: file.path,
           kind: file.kind,
           chars: file.content.length,
         })),
-      };
-      pendingReason = null;
+      );
     });
     return r;
   });
 
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') {
-      pendingReason = 'clear';
+      log.markReason('clear');
       pending.clear(); // the cleared rows can never be relabelled
       // R26: work queued before the clear lands first, so nothing from before it counts after.
       await later(async () => {
@@ -1061,7 +919,7 @@ export const register: Register = (on, options) => {
       const { turn, n, hasRecords } = await takeTurn($);
       if (!hasRecords) return next(e);
       const done = labelTurn(turn, () => false, null); // the session is over: no agent is still running
-      await safe(() => writeLogs($, turn, done, n));
+      await safe(() => log.write(logPort($), turn, n, done));
     }
     return next(e);
   });
@@ -1070,7 +928,7 @@ export const register: Register = (on, options) => {
     const r = await next(e);
     // Only a main-conversation compaction that went ahead rebuilds the main context (R8).
     if (e.agentId === undefined && e.trigger !== 'precompute' && (!('skip' in r) || !r.skip)) {
-      pendingReason = 'compact';
+      log.markReason('compact');
     }
     return r;
   });
@@ -1105,7 +963,7 @@ export const register: Register = (on, options) => {
       const { listed, liveAgents, done } = ready;
       // R5, R6: the logs are the durable output. They are written first, in their own `safe`,
       // so a refused pane-state write (below) can never cost a turn its file.
-      await safe(() => writeLogs($, turn, done, n));
+      await safe(() => log.write(logPort($), turn, n, done));
       // R36: name each listed agent; merged, so an agent the engine has since dropped keeps its name.
       if (listed && listed.length > 0) {
         await safe(() =>
@@ -1195,7 +1053,7 @@ export const register: Register = (on, options) => {
       if (!e.props.hasSurvey && inFlight.length > 0) {
         const first = inFlight.reduce((a, b) => (b.startedAt < a.startedAt ? b : a));
         const now = await $.clock.now();
-        const turn = turnNo + 1;
+        const turn = log.currentTurn();
         const done = (await read($, calls)).filter(
           (call) => call.turn === turn && call.server !== null,
         );
