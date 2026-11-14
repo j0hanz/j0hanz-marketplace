@@ -44,6 +44,16 @@ test('filesystem plugin pins the server to the plugin version with project-scope
   });
 });
 
+test('filesystem plugin gives Antigravity no directory of its own', () => {
+  const manifest = json('../.antigravity-plugin/plugin.json');
+  const { filesystem } = json('../mcp_config.json').mcpServers;
+  // Antigravity starts plugin servers in the plugin's install folder, so no
+  // cwd, --allow-cwd or positional root: the workspace comes from roots/list.
+  assert.deepEqual(filesystem.args, ['-y', `@j0hanz/filesystem-mcp@${manifest.version}`]);
+  assert.equal(filesystem.cwd, undefined);
+  assert.equal(filesystem.env.FS_ALLOWED_DIRS, '');
+});
+
 test('filesystem plugin manifest links the server repo for the directory listing', () => {
   const manifest = json('../.claude-plugin/plugin.json');
   const repo = 'https://github.com/j0hanz/filesystem-mcp';

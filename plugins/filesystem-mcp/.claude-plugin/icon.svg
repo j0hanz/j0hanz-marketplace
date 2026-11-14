@@ -1,8 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <g transform="scale(1.28)" fill="none" stroke="#205878" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M132 325H90a15 15 0 0 1-15-15V62a15 15 0 0 1 15-15h75l28 28h107a15 15 0 0 1 15 15v34"/>
-    <rect x="150" y="166" width="158" height="156" rx="14"/>
-    <rect x="191" y="206" width="70" height="70" rx="4" stroke-width="19"/>
-    <path d="M181 139v27M211 139v27M242 139v27M272 139v27M181 322v27M211 322v27M242 322v27M272 322v27M123 193h27M123 223h27M123 253h27M123 283h27M308 193h27M308 223h27M308 253h27M308 283h27"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Filesystem MCP logo">
+  <defs>
+    <linearGradient id="fsmcp-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <!-- filesystem-mcp assets/logo.svg (64 units) scaled to the 512 the directory icon needs -->
+  <g transform="scale(8)">
+    <rect width="64" height="64" rx="14" fill="url(#fsmcp-tile)"/>
+    <!-- prongs point sideways: pointing up they read as chimneys -->
+    <g fill="#ffffff" transform="translate(-1 -4)">
+      <path d="M8 24a4 4 0 0 1 4-4h10l4 4h18a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z"/>
+      <rect x="46" y="31" width="12" height="5" rx="2.5"/>
+      <rect x="46" y="40" width="12" height="5" rx="2.5"/>
+    </g>
   </g>
 </svg>

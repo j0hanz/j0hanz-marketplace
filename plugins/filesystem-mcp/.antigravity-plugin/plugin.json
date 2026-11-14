@@ -1,0 +1,21 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "filesystem-mcp",
+  "displayName": "Filesystem",
+  "version": "2.20.0",
+  "description": "Filesystem MCP server for AI assistants. Search, read, edit, and manage local files in directories you choose.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "List the allowed directories and show the project tree",
+    "Search this project for TODO comments and summarize them by file",
+    "Show a diff of the two config files and explain what changed"
+  ],
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/filesystem-mcp#readme",
+  "repository": "https://github.com/j0hanz/filesystem-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "filesystem", "search", "batch", "diff", "edit"]
+}

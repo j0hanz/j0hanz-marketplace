@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@j0hanz/filesystem-mcp@2.20.0"],
+      "env": {
+        "FS_PORT": "",
+        "FS_ALLOWED_DIRS": "",
+        "FS_ALLOW_CWD_WALK": "false",
+        "FS_ALLOW_MISSING_ROOTS": "false",
+        "FS_ALLOW_SENSITIVE": "false"
+      }
+    }
+  }
+}
