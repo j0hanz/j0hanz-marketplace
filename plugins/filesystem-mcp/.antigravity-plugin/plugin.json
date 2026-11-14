@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "filesystem-mcp",
   "displayName": "Filesystem",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "description": "Filesystem MCP server for AI assistants. Search, read, edit, and manage local files in directories you choose.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
