@@ -1,7 +1,10 @@
 // fires:  PostToolUse on Write|Edit|Bash|PowerShell (Copilot: create|edit|bash|powershell;
 //         Antigravity: write_file|edit_file|run_command). A Bash command is split at unquoted
-//         && || ; | and newlines; each `git commit` or `gh pr create|edit|comment|review`
+//         && || ; | and newlines; each `git commit` or `gh pr|issue create|edit|comment|review`
 //         segment is scanned on its own. Nothing else fires.
+//         `scan.mjs gate` is the PreToolUse mode for public `gh` writes: it denies a command
+//         whose body has hits, once per exact body hash per session (per repo when the client
+//         sends no session id); the identical resubmission passes.
 // reads:  tool_input.{file_path,content,new_string} or .command (Antigravity: toolCall.args
 //         {Path, Content, Replacement, CommandLine}); a -F/--file/--body-file a segment
 //         names, resolved against payload.cwd (workspacePaths[0] on Antigravity; a `cd`
@@ -10,12 +13,23 @@
 //         nothing. Antigravity has no PostToolUse context channel, so there the findings
 //         wait in a per-conversation state file for `scan.mjs deliver`, a PreInvocation
 //         hook that answers injectSteps and clears the file.
-// fails:  any parse or read error -> exit 0, no output; never blocks
+// fails:  any parse or read error -> exit 0; the scan prints nothing, the gate answers allow
 // verify: node hooks/scan.mjs < payload.json; echo $?   (plugins/writeup/test/scan.test.mjs)
 import { basename, resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { text as readText } from 'node:stream/consumers';
-import { drainAdvisory, parkAdvisory, pass, toolInput, toolName, workspace } from './client.mjs';
+import {
+  allow,
+  deny,
+  drainAdvisory,
+  parkAdvisory,
+  pass,
+  stateFile,
+  toolInput,
+  toolName,
+  workspace,
+} from './client.mjs';
 
 const PLUGIN_KEY = 'writeup-unslop';
 
@@ -106,13 +120,17 @@ export const lintSubject = (subject) => {
 const MAX_SHOWN = 20;
 // Facts, not orders: imperative context reads as an injected instruction and gets shown to
 // the user instead of used. Each line still names where the repair lives.
+const GATE_ENDING =
+  'The command did not run. The same text sent again unchanged runs; a rewrite without these patterns passes the scan.';
 const ENDING = {
   file: 'A rewrite without these patterns passes the scan.',
   commit: 'An unpushed commit takes a new message with `git commit --amend`.',
-  pr: '`gh pr edit --body-file` replaces the PR body.',
-  comment: '`gh pr comment --edit-last` replaces the comment.',
-  review: 'A follow-up `gh pr comment` carries the correction.',
+  pr: GATE_ENDING,
+  comment: GATE_ENDING,
+  review: GATE_ENDING,
+  issue: GATE_ENDING,
 };
+const GATED = new Set(['pr', 'comment', 'review', 'issue']);
 
 // Shell words and segments, quote-aware: a quoted string is one word, so a `--file` inside an
 // -m message is text, not a flag. A PowerShell here-string (@' or @" to a line starting '@ or
@@ -195,10 +213,17 @@ const subjectOf = (words, msg) => {
 };
 
 const GH = {
-  create: ['pr', 'PR body'],
-  edit: ['pr', 'PR body'],
-  comment: ['comment', 'PR comment'],
-  review: ['review', 'review body'],
+  pr: {
+    create: ['pr', 'PR body'],
+    edit: ['pr', 'PR body'],
+    comment: ['comment', 'PR comment'],
+    review: ['review', 'review body'],
+  },
+  issue: {
+    create: ['issue', 'issue body'],
+    edit: ['issue', 'issue body'],
+    comment: ['comment', 'issue comment'],
+  },
 };
 // git's global options sit between `git` and the subcommand; these take the next word as value.
 const GIT_VALUE_OPTION = /^(?:-C|-c|--git-dir|--work-tree|--namespace|--config-env)$/;
@@ -211,7 +236,8 @@ const commandKind = (words) => {
   for (let i = 0; i < words.length - 1; i++) {
     if (words[i] === 'git' && gitSubcommand(words, i) === 'commit')
       return ['commit', 'commit message'];
-    if (words[i] === 'gh' && words[i + 1] === 'pr' && GH[words[i + 2]]) return GH[words[i + 2]];
+    const group = words[i] === 'gh' && Object.hasOwn(GH, words[i + 1]) ? GH[words[i + 1]] : null;
+    if (group && Object.hasOwn(group, words[i + 2])) return group[words[i + 2]];
   }
   return null;
 };
@@ -268,21 +294,51 @@ export const message = (t, hits) =>
     ENDING[t.kind],
   ].join('\n');
 
+// PreToolUse: deny a public gh write whose body has hits, once per exact body.
+export const gate = (payload) => {
+  const file = stateFile('writeup-gate', payload, workspace(payload), 'txt');
+  let seen = [];
+  try {
+    seen = readFileSync(file, 'utf8').split('\n');
+  } catch {}
+  const fresh = targets(payload)
+    .filter((t) => GATED.has(t.kind))
+    .flatMap((t) => {
+      const hits = findSlop(t.text);
+      const hash = createHash('sha256').update(t.text).digest('hex');
+      return hits.length && !seen.includes(hash) ? [{ t, hits, hash }] : [];
+    });
+  if (!fresh.length) return allow();
+  appendFileSync(file, fresh.map((f) => f.hash + '\n').join(''));
+  return deny(fresh.map((f) => message(f.t, f.hits)).join('\n\n'));
+};
+
 // Imported by the test, run by the hook; a name check survives symlinked and junctioned roots.
 if (basename(process.argv[1] ?? '') === 'scan.mjs') {
-  try {
-    const payload = JSON.parse((await readText(process.stdin)) || '{}');
-    if (process.argv[2] === 'deliver') {
-      process.stdout.write(drainAdvisory(PLUGIN_KEY, payload));
-    } else {
-      const blocks = targets(payload).flatMap((t) => {
-        const hits = [...lintSubject(t.subject), ...findSlop(t.text)];
-        return hits.length ? [message(t, hits)] : [];
-      });
-      process.stdout.write(parkAdvisory(PLUGIN_KEY, payload, blocks.join('\n\n')));
+  const raw = await readText(process.stdin).catch(() => '');
+  if (process.argv[2] === 'gate') {
+    try {
+      process.stdout.write(gate(JSON.parse(raw || '{}')));
+    } catch {
+      process.stdout.write(allow()); // fail open: a crash must never deny the tool
     }
-  } catch {
-    process.stdout.write(pass());
-    // fail open: never block a tool on a reflective hook
+  } else {
+    try {
+      const payload = JSON.parse(raw || '{}');
+      if (process.argv[2] === 'deliver') {
+        process.stdout.write(drainAdvisory(PLUGIN_KEY, payload));
+      } else {
+        const blocks = targets(payload)
+          .filter((t) => !GATED.has(t.kind))
+          .flatMap((t) => {
+            const hits = [...lintSubject(t.subject), ...findSlop(t.text)];
+            return hits.length ? [message(t, hits)] : [];
+          });
+        process.stdout.write(parkAdvisory(PLUGIN_KEY, payload, blocks.join('\n\n')));
+      }
+    } catch {
+      process.stdout.write(pass());
+      // fail open: never block a tool on a reflective hook
+    }
   }
 }

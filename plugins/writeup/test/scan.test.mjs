@@ -76,6 +76,24 @@ const HOOK = fileURLToPath(new URL('../hooks/scan.mjs', import.meta.url));
 const run = (payload, env) =>
   execFileSync('node', [HOOK], { input: JSON.stringify(payload), encoding: 'utf8', env });
 const claude = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: '' });
+const gateRun = (payload, env = { ...process.env, COPILOT_PLUGIN_ROOT: '' }, args = []) =>
+  execFileSync('node', [HOOK, 'gate', ...args], {
+    input: JSON.stringify(payload),
+    encoding: 'utf8',
+    env,
+  });
+// Runs fn with a unique session id and removes that session's gate state afterwards.
+let gateN = 0;
+const gated = (fn) => {
+  const id = `gatetest-${process.pid}-${++gateN}`;
+  try {
+    return fn(id);
+  } finally {
+    rmSync(join(tmpdir(), `writeup-gate-${id}.txt`), { force: true });
+  }
+};
+const bash = (command, extra = {}) => ({ tool_name: 'Bash', tool_input: { command }, ...extra });
+const reasonOf = (out) => JSON.parse(out).hookSpecificOutput.permissionDecisionReason;
 test('markdown write with slop returns hookSpecificOutput', () => {
   const out = JSON.parse(
     claude({ tool_name: 'Write', tool_input: { file_path: 'README.md', content: 'We delve.' } }),
@@ -102,14 +120,10 @@ test('chained git commit is scanned', () => {
   });
   assert.match(out, /An unpushed commit takes a new message with `git commit --amend`\./);
 });
-test('gh pr create is scanned', () => {
-  assert.match(
-    claude({
-      tool_name: 'Bash',
-      tool_input: { command: 'gh pr create --body "I hope this helps"' },
-    }),
-    /gh pr edit/,
-  );
+test('gh pr create is left to the gate, not the PostToolUse scan', () => {
+  const command = 'gh pr create --body "I hope this helps"';
+  assert.equal(claude(bash(command)), '');
+  gated((session_id) => assert.match(reasonOf(gateRun(bash(command, { session_id }))), /PR body/));
 });
 test('silent cases', () => {
   for (const p of [
@@ -193,19 +207,16 @@ test('Edit header says edit; Write header does not', () => {
     /^writeup:unslop flagged 1 pattern in README\.md:\n- rule 7 "delve" \(line 1\)\n/,
   );
 });
-test('gh pr comment and review are scanned with their own endings', () => {
-  assert.match(
-    claude({ tool_name: 'Bash', tool_input: { command: 'gh pr comment 7 --body "Delve"' } }),
-    /PR comment:.*gh pr comment --edit-last/s,
-  );
-  assert.match(
-    claude({
-      tool_name: 'Bash',
-      tool_input: { command: 'gh pr review 7 --approve --body "Delve"' },
-    }),
-    /review body:.*A follow-up `gh pr comment` carries the correction/s,
-  );
-  assert.equal(claude({ tool_name: 'Bash', tool_input: { command: 'gh pr view 7' } }), '');
+test('gh pr comment and review are gated with their own labels', () => {
+  const comment = 'gh pr comment 7 --body "Delve"';
+  const review = 'gh pr review 7 --approve --body "Delve"';
+  assert.equal(claude(bash(comment)), '');
+  assert.equal(claude(bash(review)), '');
+  gated((session_id) => {
+    assert.match(reasonOf(gateRun(bash(comment, { session_id }))), /PR comment:.*did not run/s);
+    assert.match(reasonOf(gateRun(bash(review, { session_id }))), /review body:.*did not run/s);
+  });
+  assert.equal(claude(bash('gh pr view 7')), '');
 });
 test('message files named by -F and --body-file are read', () => {
   const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
@@ -219,9 +230,13 @@ test('message files named by -F and --body-file are read', () => {
       out('git commit -F msg.txt'),
       /commit message \(msg\.txt\):\n- rule 7 "delve" \(line 3\)/,
     );
-    assert.match(
-      out(`gh pr create --body-file "${join(dir, 'body.md')}"`),
-      /PR body \(.*body\.md\):\n- rule 20/,
+    const pr = `gh pr create --body-file "${join(dir, 'body.md')}"`;
+    assert.equal(claude({ tool_name: 'Bash', tool_input: { command: pr }, cwd: dir }), '');
+    gated((session_id) =>
+      assert.match(
+        reasonOf(gateRun({ ...bash(pr), cwd: dir, session_id })),
+        /PR body \(.*body\.md\):\n- rule 20/,
+      ),
     );
     assert.match(out('git commit --file=msg.txt'), /\(line 3\)/);
     assert.equal(
@@ -280,7 +295,7 @@ test('a --file inside the -m text is prose, not a flag', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
-test('a commit chained with gh pr yields one block each, with its own label and ending', () => {
+test('a commit chained with gh pr: the scan reports the commit, the gate the PR body', () => {
   const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
   try {
     writeFileSync(join(dir, 'body.md'), 'I hope this helps.\n');
@@ -288,11 +303,14 @@ test('a commit chained with gh pr yields one block each, with its own label and 
       'git commit -m "fix: delve" && git push && gh pr create -t t --body-file body.md';
     const ctx = JSON.parse(claude({ tool_name: 'Bash', tool_input: { command }, cwd: dir }))
       .hookSpecificOutput.additionalContext;
-    const [commit, pr] = ctx.split('\n\n');
-    assert.match(commit, /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "delve"/);
-    assert.match(commit, /git commit --amend/);
-    assert.match(pr, /^writeup:unslop flagged 1 pattern in PR body \(body\.md\):\n- rule 20/);
-    assert.match(pr, /gh pr edit --body-file/);
+    assert.equal(ctx.split('\n\n').length, 1);
+    assert.match(ctx, /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "delve"/);
+    assert.match(ctx, /git commit --amend/);
+    gated((session_id) => {
+      const pr = reasonOf(gateRun({ ...bash(command), cwd: dir, session_id }));
+      assert.match(pr, /^writeup:unslop flagged 1 pattern in PR body \(body\.md\):\n- rule 20/);
+      assert.doesNotMatch(pr, /commit message/);
+    });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -576,9 +594,23 @@ test('here-string followed by a chained gh pr create', () => {
     }),
   );
   const blocks = out.hookSpecificOutput.additionalContext.split('\n\n');
-  assert.equal(blocks.length, 2);
+  assert.equal(blocks.length, 1);
   assert.match(blocks[0], /commit message[\s\S]*rule 7 "crucial"/);
-  assert.match(blocks[1], /PR body[\s\S]*rule 20/);
+  gated((session_id) =>
+    assert.match(
+      reasonOf(
+        gateRun({
+          tool_name: 'PowerShell',
+          session_id,
+          tool_input: {
+            command:
+              "git commit -m @'\nfix: x\n\nIt's crucial.\n'@; gh pr create --body \"I hope this helps\"",
+          },
+        }),
+      ),
+      /PR body[\s\S]*rule 20/,
+    ),
+  );
 });
 test('double-quoted here-string is scanned whole', () => {
   const out = JSON.parse(
@@ -646,7 +678,9 @@ test('the subject check is commit-only', () => {
   const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
   try {
     writeFileSync(join(dir, 'body.md'), 'Add x.\nWe delve.\n');
-    const out = ctxOf('gh pr create --body-file body.md', dir);
+    const out = gated((session_id) =>
+      reasonOf(gateRun({ ...bash('gh pr create --body-file body.md'), cwd: dir, session_id })),
+    );
     assert.match(out, /rule 7/);
     assert.doesNotMatch(out, /commit subject/);
   } finally {
@@ -656,3 +690,109 @@ test('the subject check is commit-only', () => {
 test('rules 21 and 24 do not hit lookalikes', () => {
   assert.deepEqual(findSlop('It may possibly work. The server is right.'), []);
 });
+
+const SLOP = 'gh pr create --body "We delve."';
+test('gate: slop body is denied with the rule and the ending', () =>
+  gated((session_id) => {
+    const out = JSON.parse(
+      gateRun(bash('gh pr create --body "I hope this helps"', { session_id })),
+    );
+    assert.equal(out.hookSpecificOutput.permissionDecision, 'deny');
+    assert.match(out.hookSpecificOutput.permissionDecisionReason, /rule 20/);
+    assert.match(out.hookSpecificOutput.permissionDecisionReason, /The command did not run\./);
+  }));
+test('gate: the identical resubmission passes', () =>
+  gated((session_id) => {
+    assert.notEqual(gateRun(bash(SLOP, { session_id })), '');
+    assert.equal(gateRun(bash(SLOP, { session_id })), '');
+  }));
+test('gate: a different slop body in the same session is denied again', () =>
+  gated((session_id) => {
+    assert.notEqual(gateRun(bash(SLOP, { session_id })), '');
+    assert.match(
+      reasonOf(gateRun(bash('gh pr create --body "We delve deeper."', { session_id }))),
+      /rule 7/,
+    );
+  }));
+test('gate: a clean body passes', () =>
+  gated((session_id) =>
+    assert.equal(gateRun(bash('gh pr create --body "Fix the parser."', { session_id })), ''),
+  ));
+test('gate: gh issue create and comment are denied', () =>
+  gated((session_id) => {
+    for (const c of ['gh issue create --body "We delve."', 'gh issue comment 3 --body "We delve."'])
+      assert.match(reasonOf(gateRun(bash(c, { session_id }))), /rule 7/, c);
+  }));
+test('gate: commits are never gated; the scan still reports them', () =>
+  gated((session_id) => {
+    const commit = bash('git commit -m "fix: we delve"');
+    assert.equal(gateRun({ ...commit, session_id }), '');
+    assert.match(claude(commit), /rule 7/);
+  }));
+test('gate: Copilot without a session id denies once per repo', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'writeup-'));
+  const env = { ...process.env, COPILOT_PLUGIN_ROOT: '1' };
+  const payload = { toolName: 'bash', toolArgs: { command: SLOP }, cwd };
+  try {
+    assert.equal(JSON.parse(gateRun(payload, env)).permissionDecision, 'deny');
+    assert.equal(gateRun(payload, env), '');
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+    for (const f of readdirSync(tmpdir()))
+      if (f.startsWith('writeup-gate-') && f.includes(cwd.split(/[\\/]/).pop()))
+        rmSync(join(tmpdir(), f), { force: true });
+  }
+});
+test('gate: Antigravity answers deny, allow, and allow on garbage', () => {
+  const id = `gateagy${process.pid}`;
+  const env = { ...process.env };
+  const args = ['--antigravity'];
+  try {
+    const call = (name, a) => ({ conversationId: id, toolCall: { name, args: a } });
+    assert.equal(
+      JSON.parse(gateRun(call('run_command', { CommandLine: SLOP }), env, args)).decision,
+      'deny',
+    );
+    assert.equal(
+      gateRun(call('write_file', { Path: 'a.md', Content: 'We delve.' }), env, args),
+      '{"decision":"allow"}',
+    );
+    const garbage = execFileSync('node', [HOOK, 'gate', ...args], {
+      input: 'not json',
+      encoding: 'utf8',
+    });
+    assert.equal(garbage, '{"decision":"allow"}');
+  } finally {
+    rmSync(join(tmpdir(), `writeup-gate-${id}.txt`), { force: true });
+  }
+});
+test('gate: Claude garbage stdin prints nothing and exits 0', () => {
+  assert.equal(
+    execFileSync('node', [HOOK, 'gate'], {
+      input: 'not json',
+      encoding: 'utf8',
+      env: { ...process.env, COPILOT_PLUGIN_ROOT: '' },
+    }),
+    '',
+  );
+});
+test('gate: a --body-file with slop is denied and the block names the file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'body.md'), 'ok\nWe delve.\n');
+    gated((session_id) =>
+      assert.match(
+        reasonOf(
+          gateRun({ ...bash(`gh pr create --body-file "${join(dir, 'body.md')}"`), session_id }),
+        ),
+        /body\.md/,
+      ),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('gate: gh constructor name is not a command', () =>
+  gated((session_id) =>
+    assert.equal(gateRun(bash('gh constructor name --body "We delve."', { session_id })), ''),
+  ));
