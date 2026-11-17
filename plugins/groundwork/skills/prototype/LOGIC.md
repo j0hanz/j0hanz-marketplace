@@ -53,11 +53,11 @@ Beautiful but restrained: clean typography, generous spacing, one accent colour.
 
 Open file for user, give absolute path (see [SKILL](SKILL.md) rules). They click through walkthroughs and free-play when ready; interesting moments = "wait, that shouldn't be possible" or "huh, I assumed X would be different"; those are bugs in the _idea_, the whole point. Want new actions or scenario → add. Prototypes evolve.
 
-### 5. Ca### 5. Capture the answer
+### 5. Capture the answer
 
 Follow "When the question is answered" in [SKILL](SKILL.md). Logic-specific part: validated reducer / machine / function set lifts into real module; HTML shell does not.
 
-atterns
+## Anti-patterns
 
 - **Don't add tests.** Prototype needing tests no longer prototype.
 - **Don't wire it to the real database.** In-memory state unless question specifically about persistence.

@@ -212,7 +212,7 @@ PR descriptions and commit messages written for people: plain prose, structural 
 
 ### groundwork
 
-The thinking before the code: grill a plan, keep the domain model in GLOSSARY.md and ADRs, design deep modules, surface deepening opportunities, prototype logic and layouts, research primary sources
+The thinking before the code: relentless grilling of a plan, a domain model kept in GLOSSARY.md and ADRs, deep-module design vocabulary, architecture reviews that surface deepening opportunities, throwaway prototypes that settle a logic or layout question, and research against primary sources.
 
 - Commands: `/groundwork:codebase-design`, `/groundwork:domain-modeling`, `/groundwork:grill-with-docs`, `/groundwork:grilling`, `/groundwork:improve-codebase-architecture`, `/groundwork:prototype`, `/groundwork:research`
 
