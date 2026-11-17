@@ -6,6 +6,8 @@ Plans 018-020 (2026-11-17, against `08e36e3`) come from an improve run scoped to
 
 Plans 021-024 (2026-11-17, against `4e32151`) come from an improve run scoped to `plugins/groundwork/`.
 
+Plans 025-027 (2026-11-17, against `b9a98ef`) come from a direction-focused improve run on `plugins/writeup/`, with each choice settled by the maintainer in a grilling session: catch slop before publish, gate public `gh` writes (deny once per body), commits stay advisory, add issue and review skills, add rules 8/21/24 and a commit subject check.
+
 Plan 014 (2026-10-29) is not from that skill and not scoped to telltale: it adds Antigravity CLI as a third client across the marketplace.
 
 Plans 002–013 were executed 2026-10-09 by chained executors on branch `telltale/plans-002-013` (worktree `C:/tmp/telltale-exec`), one commit per step batch, each reviewed against its done criteria before the next plan started; the branch was merged to `main` after plan 013. Amendments made during execution are recorded in the plan files and rows: 002's ignores array gained `'!plugins'` (ESLint 9 ignored-ancestor rule) and 003's BEARER group is capturing (`redactText` replaces via `$1`).
@@ -39,6 +41,10 @@ Plans 002–013 were executed 2026-10-09 by chained executors on branch `telltal
 | 023  | [Sync the groundwork catalog description with the manifest](023-groundwork-catalog-description-sync.md)              | P3       | S      | none                       | DONE (branch `groundwork/plans-021-024` @ `e36b4e8`, stacked on 024; equality check true; `site/src/data` regenerated on disk but gitignored, so the commit carries 2 files, the plan's 3-file expectation was wrong there; `npm test` 288 pass, typecheck green; validate/check red only on pre-existing telltale strict failure)        |     |
 | 024  | [Route research findings into the domain model](024-groundwork-research-loop-closure.md)                             | P2       | S      | none (soft: after 021/022) | DONE (branch `groundwork/plans-021-024` @ `446ed00`, stacked on 022; manifests left at `0.5.1`; scoped validate green; `npm run validate` red only on pre-existing telltale strict failure)                                                                                                                                               |     |
 
+| 025 | [The writeup scan flags rules 8, 21 and 24 and checks the commit subject line](025-writeup-scan-rules-and-subject.md) | P2 | S | none | DONE (branch `writeup/plan-025-rules-and-subject` @ `6f28786`, worktree `.claude/worktrees/agent-ad5d979d757150f2d`; reviewed: 54/54 writeup tests, lint and format clean; 11 new tests; `npm test` red only on 2 site tests needing gitignored site data in a fresh worktree; not merged) |
+| 026 | [The writeup scan stops slop before a `gh` command publishes it](026-writeup-gate-public-gh-writes.md) | P1 | M | 025 (soft) | DONE (branch `writeup/plan-026-gh-gate` @ `d007e1f`, stacked on 025, worktree `.claude/worktrees/agent-af951c524eaf03080`; reviewed: 65/65 writeup tests; gate answers allow on garbage, `null` and non-shell tools under Antigravity; deviation approved: 025's commit-only test moved to the gate; live checks on all 3 clients pending, incl. Copilot session id; not merged) |
+| 027 | [Writeup teaches agents to write GitHub issues and review comments](027-writeup-issue-and-review-skills.md) | P2 | S-M | 026 (soft) | DONE (branch `writeup/plan-027-issue-review-skills` @ `845d86c`, stacked on 026, worktree `.claude/worktrees/agent-a690e69f795f29424`; round 1 passed 6/6, re-scored by reviewer; baseline missed parts in 6/6 runs; `npm test` 308 pass; merging this branch brings 025 and 026; not merged) |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale: finding fixed independently or approach abandoned)
 
 ## Dependency notes
@@ -52,6 +58,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 006, 007, 008, 010 all touch the `writeLogs` call record, the README call-record table and the requirements index; 008, 011, 012 and 013 all touch the `command.run` handler or its `ui.open` stub. Each plan's drift check names the sibling edits it tolerates. Every plan claims a new requirement ID as "R49 (or the next free ID)" and bumps `plugin.json`; whichever lands second takes the next ID and version.
 - 018, 019, 020 all edit `plugins/writeup/hooks/scan.mjs` in separate regions (018: header, `TOKEN`, `targets`; 019: `commandKind`; 020: `RULES`). Any order works; each drift check names the sibling regions it tolerates. Run them one at a time, not in parallel worktrees, to avoid merge noise in `scan.test.mjs`.
 - 021–024 touch disjoint files (021: `prototype/LOGIC.md`; 022: `grill-with-docs/SKILL.md`, `prototype/SKILL.md`; 023: the catalog + regenerated site data; 024: `research/SKILL.md`), so any order works. 021–024 each bump the plugin version to `0.5.1` only if it is still `0.5.0`; whichever lands first owns the bump, the rest leave it alone. Prefer one at a time; 023's `site:data` regeneration and 022's/024's skill edits would race in parallel worktrees.
+- 025 then 026: both edit `plugins/writeup/hooks/scan.mjs` and `scan.test.mjs`; 026's drift check expects 025's changes. Run them one at a time. 027 touches only skills, manifests and the catalog, and owns the writeup bump to `0.5.0` for all three. 026 leaves live checks on all three clients (deny reaches the model; Antigravity `matcher: ""` PreToolUse answers allow on other tools).
 - Live checks to fold into the pending session below: 006 (finished subagents leaving `agent.list`), 008 (permission verdict ordering), 009 (which MCP servers fold into a ToolGroup).
 
 ## Findings audited but not planned (maintainer's choice, 2026-10-09)
@@ -64,6 +71,9 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - **Catalog and manifest descriptions diverged** (`.claude-plugin/marketplace.json:85` vs `plugins/telltale/.claude-plugin/plugin.json:6`): one-line sync next time either is edited; validate compares only names.
 
 ## Writeup run (2026-11-17): audited but not planned
+
+- **Direction run, deferred by maintainer choice**: release-notes and README/docs skills; an eval corpus of before/after fixtures that measures whether the skills improve output; gating `git commit` (amending is cheap).
+- **Commit subject check and rules 8/21/24**: now planned as 025.
 
 - **Scanning `SKILL.md` and agent files**: kept by maintainer choice. This repo's skills follow writeup's rules, so the hook doubles as a lint.
 - **Direction, commit subject check**: `commit/SKILL.md` makes "subject fits 72 chars" its done criterion. The scanner could flag subject length, a trailing period, and an unknown type. Effort S.
