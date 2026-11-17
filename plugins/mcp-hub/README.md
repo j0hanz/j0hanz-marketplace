@@ -15,6 +15,7 @@ Each skill loads on its own when the work matches its description. There are no 
 | `mcp-elicitation` | Asking the end user mid-call: `inputRequired`, forms, URL mode, `requestState`   |
 | `mcp-client`      | Calling a server, answering its requests, change streams, response cache         |
 | `mcp-transport`   | stdio, Streamable HTTP, legacy SSE, era negotiation, custom transports, tests    |
+| `mcp-migration`   | v1 to v2: points at the SDK's official upgrade skill, then the rewrite           |
 | `mcp-auth`        | Bearer-token gate, protected resource metadata, client OAuth, machine auth       |
 
 ## Install

@@ -123,7 +123,8 @@ Name is exact: `maxToolInputElements`, not `inputArgumentMaximum` or any cousin.
 | `ProtocolError(ResourceNotFound, ...)` for a read miss     | Throw `ResourceNotFoundError(uri)` — sends `-32602`; `-32002` is never emitted        |
 | Invalid args reported as JSON-RPC error                    | Ordinary `isError: true` tool result; handler never runs                              |
 | `inputSchema: { query: z.string() }` raw shape             | v2 takes `z.object({...})`                                                            |
-| `import { z } from "zod"`                                  | `import * as z from "zod/v4"`                                                         |
+| `zod` declared as `^3.x` in `package.json`                 | Declare `zod ^4.2.0`; a zod-3 range typechecks, then `tools/list` errors at runtime   |
+| `zod` 4.0–4.1                                              | 4.2+: older versions fall back with a warning and drop every `.describe()`            |
 | `inputSchema: {}` for a no-arg tool                        | Omit `inputSchema`                                                                    |
 | `structuredContent` without `outputSchema`                 | Nothing validates or advertises it; declare `outputSchema` alongside                  |
 | Unbounded `z.array(...)` in arguments                      | `.max()` every array; set `maxToolInputElements` for element-count caps               |
@@ -132,7 +133,7 @@ Name is exact: `maxToolInputElements`, not `inputArgumentMaximum` or any cousin.
 
 ## Review checklist
 
-- [ ] Every `inputSchema` is `z.object(...)` from `zod/v4`; no-arg tools omit it
+- [ ] `package.json` declares `zod ^4.2.0`; every `inputSchema` is `z.object(...)`; no-arg tools omit it
 - [ ] Every argument has `.describe()`; strings that must be non-empty have `.min(1)`
 - [ ] Every array in schemas is bounded (`.max()` or `maxToolInputElements` set)
 - [ ] Tool handlers use only `isError: true` / throws; no hand-built `ProtocolError` in tools
