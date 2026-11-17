@@ -145,9 +145,17 @@ const GH = {
   comment: ['comment', 'PR comment'],
   review: ['review', 'review body'],
 };
+// git's global options sit between `git` and the subcommand; these take the next word as value.
+const GIT_VALUE_OPTION = /^(?:-C|-c|--git-dir|--work-tree|--namespace|--config-env)$/;
+const gitSubcommand = (words, i) => {
+  let j = i + 1;
+  while (words[j]?.startsWith('-')) j += GIT_VALUE_OPTION.test(words[j]) ? 2 : 1;
+  return words[j];
+};
 const commandKind = (words) => {
   for (let i = 0; i < words.length - 1; i++) {
-    if (words[i] === 'git' && words[i + 1] === 'commit') return ['commit', 'commit message'];
+    if (words[i] === 'git' && gitSubcommand(words, i) === 'commit')
+      return ['commit', 'commit message'];
     if (words[i] === 'gh' && words[i + 1] === 'pr' && GH[words[i + 2]]) return GH[words[i + 2]];
   }
   return null;

@@ -514,6 +514,20 @@ test('Antigravity: garbage on stdin still answers {}', () => {
 });
 
 const copilot = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: 'x' });
+test('git global options before commit are skipped', () => {
+  for (const command of [
+    'git -C ../wt commit -m "Delve"',
+    'git -c commit.gpgsign=false commit -m "Delve"',
+    'git --no-pager -C . commit -m "Delve"',
+    'git --git-dir=.git commit -m "Delve"',
+  ]) {
+    const out = claude({ tool_name: 'Bash', tool_input: { command } });
+    assert.notEqual(out, '', command);
+    assert.match(out, /rule 7/, command);
+  }
+  for (const command of ['git -C commit log', 'git --no-pager log --grep commit'])
+    assert.equal(claude({ tool_name: 'Bash', tool_input: { command } }), '', command);
+});
 test('Claude PowerShell tool is scanned', () => {
   const out = JSON.parse(
     claude({ tool_name: 'PowerShell', tool_input: { command: 'git commit -m "Delve in"' } }),
