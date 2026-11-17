@@ -40,7 +40,7 @@ export function buildServer() {
 }
 ```
 
-- The factory runs once per HTTP request, once per stdio connection, and sometimes for a probe instance the entry throws away. A factory that returns a shared pre-built instance gets connected twice and breaks. Register everything **inside** the factory.
+- The factory also runs for probe instances the entry throws away, so keep it free of side effects.
 - Keep the factory cheap and free of side effects. Shared state lives at module scope or in a real store; the instance holds nothing between requests.
 - Over HTTP the factory receives `{ era, authInfo, requestInfo }` and can build per-caller instances from `authInfo`.
 
@@ -123,7 +123,7 @@ Choose `versionNegotiation.mode` by client lifetime:
 - Why not `'auto'` on a CLI: on stdio the probe spawns an extra sibling process on every connect, and a legacy server that ignores unknown requests stalls `connect()` for the full probe timeout.
 - Cached verdicts: key them on the auth context (credential hash) and date them. A stale **modern** verdict fails loudly; a stale **legacy** verdict succeeds silently forever, so expire it.
 - **SSE fallback:** try Streamable HTTP; on failure, retry with `SSEClientTransport` on a **fresh** `Client`. Fall back only on a non-auth 4xx (for example `404`/`405`). A 401/403 is an auth wall: `SdkHttpError` with `ClientHttpAuthentication` / `ClientHttpForbidden`, or `InsufficientScopeError`. 5xx, timeouts and network errors are outages. None of these is transport or era evidence.
-- **stdio child env:** `StdioClientTransport` passes only `getDefaultEnvironment()` by default. Add the keys the server needs: `env: { ...getDefaultEnvironment(), API_KEY }`. Never pass `process.env`; it leaks every secret to the child. On Windows, spawn `npx.cmd`, not `npx`.
+- **stdio child env:** `StdioClientTransport` passes only `getDefaultEnvironment()` by default. Add the keys the server needs: `env: { ...getDefaultEnvironment(), API_KEY }`. Never pass `process.env`; it leaks every secret to the child.
 - **Teardown:** on Streamable HTTP, call `await transport.terminateSession()` (a no-op without a session id), then `client.close()`. Stdio `close()` closes stdin, then sends SIGTERM, then SIGKILL. In-flight requests reject with `CONNECTION_CLOSED`.
 - Gate calls on `getServerCapabilities()`. Put `getInstructions()` in the model's system prompt.
 - Wrong-era calls fail locally with `METHOD_NOT_SUPPORTED_BY_PROTOCOL_VERSION`. For example, `listen()` is modern-only, and `subscribeResource()`/`ping()` are legacy-only.
@@ -174,12 +174,10 @@ Use `fetch: applyMiddlewares(a, b, c)(fetch)` on an HTTP client transport. The *
 | Hand-wired `*StreamableHTTPServerTransport` "for modern clients" | `createMcpHandler`. Hand-wired transports are legacy-only |
 | Era split by `Mcp-Session-Id` / `initialize` sniffing            | `isLegacyRequest` in front of `legacy: 'reject'` handler  |
 | v1 SDK kept for SSE, `as never` cast                             | `@modelcontextprotocol/server-legacy/sse`                 |
-| Factory returns one shared instance                              | Build a new `McpServer` per call                          |
 | `console.log` in stdio server                                    | `console.error`                                           |
 | `0.0.0.0` bind with no `allowedHosts` / guards                   | Host + Origin validation in front, plus auth              |
 | Token checked but `authInfo` never forwarded                     | `handler.fetch(req, { authInfo })` / `req.auth`           |
 | Redis listener calls `notify` per node                           | Shared `ServerEventBus` via `{ bus }`                     |
 | `'auto'` default in spawn-per-call CLI                           | Default mode + flag, or cached `prior`                    |
 | SSE fallback on any error                                        | Only non-auth 4xx; fresh `Client`                         |
-| `env: process.env` for stdio child                               | `getDefaultEnvironment()` + named keys                    |
 | Hand-crafted JSON-RPC to smoke-test modern                       | Real `Client` over `handler.fetch`                        |

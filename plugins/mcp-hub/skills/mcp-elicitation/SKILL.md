@@ -81,15 +81,11 @@ Read the answer with `inputResponse(ctx.mcpReq.inputResponses, key)`. Its `kind`
 | `decline` | User said no      | Plain text, `isError` unset             |
 | `cancel`  | User dismissed it | Plain text: not answered, may ask again |
 
-A decline is an answer, not a failure. Keep `isError` for real failures so the model can tell "the user said no" from "something broke". Check `action` before `acceptedContent`: it returns `undefined` for a decline too, and treating that as `missing` re-asks the user in a loop. On the push path (`elicitInput`), read `result.action` the same way.
+A decline is an answer, not a failure. Keep `isError` for real failures so the model can tell "the user said no" from "something broke". On the push path (`elicitInput`), read `result.action` the same way.
 
 ### 3. Validate accepted content
 
-Call `acceptedContent(ctx.mcpReq.inputResponses, key, zodSchema)`, then check the answer means what the action needs:
-
-- the typed name equals the target;
-- the room belongs to the signed-in building;
-- the box is actually ticked.
+Call `acceptedContent(ctx.mcpReq.inputResponses, key, zodSchema)`. Validated is not the same as meaning yes: check the answer binds to the target before acting.
 
 A wrong answer gets a plain result ("not done: name did not match"), not another question.
 

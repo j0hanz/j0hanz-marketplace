@@ -157,13 +157,10 @@ await client.connect(
 | :---------------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
 | MCP server issues tokens                                          | Server is a resource server only; a dedicated AS issues                                      |
 | `audience` option on the gate                                     | The option is `expectedResource`; the verifier reports `resource` from `aud`                 |
-| Verifier omits `expiresAt`                                        | Gate answers `401 invalid_token` for every token — always populate it                        |
 | Scope check inside tool handler body                              | `scopeChallenge: requireScopes(...)` sends proper `403 insufficient_scope` before invocation |
 | `extra.authInfo` in handlers (v1 path)                            | v2 is `ctx.http?.authInfo`; `undefined` over stdio                                           |
 | `{ auth: provider }` on the transport (v1)                        | v2 option is `authProvider`                                                                  |
 | `finishAuth(code)` positional                                     | Pass the whole `URLSearchParams`; dropped `iss` is rejected under RFC 9207                   |
-| Reconnect the started transport                                   | Fresh transport; a started one cannot restart                                                |
-| Trusting the SDK to validate `state`                              | SDK never compares it — the callback must, against the provider's value                      |
 | Rendering callback `error_description`                            | Attacker-controlled; `IssuerMismatchError` means mix-up attack — show a generic failure      |
 | Client credentials stored globally                                | Key by `ctx.issuer`; cross-AS leakage is a mix-up vector                                     |
 | Tokens in plain files                                             | OS keychain / secure storage                                                                 |
@@ -178,7 +175,6 @@ await client.connect(
 - [ ] Handlers read `ctx.http?.authInfo` with a stdio guard
 - [ ] Provider: credentials keyed by `ctx.issuer`; tokens in secure storage; `state()` random per flow
 - [ ] Callback compares `state` before anything; passes whole query to `finishAuth`
-- [ ] Reconnect on a fresh transport; OAuth state lives on the provider
 - [ ] `IssuerMismatchError` handled without rendering `error` / `error_description`
 - [ ] No v1 helpers (`mcpAuthRouter`, `ProxyOAuthServerProvider`) on new servers
 - [ ] Host/Origin validation present (see `mcp-transport`) — the token gate does not replace it

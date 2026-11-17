@@ -46,8 +46,6 @@ Every verb takes request options as its second argument:
 | `maxTotalTimeout`        | Absolute cap, even with progress resets                   |
 | `cacheMode`              | `'use'` / `'refresh'` / `'bypass'` on the cacheable verbs |
 
-A call that waits on a human (an elicitation, a URL sign-in) outlives the 60 s default. Raise `timeout` on that call, or set `resetTimeoutOnProgress` with a `maxTotalTimeout`.
-
 ## Tell the failures apart
 
 | What came back              | Meaning                                          | Do                                                           |
@@ -131,13 +129,9 @@ Every `Client` holds a response cache; the server's hint decides what it may ser
 
 | Mistake                                                        | Fix                                                            |
 | :------------------------------------------------------------- | :------------------------------------------------------------- |
-| `try/catch` around `callTool` as the only failure check        | Check `result.isError`; tool failures do not throw             |
 | `structuredContent` used as a typed value                      | Narrow it from `unknown` first                                 |
 | Hand-written `nextCursor` loop around `listTools()`            | It already aggregates; pass `{ cursor }` only for one raw page |
-| `if (mode === 'form')` in the elicitation handler              | Branch on `'url'`; everything else is a form                   |
-| `elicitation: {}` expecting URL requests                       | Declare `url: {}` explicitly                                   |
 | Separate handlers per era                                      | One handler answers both delivery paths                        |
-| Human-paced call on the 60 s default                           | Raise `timeout` or reset it on progress                        |
 | `listen()` on a 2025 connection, or the reverse                | Branch on `getProtocolEra()`                                   |
 | Manual `list_changed` handler next to the `listChanged` option | Use one or the other                                           |
 | Shared cache store without `cachePartition`                    | Partition by auth subject                                      |
@@ -145,11 +139,9 @@ Every `Client` holds a response cache; the server's hint decides what it may ser
 
 ## Review checklist
 
-- [ ] Every `callTool` result checked for `isError` before its `content` is used
 - [ ] `structuredContent` narrowed from `unknown`
 - [ ] Capabilities declared in the constructor match the handlers registered
 - [ ] Elicitation handler branches on `'url'`, shows who asks, and never auto-accepts
-- [ ] Human-paced calls carry a raised `timeout` or progress resets with a `maxTotalTimeout`
 - [ ] `SdkError` branches keyed on `code`; `ProtocolError` read for `code` and `data`
 - [ ] Change subscriptions branch on era; re-listen only on `'remote'`
 - [ ] A shared cache store has `cachePartition`

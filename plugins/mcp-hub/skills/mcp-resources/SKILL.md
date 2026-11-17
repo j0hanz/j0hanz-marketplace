@@ -134,7 +134,6 @@ function buildServer(reqCtx: McpRequestContext): McpServer {
 
 Rules that hold in both eras:
 
-- Advertise `resources: { subscribe: true }`, or updates are undeliverable.
 - Track subscriptions per connection: the `Set` lives inside the factory-built instance and never leaks across connections.
 - Gate per-URI sends on `reqCtx.era === 'modern' || subscribed.has(uri)`. On modern connections the subscribe set stays empty and `serveStdio` routes `sendResourceUpdated` onto matching listen streams; on 2025-era connections send only to subscribers.
 - Over HTTP behind `createMcpHandler`, the `McpServer` instance is per-request, so long-lived state dies with it. Publish through `handler.notify.resourceUpdated(uri)` instead of the instance. The stateless legacy posture can never deliver subscriptions: `resources/subscribe` succeeds and the `Set` is discarded.
@@ -182,7 +181,6 @@ server.registerPrompt(
 ```
 
 - `.describe()` becomes the argument description `prompts/list` shows next to the input field.
-- Arguments that fail `argsSchema` reject `prompts/get` with a `-32602` protocol error; the callback never runs. This differs from tools, where a rejection is an `isError` result.
 - Each message has `role: 'user' | 'assistant'` and one `content` block (`text`, `image`, `audio`, `resource`, `resource_link`). A trailing `assistant` message seeds the start of the reply.
 - Embed a registered resource with `type: 'resource'` to deliver it inline, with no `resources/read` round trip.
 - `completable(schema, cb)` adds autocomplete to one prompt argument; `cb(value, context?)` gets the other filled-in arguments as `context.arguments`. The first `completable` registers the `completion/complete` handler and advertises the `completions` capability. Resource template variables use the template's `complete` map instead.
@@ -191,7 +189,6 @@ server.registerPrompt(
 ## Review checklist
 
 - [ ] Read-only context exposed as a resource (not only tools); a read tool exists too if agents must pull mid-task
-- [ ] Template variables resolve-then-contain (`realpath` + prefix check), never raw joins
 - [ ] Not-found throws `ResourceNotFoundError`; no empty `contents` array; nothing hardcodes `-32002`
 - [ ] List is metadata-only and cheap; bounded or paginated; cursors stable
 - [ ] Subscriptions: `subscribe: true` declared, set tracked per connection, sends gated on era, coalesced
@@ -203,14 +200,11 @@ server.registerPrompt(
 
 ## Common mistakes
 
-| Mistake                                      | Rationalization to reject                         | Fix                                                                      |
-| -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| Everything is a tool                         | "tools always work, resource support varies"      | Dual surface; the host table is dated and moving                         |
-| String-prefix containment without `realpath` | "symlinks are not a threat here"                  | The SDK docs make `realpath` the reference pattern                       |
-| `resources/subscribe` assumed universal      | "it is core spec, both eras speak it"             | Removed in 2026-07-28; gate on `reqCtx.era`                              |
-| Hardcoded `-32002` for not-found             | "the spec reserves it for not-found"              | Throw `ResourceNotFoundError`; the SDK sends `-32602` in every era       |
-| v1 API recalled as current                   | "`server.resource` is stable across versions"     | v2: `registerResource`, method-string handlers, explicit `subscribe`     |
-| Heavy work in list callbacks                 | "clients need the full picture"                   | Metadata-only list; templates and reads carry the payload                |
-| `{path}` template for nested paths           | "the template matches whatever fits the variable" | Simple `{var}` matches one segment; `{+var}` matches multi-segment paths |
-| Empty `contents` for missing resource        | "empty array reads as not-found"                  | It reads as success; throw a protocol error                              |
-| Unbounded list of thousands                  | "clients paginate anyway"                         | Bounded index + templates + search tool                                  |
+| Mistake                                 | Rationalization to reject                     | Fix                                                                  |
+| --------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| Everything is a tool                    | "tools always work, resource support varies"  | Dual surface; the host table is dated and moving                     |
+| `resources/subscribe` assumed universal | "it is core spec, both eras speak it"         | Removed in 2026-07-28; gate on `reqCtx.era`                          |
+| Hardcoded `-32002` for not-found        | "the spec reserves it for not-found"          | Throw `ResourceNotFoundError`; the SDK sends `-32602` in every era   |
+| v1 API recalled as current              | "`server.resource` is stable across versions" | v2: `registerResource`, method-string handlers, explicit `subscribe` |
+| Heavy work in list callbacks            | "clients need the full picture"               | Metadata-only list; templates and reads carry the payload            |
+| Unbounded list of thousands             | "clients paginate anyway"                     | Bounded index + templates + search tool                              |

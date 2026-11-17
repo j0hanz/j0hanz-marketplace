@@ -42,7 +42,6 @@ server.registerTool(
 );
 ```
 
-- `.describe()` is the only documentation the model gets for an argument — every argument carries one.
 - A no-argument tool **omits** `inputSchema` entirely.
 - v1 `server.tool(...)` is gone: `registerTool(name, config, handler)`.
 - Invalid arguments never reach the handler. The client receives an ordinary tool result with `isError: true` and a message naming the failed constraint — not a JSON-RPC error. The model reads it and retries.
@@ -66,8 +65,6 @@ return {
   isError: true,
 };
 ```
-
-An empty result set is a successful answer, not an error. Return `structuredContent: { orders: [] }` — reporting it as `InvalidParams` sends the model into a retry loop.
 
 `outputSchema` validation is skipped on any `isError` result.
 
@@ -100,7 +97,7 @@ An empty result set is a successful answer, not an error. Return `structuredCont
 
 ## Annotations
 
-`title` is the display name; `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are behavior hints for the client — never change how the SDK runs the tool. Clients use them to auto-approve read-only tools and confirm destructive ones. A destructive tool without `destructiveHint: true` loses that confirmation gate.
+`title` is the display name; `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) are behavior hints for the client — never change how the SDK runs the tool. Clients use them to auto-approve read-only tools and confirm destructive ones.
 
 ## Argument size limits
 
@@ -122,24 +119,14 @@ Name is exact: `maxToolInputElements`, not `inputArgumentMaximum` or any cousin.
 | Throw `ProtocolError` from a tool handler to fail the call | SDK converts it to `isError: true`; code and `data` lost, model sees only the message |
 | `ProtocolError(ResourceNotFound, ...)` for a read miss     | Throw `ResourceNotFoundError(uri)` — sends `-32602`; `-32002` is never emitted        |
 | Invalid args reported as JSON-RPC error                    | Ordinary `isError: true` tool result; handler never runs                              |
-| `inputSchema: { query: z.string() }` raw shape             | v2 takes `z.object({...})`                                                            |
 | `zod` declared as `^3.x` in `package.json`                 | Declare `zod ^4.2.0`; a zod-3 range typechecks, then `tools/list` errors at runtime   |
 | `zod` 4.0–4.1                                              | 4.2+: older versions fall back with a warning and drop every `.describe()`            |
 | `inputSchema: {}` for a no-arg tool                        | Omit `inputSchema`                                                                    |
-| `structuredContent` without `outputSchema`                 | Nothing validates or advertises it; declare `outputSchema` alongside                  |
-| Unbounded `z.array(...)` in arguments                      | `.max()` every array; set `maxToolInputElements` for element-count caps               |
-| Destructive tool, no annotations                           | Add `destructiveHint: true` so clients confirm before running                         |
-| Empty result reported as an error                          | Empty is success; error text sends the model into a retry loop                        |
 
 ## Review checklist
 
 - [ ] `package.json` declares `zod ^4.2.0`; every `inputSchema` is `z.object(...)`; no-arg tools omit it
-- [ ] Every argument has `.describe()`; strings that must be non-empty have `.min(1)`
-- [ ] Every array in schemas is bounded (`.max()` or `maxToolInputElements` set)
 - [ ] Tool handlers use only `isError: true` / throws; no hand-built `ProtocolError` in tools
 - [ ] `isError` text names the fix (valid ids, expected range) — the model's only recovery material
-- [ ] Empty results returned, not thrown
-- [ ] `structuredContent` always paired with `outputSchema` and a `content` twin
 - [ ] Resource/prompt/completion callbacks throw typed subclasses, not bare `ProtocolError`
-- [ ] Destructive tools carry `destructiveHint: true`; read-only tools carry `readOnlyHint: true`
 - [ ] Error codes matched by `code` + `data` shape wherever a peer may run a pre-brand SDK copy
