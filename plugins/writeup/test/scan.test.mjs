@@ -514,6 +514,21 @@ test('Antigravity: garbage on stdin still answers {}', () => {
 });
 
 const copilot = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: 'x' });
+test('sentence-case headings with proper nouns are not title case', () => {
+  assert.deepEqual(findSlop('## Installing Claude Code'), []);
+  assert.deepEqual(findSlop('# Getting Started'), []);
+  assert.deepEqual(
+    findSlop('## Using GitHub Copilot With Claude Code').map((h) => h.id),
+    [17],
+  );
+});
+test('landscape flags only as "landscape of"', () => {
+  assert.deepEqual(findSlop('Rotate to landscape orientation.'), []);
+  assert.deepEqual(
+    findSlop('The landscape of AI tools shifts.').map((h) => h.id),
+    [7],
+  );
+});
 test('git global options before commit are skipped', () => {
   for (const command of [
     'git -C ../wt commit -m "Delve"',

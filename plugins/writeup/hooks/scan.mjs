@@ -24,15 +24,17 @@ const LIST_OR_HEADING = /^\s*(?:#{1,6}|[-*+]|\d+[.)])\s/;
 // Ids match the numbered rules in skills/unslop/SKILL.md.
 export const RULES = [
   // AI vocabulary. Verb forms only for enhance/underscore: "enhancement" is a tracker label
-  // and "an underscore" is a character, both common in code docs.
+  // and "an underscore" is a character, both common in code docs. "landscape" only as
+  // "landscape of": orientation and layout docs use the literal word.
   {
     id: 7,
     pattern:
-      /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscape\w*|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
+      /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscapes?\s+of|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
   },
   { id: 13, pattern: /—/g },
-  // Title case heading: the heading text when it holds 3+ capitalized words. Case-sensitive.
-  { id: 17, pattern: /(?<=^#{1,6} )(?=(?:.*?\b[A-Z][a-z]{3,}){3}).+$/g },
+  // Title case heading: the heading text when 3+ words after the first are capitalized; sentence
+  // case capitalizes the first. Case-sensitive.
+  { id: 17, pattern: /(?<=^#{1,6} )(?=\S+(?:.*?\b[A-Z][a-z]{3,}){3}).+$/g },
   // Emoji on headings and list items only; the PR attribution footer is prose and stays quiet.
   // © ® ™ ℹ ‼ ⁉ are pictographic to Unicode but typography here.
   {
