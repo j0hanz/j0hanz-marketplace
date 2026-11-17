@@ -1,7 +1,7 @@
 {
   "name": "writeup",
-  "version": "0.4.1",
-  "description": "PR descriptions and commit messages written for people: plain prose, structural diagrams, slop flagged on write.",
+  "version": "0.5.0",
+  "description": "PR descriptions, commit messages, issues and review comments written for people: plain prose, structural diagrams, slop caught before it publishes.",
   "author": {
     "name": "j0hanz",
     "url": "https://github.com/j0hanz"
