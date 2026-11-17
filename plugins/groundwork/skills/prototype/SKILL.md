@@ -33,7 +33,7 @@ Not this skill:
 
 ## When the question is answered
 
-1. Write verdict: question, answer, what surprised user.
+1. Write verdict where the project keeps decisions (its decision notes if it has them, else the conversation): question, answer, what surprised user.
 2. Fold validated decision into real code, rewritten properly. Prototype code had no tests or error handling.
 3. Decision with load-bearing reason future readers would re-litigate? Call Skill tool with `groundwork:domain-modeling`, offer ADR. New domain terms surfaced? Same skill, update `GLOSSARY.md`.
 4. Remove prototype from working tree. Ask user first whether to keep copy, e.g. on `prototype/<name>` branch. No branches or commits without asking.
