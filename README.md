@@ -157,7 +157,7 @@ Designs and reviews frontend UI: invents art-directed page direction from a brie
 
 MCP development skills for TypeScript SDK v2
 
-- Commands: `/mcp-hub:mcp-auth`, `/mcp-hub:mcp-elicitation`, `/mcp-hub:mcp-resources`, `/mcp-hub:mcp-tools`, `/mcp-hub:mcp-transport`
+- Commands: `/mcp-hub:mcp-auth`, `/mcp-hub:mcp-client`, `/mcp-hub:mcp-elicitation`, `/mcp-hub:mcp-resources`, `/mcp-hub:mcp-tools`, `/mcp-hub:mcp-transport`
 
 ### filesystem-mcp
 

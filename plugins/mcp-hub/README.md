@@ -13,6 +13,7 @@ Each skill loads on its own when the work matches its description. There are no 
 | `mcp-tools`       | `registerTool`, schemas, structured output, annotations, tool vs protocol errors |
 | `mcp-resources`   | Resources, URI templates, subscriptions across eras, prompts, completion         |
 | `mcp-elicitation` | Asking the end user mid-call: `inputRequired`, forms, URL mode, `requestState`   |
+| `mcp-client`      | Calling a server, answering its requests, change streams, response cache         |
 | `mcp-transport`   | stdio, Streamable HTTP, legacy SSE, era negotiation, custom transports, tests    |
 | `mcp-auth`        | Bearer-token gate, protected resource metadata, client OAuth, machine auth       |
 
