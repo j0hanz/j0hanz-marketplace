@@ -139,14 +139,14 @@ const worldOf = (on: On, files: Record<string, string> = {}): World => {
     await world.listHold;
     return world.failList
       ? { deny: 'no list' }
-      : {
+      : ({
           value: world.running.map((id) => ({
             id,
             description: id,
             type: 'general-purpose',
             status: 'running',
           })),
-        };
+        } as never);
   });
   on('session.usage', ($, e) => {
     world.usageCalls.push(String((e as { breakdown?: string }).breakdown ?? 'none'));

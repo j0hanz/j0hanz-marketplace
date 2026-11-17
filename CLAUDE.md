@@ -31,11 +31,11 @@ npm run site:data     # rebuilds site/src/data/marketplace.json and rewrites REA
 
 - A mod is a plugin whose `hooks/hooks.json` names a TypeScript hooks module (`"modules": ["./register.tsx"]`). Copilot does not run mods, so a mod carries the `claude-code-only` tag.
 - Mod tests are `*.test.ts` under the plugin, run by `claude plugin test` from `npm run validate`. The root `npm test` collects only `*.test.mjs`.
-- Loading a mod with `--plugin-dir` lays `.claude-plugin/types/`, which is gitignored. Load it once so `npm run validate` can typecheck it.
+- Loading a mod with `--plugin-dir` lays `.claude-plugin/types/` (gitignored) for the editor; it goes stale as Claude Code updates. `npm run validate` typechecks mods against the installed engine instead.
 
 ## Gate
 
-No CI. Run `npm run check` before a change lands.
+No CI. Run `npm run check` before a change lands. `.githooks/pre-commit` formats staged files; enable it once with `git config core.hooksPath .githooks`.
 
 ## Commits
 

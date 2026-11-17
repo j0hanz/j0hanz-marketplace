@@ -11,10 +11,10 @@ import { fails, lintPlugin } from './skill-lint.mjs';
 const catalog = JSON.parse(readFileSync('.claude-plugin/marketplace.json', 'utf8'));
 const sources = catalog.plugins.map((p) => p.source).filter((s) => typeof s === 'string');
 
-let failed = 0;
+const failures = [];
 const fail = (message) => {
   console.error(`✘ ${message}`);
-  failed++;
+  failures.push(message);
 };
 
 // shell: true — `claude` and `copilot` are .cmd shims on Windows.
@@ -32,7 +32,8 @@ if (!hasClaude) {
 
 if (hasClaude) {
   for (const target of ['.', ...sources]) {
-    if (run('claude', ['plugin', 'validate', target, '--strict']).status !== 0) failed++;
+    if (run('claude', ['plugin', 'validate', target, '--strict']).status !== 0)
+      fail(`${target}: claude plugin validate --strict`);
   }
 }
 
@@ -115,17 +116,13 @@ for (const { name, source } of catalog.plugins) {
 }
 
 // A plugin whose hooks.json names a hooks module (a mod) ships `*.test.ts` files that only
-// `claude plugin test` can run, and a typecheck that needs the types the engine lays on load.
+// `claude plugin test` can run. `plugin validate --strict` above typechecks it against the
+// installed engine; the types a --plugin-dir load lays go stale, so they are not used here.
 for (const source of sources) {
   const hooks = join(source, 'hooks', 'hooks.json');
   if (!existsSync(hooks) || !JSON.parse(readFileSync(hooks, 'utf8')).modules) continue;
   if (hasClaude && run('claude', ['plugin', 'test', source]).status !== 0)
     fail(`${source}: claude plugin test`);
-  if (!existsSync(join(source, '.claude-plugin', 'types'))) {
-    fail(
-      `${source}: no generated types; load it once with --plugin-dir so validate can typecheck it (CLAUDE.md, "Mods")`,
-    );
-  } else if (run('npx', ['tsc', '-p', source]).status !== 0) fail(`${source}: tsc`);
 }
 
 // Smoke test through the real CLI when it is installed, in a throwaway home so the
@@ -174,4 +171,6 @@ if (py) {
   console.log('python not on PATH: skipped tutor Python tests.');
 }
 
-process.exit(failed ? 1 : 0);
+// Printed last, so `tail` of a long run shows what failed.
+if (failures.length) console.error(`\n✘ ${failures.length} failed:\n  ${failures.join('\n  ')}`);
+process.exit(failures.length ? 1 : 0);
