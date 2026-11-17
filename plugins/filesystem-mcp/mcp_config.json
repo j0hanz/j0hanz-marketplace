@@ -2,7 +2,7 @@
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@j0hanz/filesystem-mcp@2.22.0"],
+      "args": ["-y", "@j0hanz/filesystem-mcp@2.23.0"],
       "env": {
         "FS_PORT": "",
         "FS_ALLOWED_DIRS": "",
