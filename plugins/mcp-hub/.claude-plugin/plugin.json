@@ -2,7 +2,7 @@
   "name": "mcp-hub",
   "displayName": "MCP Hub",
   "description": "MCP development skills for TypeScript SDK v2",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "license": "MIT",
   "author": {
     "name": "j0hanz",
@@ -12,9 +12,10 @@
     "mcp",
     "model-context-protocol",
     "typescript-sdk",
-    "mcp-server",
-    "mcp-client",
+    "oauth",
+    "elicitation",
     "claude-code",
-    "github-copilot"
+    "github-copilot",
+    "antigravity"
   ]
 }

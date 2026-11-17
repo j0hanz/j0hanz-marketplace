@@ -1,0 +1,11 @@
+{
+  "name": "mcp-hub",
+  "version": "3.0.0",
+  "description": "MCP development skills for TypeScript SDK v2",
+  "author": {
+    "name": "j0hanz",
+    "url": "https://github.com/j0hanz"
+  },
+  "homepage": "https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/mcp-hub",
+  "repository": "https://github.com/j0hanz/j0hanz-marketplace"
+}

@@ -109,6 +109,8 @@ Antigravity CLI reads no third-party catalog, so there is no marketplace to add:
 
 ```text
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/frontend
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/mcp-hub
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/filesystem-mcp
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/review
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/prompt
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/nodejs
@@ -155,10 +157,7 @@ Designs and reviews frontend UI: invents art-directed page direction from a brie
 
 MCP development skills for TypeScript SDK v2
 
-- Commands: `/mcp-hub:mcp`
-- Model-loaded skills: `mcp-auth`, `mcp-client`, `mcp-elicitation`, `mcp-migration`, `mcp-planning`, `mcp-protocol`, `mcp-router`, `mcp-server`, `mcp-test`
-- Agents: `mcp-auditor`, `mcp-debugger`, `mcp-migrator`
-- Hooks: `SessionStart`, `PostToolUse`
+- Commands: `/mcp-hub:mcp-auth`, `/mcp-hub:mcp-elicitation`, `/mcp-hub:mcp-resources`, `/mcp-hub:mcp-tools`, `/mcp-hub:mcp-transport`
 
 ### filesystem-mcp
 

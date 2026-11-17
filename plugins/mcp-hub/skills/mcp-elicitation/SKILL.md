@@ -1,154 +1,260 @@
 ---
 name: mcp-elicitation
-description: 'Elicitation: MCP SDK v2 user-input rounds, prompt completion, progress, or cancellation.'
-user-invocable: false
-metadata:
-  category: technique
+description: Use when an MCP server tool needs input from the end user mid-call (a confirmation, a missing value, a sign-in, a secret), or when writing or reviewing code that uses inputRequired, elicitInput, elicitation/create, requestState, or the elicitation client capability.
 ---
 
-# MCP Elicitation
+# MCP elicitation
 
-Implement mid-call interaction with `@modelcontextprotocol/server` v2. Reference: https://ts.sdk.modelcontextprotocol.io/v2/
+A tool asks the **end user** (not the model) for input while it runs. In TypeScript SDK v2 (`@modelcontextprotocol/server`), write every elicitation **write-once**: the handler returns `inputRequired(...)`, and the client calls again with the answers. On each entry the handler works out where it is and asks only for what is still missing. The principles hold in any SDK.
 
-**Era gotcha.** Modern (2026) handlers return stateless, multi-round `inputRequired(...)` descriptors; 2025 handlers await blocking `elicitInput()`. `elicitInput()` throws on modern connections. With its default `legacyShim: true`, SDK deliver modern `inputRequired(...)` returns to 2025 clients by issuing `elicitation/create`, `sampling/createMessage`, and `roots/list`; not enable `elicitInput()` for modern clients. Progress (`notify`) and cancellation (`signal`) work both eras.
+## Where one handler reaches
 
-## Steps
+| Connection                                             | `inputRequired` return                                     |
+| :----------------------------------------------------- | :--------------------------------------------------------- |
+| 2026-07-28                                             | Native multi-round-trip                                    |
+| 2025, stdio                                            | Legacy shim pushes `elicitation/create`                    |
+| 2025, sessionful Streamable HTTP + SSE                 | Legacy shim pushes                                         |
+| 2025, `createMcpHandler` default `legacy: 'stateless'` | Never asks: those users always get the gate's fallback     |
+| 2025, `enableJsonResponse`                             | Each round waits out `roundTimeoutMs` (10 min), then fails |
 
-1. **Register owned clients before calls**: Advertise elicitation capabilities, bound auto-fulfillment with `inputRequired.maxRounds`, handle `elicitation/create` at construction. Client default 10 rounds; past it client rejects with `SdkError` (`INPUT_REQUIRED_ROUNDS_EXCEEDED`).
+Serve interactive tools on a transport with a return path, and never in JSON-response mode. The sessionful `NodeStreamableHTTPServerTransport` arm serves only 2025 traffic.
 
-   ```ts
-   const client = new Client(
-     { name: 'client', version: '1.0' },
-     {
-       capabilities: { elicitation: { form: {} } },
-       inputRequired: { maxRounds: 10 },
-     },
-   );
-   client.setRequestHandler('elicitation/create', async (req) => {
-     if (req.params.mode === 'url') return { action: 'decline' }; // mode is omitted on older form requests
-     const content = await renderAndValidateJsonSchemaForm(
-       req.params.message,
-       req.params.requestedSchema,
-     );
-     return content === undefined ? { action: 'decline' } : { action: 'accept', content };
-   });
-   ```
+**Identity** comes from the request's auth, never from a form answer: `ctx.http?.authInfo`. Its `clientId` is the OAuth client, not the user, so have the token verifier put the user's subject in `authInfo.extra`.
 
-   Host-implemented `renderAndValidateJsonSchemaForm()` (not SDK export) renders requested schema, resolves only validated content; `undefined` means user declined. Add URL capability + owned URL handler only when client can complete that flow.
+## Decide whether to elicit
 
-   **Done:** Every owned client serving interaction advertises only supported modes, has bounded handler, returns content validated against requested schema.
+| Situation                                | Do                                 |
+| :--------------------------------------- | :--------------------------------- |
+| Model can supply the value               | Put it in `inputSchema`            |
+| Only the user knows it, non-sensitive    | Form elicitation                   |
+| Irreversible action                      | Form confirmation bound to target  |
+| Secret, payment, third-party OAuth       | URL elicitation                    |
+| Later question depends on earlier answer | Chained rounds with `requestState` |
 
-2. **Make modern tool calls replay-safe**: Each answer restarts tool from beginning. Read `ctx.mcpReq.inputResponses` before returning `inputRequired`; use `acceptedContent(..., key, schema)` for accepted content, `inputResponse(...)` to exit clean on `decline` or `cancel`.
+Names, emails and usernames may go in a form. Secrets, tokens and payment details may not: form answers land in the model's context. Form messages contain no clickable links.
 
-   ```ts
-   server.registerTool(
-     'deploy',
-     { inputSchema: z.object({ env: z.string() }) },
-     async ({ env }, ctx) => {
-       const state = inputResponse(ctx.mcpReq.inputResponses, 'confirm');
-       if (state?.kind === 'elicit' && state.action !== 'accept') {
-         return { content: [{ type: 'text', text: 'Deploy cancelled' }] };
-       }
-       const confirmed = acceptedContent(
-         ctx.mcpReq.inputResponses,
-         'confirm',
-         z.object({ confirm: z.boolean() }),
-       )?.confirm;
-       if (confirmed) return { content: [{ type: 'text', text: 'Deployed' }] };
-       return inputRequired({
-         inputRequests: {
-           confirm: inputRequired.elicit({
-             message: 'Deploy?',
-             requestedSchema: { type: 'object', properties: { confirm: { type: 'boolean' } } },
-           }),
-         },
-       });
-     },
-   );
-   ```
+## The handler's contract
 
-   Use `inputRequired.elicit()` for form fields, `inputRequired.elicitUrl()` for redirects like OAuth. Migrate embedded sampling and roots flows off deprecated `inputRequired.createMessage()` and `inputRequired.listRoots()`.
+Every handler has four parts, in this order.
 
-   **Done:** Every modern interaction reads prior responses, returns each accepted path once, terminates every decline/cancel path.
+### 1. Capability gate
 
-3. **Carry sequential state in signed `requestState`**: Return opaque, HMAC-signed state value, read via `ctx.mcpReq.requestState<State>()`. Client round-trips value byte-for-byte — keep secrets out, reject tampered/expired values with `-32602 Invalid or expired requestState`.
+Read the client's declared capabilities before asking. The SDK checks only after the handler returns. It then refuses with `-32021` (2026) or an `isError` "did not declare the required capability" result (2025), and the model gets no next step. The gate is the only way to turn that refusal into a readable result.
 
-   ```ts
-   const codec = createRequestStateCodec<{ step: string }>({
-     key: crypto.getRandomValues(new Uint8Array(32)),
-     ttlSeconds: 600,
-   });
-   const app = new McpServer(
-     { name: 'app', version: '1.0' },
-     { requestState: { verify: codec.verify } },
-   );
-   // Inside a tool handler registered on `app`:
-   return inputRequired({
-     inputRequests: { scope: inputRequired.elicit({/* … */}) },
-     requestState: await codec.mint({ step: 'confirmed' }),
-   });
-   ```
+```ts
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  type ClientCapabilities,
+  type McpServer,
+} from '@modelcontextprotocol/server';
 
-   **Done:** Every multi-round flow stores state in verified codec, rejects invalid state before business logic, exposes no secret in payload.
+// 2026 requests carry capabilities per request; 2025 sessions declared them at initialize.
+// Cast: SDK typings declare the envelope as {}, which strict TS will not index (TS7053).
+function elicitModes(server: McpServer, envelope: unknown) {
+  const caps = ((envelope as Record<string, unknown> | undefined)?.[CLIENT_CAPABILITIES_META_KEY] ??
+    server.server.getClientCapabilities()) as ClientCapabilities | undefined;
+  const e = caps?.elicitation;
+  return {
+    form: e !== undefined && (e.form !== undefined || Object.keys(e).length === 0), // spec: bare {} = form
+    url: e?.url !== undefined,
+  };
+}
+```
 
-4. **Report long work, honor cancellation**: Emit strictly increasing `notifications/progress` values for one `progressToken`. Pass `ctx.mcpReq.signal` to DB/HTTP work; check `signal.aborted` inside recursive work and loop conditions.
+Pick the fallback by action class:
 
-   ```ts
-   async ({ files }, ctx) => {
-     const tok = ctx.mcpReq._meta?.progressToken;
-     for (let i = 0; i < files.length; i++) {
-       if (tok)
-         await ctx.mcpReq.notify({
-           method: 'notifications/progress',
-           params: { progressToken: tok, progress: i + 1, total: files.length },
-         });
-     }
-     return { content: [{ type: 'text', text: 'Done' }] };
-   };
-   ```
+| Missing mode, tool is         | Return                                                         |
+| :---------------------------- | :------------------------------------------------------------- |
+| Destructive or paid           | Refuse: nothing done, do not retry from this client            |
+| Needs a non-secret value      | Ask the model to collect it in chat, pass as optional argument |
+| Needs the server's own secret | Setup steps (env var, config)                                  |
+| Needs user's secret or OAuth  | Where to connect (your connect page), then call again          |
 
-   **Done:** Each long-running path propagates abort signal, checks it during repeated work, emits monotonic progress when caller supplied token.
+### 2. Outcome per action
 
-5. **Complete prompt arguments at schema**: Wrap prompt `argsSchema` fields with `completable(...)`. Define resource-template completion in template's `complete` map instead.
+Read the answer with `inputResponse(ctx.mcpReq.inputResponses, key)`. Its `kind` is `missing`, `elicit`, `sampling` or `roots`; the `elicit` view also carries `action`. Give each outcome its **own** result:
 
-   ```ts
-   import { completable } from '@modelcontextprotocol/server';
-   server.registerPrompt(
-     'review',
-     {
-       argsSchema: z.object({
-         lang: completable(z.string(), (val) =>
-           ['ts', 'js', 'py'].filter((lang) => lang.startsWith(val)),
-         ),
-       }),
-     },
-     ({ lang }) => ({
-       messages: [{ role: 'user', content: { type: 'text', text: `Review ${lang}` } }],
-     }),
-   );
-   ```
+| Outcome   | Meaning           | Result                                  |
+| :-------- | :---------------- | :-------------------------------------- |
+| `missing` | Not asked yet     | Return `inputRequired(...)`             |
+| `accept`  | User submitted    | Validate, then act                      |
+| `decline` | User said no      | Plain text, `isError` unset             |
+| `cancel`  | User dismissed it | Plain text: not answered, may ask again |
 
-   **Done:** Every prompt argument needing completion uses `completable(...)`, every resource-template variable uses its template completion map.
+A decline is an answer, not a failure. Keep `isError` for real failures so the model can tell "the user said no" from "something broke". Check `action` before `acceptedContent`: it returns `undefined` for a decline too, and treating that as `missing` re-asks the user in a loop. On the push path (`elicitInput`), read `result.action` the same way.
 
-6. **Serve confirmed 2025 connections through legacy branch**: Require client's `elicitation` capability, use form mode for standard data, URL mode for external redirects, return from handler on `decline`/`cancel`. Keep credentials, API keys out of forms. `requestedSchema` defaults JSON Schema 2020-12; declare `$schema` when porting draft-07. `ElicitResult.content` in form mode is submitted form fields as object (e.g. `{ rating: 5, comment: '…' }`) validated against `requestedSchema` — return schema-shaped object.
+### 3. Validate accepted content
 
-   ```ts
-   const result = await ctx.mcpReq.elicitInput({
-     mode: 'form',
-     message: 'Rate topic',
-     requestedSchema: {
-       type: 'object',
-       properties: { rating: { type: 'number' } },
-       required: ['rating'],
-     },
-   });
-   if (result.action === 'accept') {
-     return { content: [{ type: 'text', text: `Recorded: ${JSON.stringify(result.content)}` }] };
-   }
-   ```
+Call `acceptedContent(ctx.mcpReq.inputResponses, key, zodSchema)`, then check the answer means what the action needs:
 
-   **Done:** Each legacy-only flow has confirmed 2025 connection, supported client capability, declared schema dialect when needed, valid result content, terminating non-accept path.
+- the typed name equals the target;
+- the room belongs to the signed-in building;
+- the box is actually ticked.
 
-7. **Retire 2025-only facilities**: Replace `ctx.mcpReq.requestSampling` with server direct-LLM-provider call only after recording provider, data-handling/retention policy, consent path, cost owner; stays functional for 2025 connections but throws for modern ones. Replace deprecated `ctx.mcpReq.log(level, data)` with stderr or OpenTelemetry.
+A wrong answer gets a plain result ("not done: name did not match"), not another question.
 
-   **Done:** Each direct LLM replacement has recorded provider, privacy/consent, cost decision; new interaction paths use neither sampling nor MCP logging; every retained legacy call isolated to confirmed 2025 branch.
+### 4. Act, idempotently
+
+Retries resend the final round, and sealed state is not single-use. Key the side effect so a repeat is a no-op. In a chained flow, mint the idempotency key in an early round and carry it in `requestState`. Return backend errors as an `isError` result.
+
+## Form schema
+
+Pass a zod object as `requestedSchema`; the SDK converts it. The wire takes only a **flat** object of these:
+
+| Use                                                                                 | Avoid (`TypeError` when the request is built) |
+| :---------------------------------------------------------------------------------- | :-------------------------------------------- |
+| `z.string().min().max()`                                                            | `.regex()`                                    |
+| `z.email()`, `z.url()`, `z.iso.date()`, `z.iso.datetime()`                          | `z.uuid()`, `z.email({ pattern })`            |
+| `z.number()` / `.int()` with `.min()` / `.max()`                                    | `.positive()`, `.gt()`, `.lt()`               |
+| `z.boolean()`                                                                       | `.nullable()`                                 |
+| `z.enum([...])`, `z.literal(['a', 'b'])`, `z.array(z.enum([...]))` for multi-select | union of literals, numeric enum               |
+| `.optional()`, `.default()`, `.meta({ title })`                                     | nested `z.object`                             |
+
+Refinements and transforms the wire cannot advertise still hold on re-entry, because `acceptedContent` validates with the original schema. Raw JSON Schema is sent unchecked: a nested object or a `pattern` breaks compliant clients with no server error.
+
+## Example: confirm a delete
+
+```ts
+import {
+  acceptedContent,
+  inputRequired,
+  inputResponse,
+  type CallToolResult,
+  type InputRequiredResult,
+  type McpServer,
+} from '@modelcontextprotocol/server';
+import * as z from 'zod/v4';
+
+const confirmSchema = z.object({
+  name: z.string().meta({ title: 'Type the dataset name to delete it' }),
+});
+const text = (t: string, isError?: true): CallToolResult => ({
+  content: [{ type: 'text', text: t }],
+  ...(isError && { isError }),
+});
+
+// deleteDataset must resolve without error when the dataset is already gone (idempotent).
+export function registerDeleteDataset(
+  server: McpServer,
+  deleteDataset: (name: string) => Promise<void>,
+) {
+  server.registerTool(
+    'delete-dataset',
+    {
+      description: 'Permanently delete a dataset after the user confirms',
+      inputSchema: z.object({ name: z.string().min(1) }),
+      annotations: { destructiveHint: true, idempotentHint: true },
+    },
+    async ({ name }, ctx): Promise<CallToolResult | InputRequiredResult> => {
+      const q = JSON.stringify(name);
+      if (!elicitModes(server, ctx.mcpReq.envelope).form) {
+        // elicitModes: the gate helper in section 1
+        return text(
+          `Nothing deleted: this client cannot show a confirmation, so ${q} cannot be deleted from here. Do not retry from this client.`,
+        );
+      }
+
+      const view = inputResponse(ctx.mcpReq.inputResponses, 'confirm');
+      if (view.kind === 'missing') {
+        return inputRequired({
+          inputRequests: {
+            confirm: inputRequired.elicit({
+              message: `Permanently delete ${q}? This cannot be undone.`,
+              requestedSchema: confirmSchema,
+            }),
+          },
+        });
+      }
+      if (view.kind !== 'elicit') return text(`Unexpected response; ${q} was not deleted.`, true);
+      if (view.action === 'decline') return text(`User declined. ${q} was not deleted.`);
+      if (view.action === 'cancel')
+        return text(
+          `User dismissed the confirmation. ${q} was not deleted; ask again if they still want it.`,
+        );
+
+      // A typed name binds the confirmation to this dataset; a checkbox would not.
+      if (acceptedContent(ctx.mcpReq.inputResponses, 'confirm', confirmSchema)?.name !== name) {
+        return text(`Typed name did not match. ${q} was not deleted.`);
+      }
+      try {
+        await deleteDataset(name);
+      } catch (err) {
+        return text(
+          `Deleting ${q} failed: ${err instanceof Error ? err.message : String(err)}`,
+          true,
+        );
+      }
+      return text(`Deleted ${q}.`);
+    },
+  );
+}
+```
+
+## Rounds and `requestState`
+
+- Put independent questions in one round's `inputRequests` map. Chain rounds only when a question depends on an earlier answer.
+- Each re-entry carries only the latest round's answers. Earlier answers survive only in `requestState`.
+- `requestState` is the only memory between rounds, and it comes back from the client. Seal it:
+  - Wire it with `createRequestStateCodec({ key, ttlSeconds, bind })` and `{ requestState: { verify: codec.verify } }` in the `McpServer` options.
+  - Tampered, expired or rebound state gets `-32602` before the handler runs.
+  - Read it back with `ctx.mcpReq.requestState<T>()`.
+- The key is at least 32 bytes. Load it from shared config whenever more than one instance serves requests.
+- `bind: ctx => <authenticated principal>` ties the state to the user. With `bind` set, call `codec.mint(payload, ctx)`.
+- In the payload, put the tool arguments that matter (or their hash), and reject a re-entry whose arguments differ. Mint only from already-validated answers. Store IDs, never secrets: the codec signs, it does not encrypt.
+- `ttlSeconds` defaults to 600 and restarts on every mint. Size it for human think time: an expired form becomes `-32602`, not a call to your handler.
+- Re-asking is capped at 8 rounds on the 2025 shim and 10 in the SDK client. After a bad answer, return a result instead of re-asking forever.
+
+## URL mode
+
+URL mode means you build and host a web page. Even a "keep it simple" secret request still needs the page, its auth, and a server-side store.
+
+1. Point the URL at **your own** connect page, never straight at a third-party authorize endpoint. The URL:
+   - uses HTTPS;
+   - carries only an opaque flow ID;
+   - holds no PII, no tokens, nothing that grants access by itself.
+2. The page authenticates the visitor and checks they are the user who started the flow before redirecting onward. This is the spec's anti-phishing MUST.
+3. Write-once:
+   1. Mint a flow ID.
+   2. Return `inputRequired.elicitUrl({ message, url })`, with the ID in the URL and in `requestState` bound to the user.
+   3. On re-entry, read the answer with `inputResponse`. `acceptedContent` is always `undefined` in URL mode.
+4. **Accept means opened.** The user agreed to open the page, not that they finished. Look up your own record by flow ID plus user. If the record is missing, return "sign-in not finished; call again when done". A URL flow normally ends with a second call.
+5. Key stored records by the authenticated subject, never by MCP session ID alone. Flow tokens stay on the server and never appear in a tool result. URL mode is not how users sign in to your own MCP server; that is MCP authorization (see `mcp-auth`).
+
+Write-once re-entry sketch. `codec` is bound to the user. `connectUrl` and `findRecord` are your page and your store.
+
+```ts
+const state = ctx.mcpReq.requestState<{ flowId: string }>();
+if (state) {
+  if (await findRecord(state.flowId, userId)) return text('Connected.');
+  const view = inputResponse(ctx.mcpReq.inputResponses, 'auth');
+  if (view.kind === 'elicit' && view.action !== 'accept')
+    return text(
+      `Sign-in ${view.action === 'decline' ? 'declined' : 'dismissed'}; nothing connected.`,
+    );
+  return text('Sign-in not finished. Call this tool again once the browser page says done.');
+}
+const flowId = crypto.randomUUID();
+return inputRequired({
+  inputRequests: {
+    auth: inputRequired.elicitUrl({
+      message: 'Sign in to connect your account',
+      url: connectUrl(flowId),
+    }),
+  },
+  requestState: await codec.mint({ flowId }, ctx),
+});
+```
+
+**Holding one call open until the callback** is the 2025-only push path: `notifications/elicitation/complete` exists on 2025-11-25 connections only. Branch on the `era` your `createMcpHandler`/`serveStdio` factory receives (`'legacy'` | `'modern'`).
+
+1. In the handler, mint an `elicitationId` and store `server.server.createElicitationCompletionNotifier(elicitationId, { relatedRequestId: ctx.mcpReq.id })` under it. The call **returns the sender function**; it sends nothing yet.
+2. Await `ctx.mcpReq.elicitInput({ mode: 'url', message, url, elicitationId }, { timeout: 10 * 60_000, signal: ctx.mcpReq.signal })`. Delete the stored sender in `finally`.
+3. Your callback endpoint looks up the sender by `elicitationId` and **calls** it, which sends `notifications/elicitation/complete`.
+4. The client's own `tools/call` timeout (60 s default) still runs, so the caller raises it too. Send `notifications/progress` when the request has a `progressToken`, and document that clients need `resetTimeoutOnProgress`.
+5. The callback must reach the same process. A fleet needs session affinity or pub/sub.
+
+## Checklist
+
+- Model-supplied values going into a URL or message are encoded or quoted.
+- The final side effect is idempotent.
+- Every `isError: true` is a real failure, never the user's choice.

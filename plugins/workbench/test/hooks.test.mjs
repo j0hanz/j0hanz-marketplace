@@ -122,7 +122,7 @@ test('client: all plugins with JS hooks carry byte-identical hooks/client.mjs an
       assert.equal(readFileSync(clientMjs, 'utf8'), canonical, `${entry.name}/hooks/client.mjs`);
     }
   }
-  assert.equal(count, 5);
+  assert.equal(count, 4);
 });
 
 test('client: envelope accessors and answers normalize Claude, Copilot, and Antigravity shapes', () => {
