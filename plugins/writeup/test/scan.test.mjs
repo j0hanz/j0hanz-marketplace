@@ -13,17 +13,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { findSlop, stripCode, RULES } from '../hooks/scan.mjs';
+import { findSlop, lintSubject, stripCode, RULES } from '../hooks/scan.mjs';
 
 test('each rule flags its sample', () => {
   const samples = {
     7: 'We delve into it.',
+    8: 'The file serves as an index.',
     13: 'Fast — and small.',
     17: '## Getting Started With Docker',
     18: '- Done 🎉',
     19: 'He said “hi”.',
     20: 'I hope this helps.',
+    21: 'Great question.',
     23: 'In order to run it.',
+    24: 'It could potentially fail.',
     31: 'We utilize caching.',
   };
   for (const [id, text] of Object.entries(samples))
@@ -95,7 +98,7 @@ test('Copilot create gets flat additionalContext', () => {
 test('chained git commit is scanned', () => {
   const out = claude({
     tool_name: 'Bash',
-    tool_input: { command: 'git add -A && git commit -m "Delve into it"' },
+    tool_input: { command: 'git add -A && git commit -m "fix: delve into it"' },
   });
   assert.match(out, /An unpushed commit takes a new message with `git commit --amend`\./);
 });
@@ -321,7 +324,7 @@ test('a bare heredoc on stdin is part of its segment, not new commands', () => {
   }
 });
 test('a heredoc opened before a commit belongs to its opener, not the commit', () => {
-  const command = `cat <<'EOF' > notes.md && git commit -m "ok"\nIt's crucial.\nEOF\necho done`;
+  const command = `cat <<'EOF' > notes.md && git commit -m "fix: ok"\nIt's crucial.\nEOF\necho done`;
   assert.equal(claude({ tool_name: 'Bash', tool_input: { command } }), '');
 });
 test('the hook runs when invoked through a symlink or junction', () => {
@@ -587,4 +590,69 @@ test('double-quoted here-string is scanned whole', () => {
   const ctx = out.hookSpecificOutput.additionalContext;
   assert.equal(ctx.split('\n\n').length, 1);
   assert.match(ctx, /rule 7 "delve"/);
+});
+
+const ctxOf = (command, cwd) => claude({ tool_name: 'Bash', tool_input: { command }, cwd });
+test('lintSubject reports each reason', () => {
+  assert.deepEqual(lintSubject('feat(api): add x'), []);
+  assert.deepEqual(lintSubject('feat(api)!: drop v1'), []);
+  const long = `feat: ${'x'.repeat(74)}`;
+  assert.deepEqual(
+    lintSubject(long).map((h) => h.match),
+    ['80 chars, limit 72'],
+  );
+  assert.deepEqual(
+    lintSubject('feat: add x.').map((h) => h.match),
+    ['ends in a period'],
+  );
+  assert.deepEqual(
+    lintSubject('Add x').map((h) => h.match),
+    ['not in type(scope): summary form'],
+  );
+  assert.deepEqual(
+    lintSubject('feature: add x').map((h) => h.match),
+    ['unknown type "feature"'],
+  );
+});
+test('git-generated subjects are skipped', () => {
+  assert.deepEqual(lintSubject('fixup! feat: x'), []);
+  assert.deepEqual(lintSubject('Revert "feat: x"'), []);
+});
+test('a -m subject with a period is flagged', () => {
+  assert.match(ctxOf('git commit -m "Fixed it."'), /- commit subject: ends in a period/);
+});
+test('-am is read as a message flag', () => {
+  assert.match(ctxOf('git commit -am "Fixed it."'), /- commit subject: ends in a period/);
+});
+test('a clean heredoc commit passes', () => {
+  const command = `git commit -m "$(cat <<'EOF'\nfix(x): handle y\n\nBody line.\nEOF\n)"`;
+  assert.equal(ctxOf(command), '');
+});
+test('a PowerShell here-string subject is read past its wrapper', () => {
+  const out = ctxOf("git commit -m @'\nFixed it.\n'@");
+  assert.match(out, /- commit subject: ends in a period/);
+  assert.doesNotMatch(out, /@/); // the wrapper opener is not the subject
+});
+test('the first line of a -F file is the subject', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'msg.txt'), 'wip\n');
+    assert.match(ctxOf('git commit -F msg.txt', dir), /not in type\(scope\): summary form/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('the subject check is commit-only', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'body.md'), 'Add x.\nWe delve.\n');
+    const out = ctxOf('gh pr create --body-file body.md', dir);
+    assert.match(out, /rule 7/);
+    assert.doesNotMatch(out, /commit subject/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('rules 21 and 24 do not hit lookalikes', () => {
+  assert.deepEqual(findSlop('It may possibly work. The server is right.'), []);
 });

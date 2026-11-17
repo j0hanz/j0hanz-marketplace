@@ -31,6 +31,7 @@ export const RULES = [
     pattern:
       /\b(?:additionally|crucial\w*|delv\w*|enduring|enhanc(?:e[sd]?|ing)|foster\w*|garner\w*|interplay\w*|intricate\w*|landscapes?\s+of|pivotal\w*|showcas(?:es|ed|ing)|tapestr\w*|testament\w*|underscor(?:es?\s+(?:the|how|that|why)|ed|ing)|vibrant\w*)\b/gi,
   },
+  { id: 8, pattern: /\b(?:serves as|stands as|boasts)\b/gi },
   { id: 13, pattern: /—/g },
   // Title case heading: the heading text when 3+ words after the first are capitalized; sentence
   // case capitalizes the first. Case-sensitive.
@@ -44,7 +45,9 @@ export const RULES = [
   },
   { id: 19, pattern: /[“‘][^“”‘’\n]*[”’]|[“”‘’]/g },
   { id: 20, pattern: /I hope this helps|let me know if|\bof course!|\bcertainly!|smoking gun/gi },
+  { id: 21, pattern: /\bgreat question\b|\babsolutely right\b/gi },
   { id: 23, pattern: /\bin order to\b|\bdue to the fact that\b|\bit is important to note\b/gi },
+  { id: 24, pattern: /\b(?:could|might|may) potentially\b|\b(?:could|might) possibly\b/gi },
   { id: 31, pattern: /\b(?:utiliz\w*|leverag\w*|facilitat\w*|numerous|in the event that)\b/gi },
 ];
 
@@ -68,6 +71,37 @@ export const findSlop = (text) =>
       ),
     )
     .sort((a, b) => a.line - b.line || a.id - b.id);
+
+// Types allowed by skills/commit/SKILL.md; edit both together.
+const COMMIT_TYPES = new Set([
+  'feat',
+  'fix',
+  'refactor',
+  'perf',
+  'docs',
+  'test',
+  'chore',
+  'build',
+  'ci',
+  'style',
+  'revert',
+]);
+// Subjects git writes itself are not the agent's prose.
+const GIT_GENERATED = /^(?:fixup! |squash! |amend! |Revert "|Merge )/;
+
+export const lintSubject = (subject) => {
+  if (typeof subject !== 'string') return [];
+  const s = subject.trim();
+  if (!s || GIT_GENERATED.test(s)) return [];
+  const reasons = [];
+  const n = [...s].length;
+  if (n > 72) reasons.push(`${n} chars, limit 72`);
+  if (s.endsWith('.')) reasons.push('ends in a period');
+  const m = s.match(/^([a-z]+)(\([^)]*\))?!?: \S/);
+  if (!m) reasons.push('not in type(scope): summary form');
+  else if (!COMMIT_TYPES.has(m[1])) reasons.push(`unknown type "${m[1]}"`);
+  return reasons.map((match) => ({ id: 'subject', match, line: 1 }));
+};
 
 const MAX_SHOWN = 20;
 // Facts, not orders: imperative context reads as an injected instruction and gets shown to
@@ -141,6 +175,25 @@ const messageFile = (words, cwd) => {
   return null;
 };
 
+// First -m value (or the -F file's first real line); a heredoc or here-string wrapper's opener
+// line is skipped. Undefined when the message lives elsewhere (editor, stdin).
+const OPENER = /^(?:\$\(cat <<-?['"]?[\w.-]+['"]?|@['"])\s*$/;
+const subjectOf = (words, msg) => {
+  let value;
+  if (msg) value = msg.text.split(/\r?\n/).find((l) => l.trim() && !l.startsWith('#'));
+  else {
+    for (const [i, w] of words.entries()) {
+      if (/^-[a-zA-Z]*m$|^--message$/.test(w)) value = words[i + 1];
+      else if (w.startsWith('--message=')) value = w.slice(10);
+      else continue;
+      break;
+    }
+    const lines = value?.split(/\r?\n/);
+    if (lines && OPENER.test(lines[0])) value = lines[1];
+  }
+  return value?.replace(/\r$/, '');
+};
+
 const GH = {
   create: ['pr', 'PR body'],
   edit: ['pr', 'PR body'],
@@ -192,7 +245,10 @@ export const targets = (payload) => {
       if (!found) return [];
       const [kind, name] = found;
       const msg = messageFile(words, workspace(payload));
-      return [msg ? { kind, name: `${name} (${msg.file})`, text: msg.text } : { kind, name, text }];
+      const t = msg
+        ? { kind, name: `${name} (${msg.file})`, text: msg.text }
+        : { kind, name, text };
+      return [kind === 'commit' ? { ...t, subject: subjectOf(words, msg) } : t];
     });
   }
   return [];
@@ -203,7 +259,11 @@ export const message = (t, hits) =>
     `writeup:unslop flagged ${hits.length} pattern${hits.length === 1 ? '' : 's'} in ${t.edit ? 'an edit to ' : ''}${t.name}:`,
     ...hits
       .slice(0, MAX_SHOWN)
-      .map((h) => `- rule ${h.id} "${h.match}" (line ${h.line}${t.edit ? ' of the edit' : ''})`),
+      .map((h) =>
+        h.id === 'subject'
+          ? `- commit subject: ${h.match}`
+          : `- rule ${h.id} "${h.match}" (line ${h.line}${t.edit ? ' of the edit' : ''})`,
+      ),
     ...(hits.length > MAX_SHOWN ? [`- and ${hits.length - MAX_SHOWN} more`] : []),
     ENDING[t.kind],
   ].join('\n');
@@ -216,7 +276,7 @@ if (basename(process.argv[1] ?? '') === 'scan.mjs') {
       process.stdout.write(drainAdvisory(PLUGIN_KEY, payload));
     } else {
       const blocks = targets(payload).flatMap((t) => {
-        const hits = findSlop(t.text);
+        const hits = [...lintSubject(t.subject), ...findSlop(t.text)];
         return hits.length ? [message(t, hits)] : [];
       });
       process.stdout.write(parkAdvisory(PLUGIN_KEY, payload, blocks.join('\n\n')));
