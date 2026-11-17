@@ -512,3 +512,50 @@ test('Antigravity: garbage on stdin still answers {}', () => {
     '{}',
   );
 });
+
+const copilot = (payload) => run(payload, { ...process.env, COPILOT_PLUGIN_ROOT: 'x' });
+test('Claude PowerShell tool is scanned', () => {
+  const out = JSON.parse(
+    claude({ tool_name: 'PowerShell', tool_input: { command: 'git commit -m "Delve in"' } }),
+  );
+  assert.match(out.hookSpecificOutput.additionalContext, /rule 7 "Delve"/);
+});
+test('here-string with apostrophe and semicolon is scanned whole', () => {
+  const out = JSON.parse(
+    copilot({
+      toolName: 'powershell',
+      toolArgs: { command: "git commit -m @'\nfix: x\n\nDon't stop; we delve.\n'@" },
+    }),
+  );
+  assert.equal(out.additionalContext.split('\n\n').length, 1);
+  assert.match(
+    out.additionalContext,
+    /^writeup:unslop flagged 1 pattern in commit message:\n- rule 7 "delve" \(line 4\)/,
+  );
+});
+test('here-string followed by a chained gh pr create', () => {
+  const out = JSON.parse(
+    claude({
+      tool_name: 'PowerShell',
+      tool_input: {
+        command:
+          "git commit -m @'\nfix: x\n\nIt's crucial.\n'@; gh pr create --body \"I hope this helps\"",
+      },
+    }),
+  );
+  const blocks = out.hookSpecificOutput.additionalContext.split('\n\n');
+  assert.equal(blocks.length, 2);
+  assert.match(blocks[0], /commit message[\s\S]*rule 7 "crucial"/);
+  assert.match(blocks[1], /PR body[\s\S]*rule 20/);
+});
+test('double-quoted here-string is scanned whole', () => {
+  const out = JSON.parse(
+    claude({
+      tool_name: 'PowerShell',
+      tool_input: { command: 'git commit -m @"\nfix: x\n\nSay "hi"; we delve.\n"@' },
+    }),
+  );
+  const ctx = out.hookSpecificOutput.additionalContext;
+  assert.equal(ctx.split('\n\n').length, 1);
+  assert.match(ctx, /rule 7 "delve"/);
+});

@@ -1,7 +1,7 @@
-// fires:  PostToolUse on Write|Edit|Bash (Copilot: create|edit|bash|powershell; Antigravity:
-//         write_file|edit_file|run_command). A Bash command is split at unquoted && || ; | and
-//         newlines; each `git commit` or `gh pr create|edit|comment|review` segment is scanned
-//         on its own. Nothing else fires.
+// fires:  PostToolUse on Write|Edit|Bash|PowerShell (Copilot: create|edit|bash|powershell;
+//         Antigravity: write_file|edit_file|run_command). A Bash command is split at unquoted
+//         && || ; | and newlines; each `git commit` or `gh pr create|edit|comment|review`
+//         segment is scanned on its own. Nothing else fires.
 // reads:  tool_input.{file_path,content,new_string} or .command (Antigravity: toolCall.args
 //         {Path, Content, Replacement, CommandLine}); a -F/--file/--body-file a segment
 //         names, resolved against payload.cwd (workspacePaths[0] on Antigravity; a `cd`
@@ -79,12 +79,14 @@ const ENDING = {
 };
 
 // Shell words and segments, quote-aware: a quoted string is one word, so a `--file` inside an
-// -m message is text, not a flag. Segments split at unquoted && || ; | and newlines, so a
-// `gh pr create` chained after `git commit` is its own target. A bare heredoc body (`-F - <<EOF`)
-// stays in its segment untokenized, up to the delimiter line; a body whose opener sits in an
-// earlier segment is skipped. ponytail: one heredoc per line; a second `<<` on the same line
-// replaces the first.
-const TOKEN = /"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|[^\s"'|;&]+/g;
+// -m message is text, not a flag. A PowerShell here-string (@' or @" to a line starting '@ or
+// "@) is one word whatever quotes it holds. Segments split at unquoted && || ; | and newlines,
+// so a `gh pr create` chained after `git commit` is its own target. A bare heredoc body
+// (`-F - <<EOF`) stays in its segment untokenized, up to the delimiter line; a body whose
+// opener sits in an earlier segment is skipped. ponytail: one heredoc per line; a second `<<`
+// on the same line replaces the first.
+const TOKEN =
+  /@'\r?\n[\s\S]*?\n'@|@"\r?\n[\s\S]*?\n"@|"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|[^\s"'|;&]+/g;
 const HEREDOC = /^<<-?([\w.-]*)$/;
 const parse = (command) => {
   const segments = [{ start: 0, words: [] }];
@@ -174,7 +176,7 @@ export const targets = (payload) => {
       return [];
     return [{ kind: 'file', name: path, text, edit: tool === 'Edit' }];
   }
-  if (tool === 'Bash' && typeof command === 'string') {
+  if ((tool === 'Bash' || tool === 'PowerShell') && typeof command === 'string') {
     return parse(command).flatMap(({ text, words }) => {
       const found = commandKind(words);
       if (!found) return [];

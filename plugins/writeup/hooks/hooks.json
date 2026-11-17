@@ -2,7 +2,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|Bash|create|edit|bash|powershell",
+        "matcher": "Write|Edit|Bash|PowerShell|create|edit|bash|powershell",
         "hooks": [
           {
             "type": "command",
