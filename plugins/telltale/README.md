@@ -31,7 +31,7 @@ While you work, without opening anything:
 - **Status line.** Session totals since start or the last `/clear`, with Claude Code's share of the context window in use:
 
   ```text
-  telltale · 7 MCP · 1✗ · ~12.6k tok · ctx 61%
+  telltale: 7 MCP calls · 1✗ · ~12.6k tok · ctx 61%
   ```
 
 - **Band above the prompt.** While an MCP call runs, it shows the longest-running call, its elapsed time, and the turn so far. It is empty otherwise.
@@ -213,7 +213,7 @@ The source and tests cite these IDs (`R1` to `R51`, and "delta R12" and similar)
 - **R23** The pane shows a view row `1: Calls`, `2: Inventory`, the view not shown dim (the detail counts as Calls); `1`/`2` switch; the `/telltale` argument picks the view (case-insensitive, trimmed); an unknown argument opens Calls and replies `unknown view "<argument>"; views: calls, inventory`.
 - **R24** Logged string argument values longer than 2,000 characters are cut to 2,000 followed by `…[cut N chars]`, after redaction.
 - **R25** The pane keeps the first 20,000 characters of the args (compact JSON) and of the result text, unredacted, for the 200 most recent calls, in the mod's own memory, not in shared plugin state; after a hot reload the detail of earlier calls says so (R47); older calls leave the list, which ends with `<n> older calls are in the logs`.
-- **R26** In an interactive session a status entry shows the session totals (counted MCP calls and distinct skills since start or the last `/clear`, kept across a hot reload): `telltale · <n> MCP · <e>✗ · ~<t> tok · <k> skills · ctx <p>%`, each segment only when non-zero or reported; it updates when a counted call completes, at turn end and at `/clear`; with no call and no skill there is no entry.
+- **R26** In an interactive session a status entry shows the session totals (counted MCP calls and distinct skills since start or the last `/clear`, kept across a hot reload): `<n> MCP calls · <e>✗ · ~<t> tok · <k> skills · ctx <p>%` (Claude Code draws the plugin name in front of it), each segment only when non-zero or reported; it updates when a counted call completes, at turn end and at `/clear`; with no call and no skill there is no entry.
 - **R27** When Claude Code reports no context share (before the first response, or a failed usage report), the status entry drops only its `ctx` segment.
 - **R28** In an interactive session, at most one toast per main-thread turn: a failed counted call's toast (`<server>.<tool> failed · /telltale`) shows when the call completes, and a call that returned 40,000 characters or more holds its toast (`<server>.<tool> returned ~<t> tok`) until the turn ends and shows only when no error toast showed that turn; a `<server>.<tool>` that already toasted with the same text kind (failed or large) raises no toast until the next `/telltale` or `/clear`, and leaves the turn's toast to another call; the R16 notice does not count toward the limit.
 - **R29** While a counted call runs, the band above the prompt shows `◐ <server>.<tool> <elapsed>` for the longest-running call, ` +<k> running`, then ` · turn: <n> MCP · ~<t> tok` and ` · <e>✗` over the turn's completed calls; elapsed is whole seconds (`<m>m<ss>s` from a minute), never more than 2 seconds behind; parts drop, then the name is cut, to fit.

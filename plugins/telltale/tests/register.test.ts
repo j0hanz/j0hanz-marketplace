@@ -1487,9 +1487,9 @@ test('R26: the status entry shows the session totals and the context share', asy
   for (let i = 0; i < 7; i++) {
     await callOne($ as never, world, `u${i}`, 'mcp__o__s', 'x'.repeat(7200), i === 0);
   }
-  expect(world.status.at(-1)).toBe('telltale · 7 MCP · 1✗ · ~12.6k tok');
+  expect(world.status.at(-1)).toBe('7 MCP calls · 1✗ · ~12.6k tok');
   await endTurn($ as never, world);
-  expect(world.status.at(-1)).toBe('telltale · 7 MCP · 1✗ · ~12.6k tok · ctx 61%');
+  expect(world.status.at(-1)).toBe('7 MCP calls · 1✗ · ~12.6k tok · ctx 61%');
 });
 
 test('R26: no counted call and no skill means no status entry', async ($, on) => {
@@ -1504,7 +1504,7 @@ test('R26: /clear removes the status entry', async ($, on) => {
   const world = worldOf(on);
   await $.session.start(SESSION);
   await callOne($ as never, world, 'u', 'mcp__o__s', 'x'.repeat(3600));
-  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~900 tok');
+  expect(world.status.at(-1)).toBe('1 MCP call · ~900 tok');
   await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
   await world.clock.settle();
   expect(world.status.at(-1)).toBe(undefined);
@@ -1517,7 +1517,7 @@ test('R27: a failing usage report drops only the ctx segment', async ($, on) => 
   await callOne($ as never, world, 'a', 'mcp__o__s', 'x'.repeat(1500));
   await callOne($ as never, world, 'b', 'mcp__o__s', 'x'.repeat(1500));
   await endTurn($ as never, world);
-  expect(world.status.at(-1)).toBe('telltale · 2 MCP · ~750 tok');
+  expect(world.status.at(-1)).toBe('2 MCP calls · ~750 tok');
 });
 
 test('R28: one toast per turn, and an errored call gets the error text', async ($, on) => {
@@ -2572,10 +2572,10 @@ test('R26, R27: /clear drops the old context share from the status entry', async
   await $.session.start(SESSION);
   await callOne($ as never, world, 'a', 'mcp__o__s', 'ok');
   await endTurn($ as never, world);
-  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~1 tok · ctx 61%');
+  expect(world.status.at(-1)).toBe('1 MCP call · ~1 tok · ctx 61%');
   await $.session.end({ reason: 'clear', sessionId: 's1' } as never);
   await callOne($ as never, world, 'b', 'mcp__o__s', 'ok');
-  expect(world.status.at(-1)).toBe('telltale · 1 MCP · ~1 tok');
+  expect(world.status.at(-1)).toBe('1 MCP call · ~1 tok');
 });
 
 const parentOf = (node: unknown, key: string): Element | undefined =>

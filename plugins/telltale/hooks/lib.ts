@@ -270,8 +270,9 @@ export const statusLine = (t: {
   ctx: number | null;
 }): string | undefined => {
   if (t.calls === 0 && t.skills === 0) return undefined;
-  const parts = ['telltale'];
-  if (t.calls > 0) parts.push(`${t.calls} MCP`);
+  // Claude Code draws the plugin name before a mod's status text.
+  const parts: string[] = [];
+  if (t.calls > 0) parts.push(plural(t.calls, 'MCP call'));
   if (t.errors > 0) parts.push(`${t.errors}✗`);
   if (t.calls > 0) parts.push(`~${formatTokens(t.tokens)} tok`);
   if (t.skills > 0) parts.push(plural(t.skills, 'skill'));

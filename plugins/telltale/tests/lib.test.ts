@@ -345,16 +345,17 @@ test('R32: toolName drops the mcp__<server>__ prefix', async () => {
 
 test('R26: the status entry from session totals', async () => {
   expect(statusLine({ calls: 7, errors: 1, tokens: 12_600, skills: 0, ctx: 61 })).toBe(
-    'telltale · 7 MCP · 1✗ · ~12.6k tok · ctx 61%',
+    '7 MCP calls · 1✗ · ~12.6k tok · ctx 61%',
   );
   expect(statusLine({ calls: 3, errors: 0, tokens: 900, skills: 0, ctx: null })).toBe(
-    'telltale · 3 MCP · ~900 tok',
+    '3 MCP calls · ~900 tok',
   );
   expect(statusLine({ calls: 0, errors: 0, tokens: 0, skills: 1, ctx: 20 })).toBe(
-    'telltale · 1 skill · ctx 20%',
+    '1 skill · ctx 20%',
   );
-  expect(statusLine({ calls: 0, errors: 0, tokens: 0, skills: 2, ctx: null })).toBe(
-    'telltale · 2 skills',
+  expect(statusLine({ calls: 0, errors: 0, tokens: 0, skills: 2, ctx: null })).toBe('2 skills');
+  expect(statusLine({ calls: 1, errors: 0, tokens: 1, skills: 0, ctx: null })).toBe(
+    '1 MCP call · ~1 tok',
   );
   expect(statusLine({ calls: 0, errors: 0, tokens: 0, skills: 0, ctx: 61 })).toBe(undefined);
 });
