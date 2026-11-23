@@ -1,7 +1,7 @@
 // fires:  PostToolUse on Write|Edit|Bash|PowerShell (Copilot: create|edit|bash|powershell;
 //         Antigravity: write_file|edit_file|run_command). A Bash command is split at unquoted
-//         && || ; | and newlines; each `git commit` or `gh pr|issue create|edit|comment|review`
-//         segment is scanned on its own. Nothing else fires.
+//         && || ; | and newlines (a line ending in \ or ` continues); each `git commit` or `gh
+//         pr|issue create|edit|comment|review` segment is scanned on its own. Nothing else fires.
 //         `scan.mjs gate` is the PreToolUse mode for public `gh` writes: it denies a command
 //         whose body has hits, once per exact body hash per session (per repo when the client
 //         sends no session id); the identical resubmission passes.
@@ -135,12 +135,13 @@ const GATED = new Set(['pr', 'comment', 'review', 'issue']);
 // Shell words and segments, quote-aware: a quoted string is one word, so a `--file` inside an
 // -m message is text, not a flag. A PowerShell here-string (@' or @" to a line starting '@ or
 // "@) is one word whatever quotes it holds. Segments split at unquoted && || ; | and newlines,
-// so a `gh pr create` chained after `git commit` is its own target. A bare heredoc body
-// (`-F - <<EOF`) stays in its segment untokenized, up to the delimiter line; a body whose
-// opener sits in an earlier segment is skipped. ponytail: one heredoc per line; a second `<<`
-// on the same line replaces the first.
+// so a `gh pr create` chained after `git commit` is its own target. A line ending in an
+// unquoted \ (bash) or ` (PowerShell) continues onto the next, so a multi-line command stays
+// one segment. A bare heredoc body (`-F - <<EOF`) stays in its segment untokenized, up to the
+// delimiter line; a body whose opener sits in an earlier segment is skipped. ponytail: one heredoc
+// per line; a second `<<` on the same line replaces the first.
 const TOKEN =
-  /@'\r?\n[\s\S]*?\n'@|@"\r?\n[\s\S]*?\n"@|"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|[^\s"'|;&]+/g;
+  /[\\`]\r?\n|@'\r?\n[\s\S]*?\n'@|@"\r?\n[\s\S]*?\n"@|"(?:\\[\s\S]|[^"\\])*"|'[^']*'|&&|\|\||[|;\n]|(?:[^\s"'|;&\\`]|[\\`](?!\r?\n))+/g;
 const HEREDOC = /^<<-?([\w.-]*)$/;
 const parse = (command) => {
   const segments = [{ start: 0, words: [] }];
@@ -159,6 +160,7 @@ const parse = (command) => {
       heredoc = null;
       continue;
     }
+    if (/^[\\`]\r?\n$/.test(m[0])) continue; // line continuation: same segment, no word
     if (/^(?:&&|\|\||[|;\n])$/.test(m[0])) {
       segments.at(-1).end = m.index;
       segments.push({ start: m.index + m[0].length, words: [] });

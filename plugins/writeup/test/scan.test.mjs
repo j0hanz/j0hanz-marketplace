@@ -796,3 +796,37 @@ test('gate: gh constructor name is not a command', () =>
   gated((session_id) =>
     assert.equal(gateRun(bash('gh constructor name --body "We delve."', { session_id })), ''),
   ));
+test('a line continuation keeps the next line in its command', () => {
+  for (const [tool_name, command] of [
+    ['Bash', 'gh pr create \\\n  --title t \\\n  --body "We delve."'],
+    ['Bash', 'gh pr create \\\r\n  --body "We delve."'],
+    ['PowerShell', 'gh pr create `\n  --title t `\n  --body "We delve."'],
+  ])
+    gated((session_id) =>
+      assert.match(
+        reasonOf(gateRun({ tool_name, tool_input: { command }, session_id })),
+        /PR body:\n- rule 7 "delve"/,
+        command,
+      ),
+    );
+});
+test('a continued git commit reads its -F file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'writeup-'));
+  try {
+    writeFileSync(join(dir, 'msg.txt'), 'fix: x\n\nWe delve.\n');
+    const ctx = JSON.parse(ctxOf('git commit \\\n  -F msg.txt', dir)).hookSpecificOutput
+      .additionalContext;
+    assert.match(ctx, /commit message \(msg\.txt\):\n- rule 7 "delve"/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('a newline without a continuation still ends the command', () =>
+  gated((session_id) =>
+    assert.match(
+      reasonOf(
+        gateRun(bash('git commit -m "fix: x"\ngh pr create --body "We delve."', { session_id })),
+      ),
+      /PR body:\n- rule 7 "delve"/,
+    ),
+  ));
