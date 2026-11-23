@@ -10,6 +10,8 @@ Plans 025-027 (2026-11-17, against `b9a98ef`) come from a direction-focused impr
 
 Plans 028-029 (2026-11-23, against `fc5a197`) come from a standard improve run on `plugins/writeup/`. Every finding was reproduced with a probe script against the live `scan.mjs`; the fix in 028 and the test in 029 were proven on a scratch copy before the plans were written.
 
+Plan 030 (2026-11-23, against `8b0fefe`) comes from a standard improve run on `plugins/groundwork/`. The maintainer picked one of three findings; the rest are recorded under "Groundwork run (2026-11-23)" below.
+
 Plan 014 (2026-10-29) is not from that skill and not scoped to telltale: it adds Antigravity CLI as a third client across the marketplace.
 
 Plans 002–013 were executed 2026-10-09 by chained executors on branch `telltale/plans-002-013` (worktree `C:/tmp/telltale-exec`), one commit per step batch, each reviewed against its done criteria before the next plan started; the branch was merged to `main` after plan 013. Amendments made during execution are recorded in the plan files and rows: 002's ignores array gained `'!plugins'` (ESLint 9 ignored-ancestor rule) and 003's BEARER group is capturing (`redactText` replaces via `$1`).
@@ -47,6 +49,7 @@ Plans 002–013 were executed 2026-10-09 by chained executors on branch `telltal
 | 027  | [Writeup teaches agents to write GitHub issues and review comments](027-writeup-issue-and-review-skills.md)           | P2       | S-M    | 026 (soft)                           | DONE (branch `writeup/plan-027-issue-review-skills` @ `845d86c`, stacked on 026, worktree `.claude/worktrees/agent-a690e69f795f29424`; round 1 passed 6/6, re-scored by reviewer; baseline missed parts in 6/6 runs; `npm test` 308 pass; merged to `main`, confirmed 2026-11-23)                                                                                                                               |
 | 028  | [The writeup scan and gate read a command continued across lines as one command](028-writeup-line-continuations.md)   | P1       | S      | none                                 | DONE (branch `writeup/plan-028-line-continuations` @ `50afe8b`, worktree `.claude/worktrees/agent-a06402652944baa26`; reviewed: 68/68 writeup tests, 2 new tests fail on `main`, `npm run check` exit 0; 1 revision round rewrapped comments to 100 cols; merged to `main` by fast-forward)                                                                                                                     |
 | 029  | [The issue skill shows error output in a fence the writeup scan skips](029-writeup-issue-example-fence.md)            | P2       | S      | none (run after 028, same test file) | DONE (branch `writeup/plan-029-issue-example-fence` @ `48e7295`, worktree `.claude/worktrees/agent-af3301e37d4d95b32`, fast-forwarded to `50afe8b` first; reviewed: 69/69 writeup tests, new test fails on the old skill, `npm run check` exit 0, `claude plugin validate --strict` passed; plan excerpt for lines 41-43 corrected before dispatch after prettier mangled it; merged to `main` by fast-forward) |
+| 030  | [The architecture report guide agrees with its own example and its template](030-groundwork-html-report-drift.md)     | P3       | S      | none                                 | DONE (branch `groundwork/plan-030-html-report-drift` @ `9a1a6b1`, worktree `.claude/worktrees/agent-a95d5241ab6584da6`; reviewed: all greps re-run green, diff 2 + 1 lines exactly as planned, prettier clean, `npm run check` exit 0 (312 tests) per executor; trailer reads Sonnet 5.5; merged to `main` by fast-forward)                                                                                     |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale: finding fixed independently or approach abandoned)
 
@@ -109,6 +112,19 @@ Considered and rejected: stripping indented code blocks in `stripCode` (nested l
 - `disable-model-invocation: true` on `grill-with-docs` and `improve-codebase-architecture`: correct, they are user-invoked commands.
 - A heading-structure lint in `skill-lint` to catch corruption like plan 021's: prose structure is not worth a linter; the grep checks in plan 021 pin the recurrence.
 - Not audited: performance, dependencies, security surface — the plugin is prose plus one static HTML file; there is no code to audit.
+
+## Groundwork run (2026-11-23): audited but not planned
+
+- `research/SKILL.md:19` and `improve-codebase-architecture/SKILL.md:14` name only `docs/adr/`; `domain-modeling` supports per-context ADR folders via `GLOSSARY-MAP.md`. A multi-context repo's context ADRs get missed. Low impact, S.
+- Duplicated rule text, wording already diverging: ADR criteria in `domain-modeling/SKILL.md:68-74` and `ADR-FORMAT.md:31-37`; seam rules in `codebase-design/SKILL.md:62,65` and `DEEPENING.md:29-30`. Low value, S.
+
+Direction (maintainer's call, un-planned):
+
+- **Overlap with workbench.** `grilling`, `prototype` and `research` exist in both plugins, all model-invoked, with overlapping triggers and different behavior (workbench's grilling writes a map under `docs/plan/`; groundwork's writes nothing). `workbench:write-adr` overlaps domain-modeling's ADRs; `workbench:architecture-audit` overlaps `improve-codebase-architecture`. No decision recorded. Options: retire groundwork's twins, position groundwork as the workbench-free subset, or add "Not for…" boundaries so triggers split.
+- **`CONTEXT.md` fallback**: repos that already keep the upstream `CONTEXT.md` / `CONTEXT-MAP.md` are invisible to groundwork.
+- **Trigger evals** (`claude plugin eval`) for the five model-invoked skills, alone and beside workbench. Settle the overlap first.
+
+Considered and rejected: the compressed prose (deliberate, `bf15c28`); the `/tmp` fallback for the report on Windows (Git Bash sets `TMPDIR` to the Windows temp dir, MSYS converts paths for `start`); the Mermaid `var()` token swap (`report.html:521-523` works); the report not re-theming on a live light/dark toggle (trivial); `ICON_MISSING` from `plugin validate` (marketplace-wide, not groundwork's). Not audited: security, performance, dependencies (no code); whether Copilot's `ask_user` takes four questions per call (`grilling/SKILL.md:10`).
 
 ## Direction (from both runs, un-planned)
 
