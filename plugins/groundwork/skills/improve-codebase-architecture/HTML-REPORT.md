@@ -157,7 +157,7 @@ Use when point is "interface as wide as implementation". Count module's names:
 
 - `--iface` = number of exported names (top blue cap).
 - `--impl` = number of internal names: non-exported functions and methods (bottom tonal body).
-  Each band scales at `0.75rem` per count, capped at 14. If any module in figure passes 14, divide every count in that figure by same factor so heights still compare. Both bands use same unit, so proportion tells truth. Text inside core = its label.
+  Each band scales at `0.7rem` per count, capped at 14. If any module in figure passes 14, divide every count in that figure by same factor so heights still compare. Both bands use same unit, so proportion tells truth. Text inside core = its label.
 
 ```html
 <div class="cores">
@@ -181,7 +181,7 @@ Write colours as `var(--token)`. Template swaps in theme value before Mermaid pa
 
 ```html
 <pre class="mermaid">
-flowchart LR
+flowchart TD
   accTitle: Order intake before
   accDescr: The handler reaches pricing through the repo, past the seam
   A["OrderHandler"] --> B["OrderValidator"]
