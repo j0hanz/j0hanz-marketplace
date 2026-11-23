@@ -1,6 +1,6 @@
 {
   "name": "writeup",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PR descriptions, commit messages, issues and review comments written for people: plain prose, structural diagrams, slop caught before it publishes.",
   "author": {
     "name": "j0hanz",
