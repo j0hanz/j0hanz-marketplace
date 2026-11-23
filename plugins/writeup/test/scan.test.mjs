@@ -830,3 +830,9 @@ test('a newline without a continuation still ends the command', () =>
       /PR body:\n- rule 7 "delve"/,
     ),
   ));
+
+test('the issue skill shows error text in a fence, not an indented block', () => {
+  const skill = readFileSync(new URL('../skills/issue/SKILL.md', import.meta.url), 'utf8');
+  assert.doesNotMatch(skill, /^ {4}\S/m);
+  assert.match(skill, /^````text$/m);
+});

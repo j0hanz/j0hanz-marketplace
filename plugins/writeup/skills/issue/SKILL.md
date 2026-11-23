@@ -10,7 +10,7 @@ description: Use when writing or editing a GitHub issue or issue comment, or bef
 Issue body parts, in this order:
 
 1. **Title.** Observed failure in one line, present tense. No "bug:" prefix unless repo's labels or title log use one.
-2. **What happens.** Observed behavior. Exact error text in a `text` fence, trimmed to decisive lines.
+2. **What happens.** Observed behavior. Exact error text in a `text` fence, trimmed to decisive lines. Never an indented block: the writeup scan reads indented lines as prose.
 3. **Expected.** One line.
 4. **Repro.** Numbered minimal steps from a clean state. Commands copy-pasteable.
 5. **Environment.** Only versions that bear on it (OS, runtime, tool version), copied from the report. Version the report did not give: leave out, never invent.
@@ -18,13 +18,15 @@ Issue body parts, in this order:
 
 Example:
 
-```text
+````text
 Title: export drops the last row when the table has one column
 
 ## What happens
 `tabx export t.db out.csv` writes every row except the last.
 
-    wrote 41 rows (table has 42)
+```text
+wrote 41 rows (table has 42)
+```
 
 ## Expected
 Output has 42 rows.
@@ -40,7 +42,7 @@ tabx 1.8.0, Ubuntu 24.04
 
 ## Cause
 Guess: the writer stops one row early when there is no delimiter to flush.
-```
+````
 
 ## Feature request
 

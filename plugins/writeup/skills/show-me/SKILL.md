@@ -97,7 +97,7 @@ Place each visual next to short text it supports. Keep only calls, files, props,
 
 Reviewer sees files one at a time; PR description shows how they fit. Read branch diff (`git diff <base>...HEAD`), then add visual under summary line for each structural change file list hides: new call path, moved module boundary, new component, new message between services. Label each node with name of component, module or step existing in diff. Omit string literals, regexes, flags, numbers from code. `diff` of before shape usually smallest view.
 
-GitHub renders `mermaid` and `diff` fences in PR body. HTML file can't live there — Markdown views only.
+GitHub renders `mermaid` and `diff` fences in PR body. HTML file can't live there, so use Markdown views only.
 
 Change with no structural shift (one-file fix, rename, dependency bump) gets no visual.
 
