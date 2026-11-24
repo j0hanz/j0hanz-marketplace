@@ -128,7 +128,13 @@ test('formatState reports the full fixture', () => {
   assert.ok(lines.includes('superseded: 0001-moves'));
   assert.ok(lines.includes('references: 1 (reference/cheatsheet.html)'));
   assert.ok(lines.includes('glossary: 2 terms'));
-  assert.ok(lines.includes('assets: quiz.js, style.css'));
+  assert.ok(
+    lines.some((l) =>
+      /^assets: quiz\.js, style\.css; missing toc\.js; starters in .+\/skills\/teach\/assets$/.test(
+        l,
+      ),
+    ),
+  );
 });
 
 test('formatState on an empty folder', () => {

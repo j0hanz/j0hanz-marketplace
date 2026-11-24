@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const dir = join(dirname(fileURLToPath(import.meta.url)), '../skills/teach/assets');
 const css = readFileSync(join(dir, 'style.css'), 'utf8');
 const js = readFileSync(join(dir, 'quiz.js'), 'utf8');
+const toc = readFileSync(join(dir, 'toc.js'), 'utf8');
 
 test('stylesheet styles every contract selector and stays offline', () => {
   for (const sel of [
@@ -20,6 +21,7 @@ test('stylesheet styles every contract selector and stays offline', () => {
     'dl.glossary',
     '.avoid',
     'nav.crumbs',
+    'nav.toc',
     '.win',
     '.source',
     '.ask',
@@ -47,4 +49,10 @@ test('quiz widget is a classic script', () => {
   assert.doesNotMatch(js, /^\s*(import|export)\s/m);
   assert.ok(js.includes('data-answer') || js.includes('dataset.answer'));
   assert.ok(js.includes('Try again'));
+});
+
+test('table of contents script is a classic script that builds nav.toc', () => {
+  assert.doesNotMatch(toc, /^\s*(import|export)\s/m);
+  assert.ok(toc.includes("'toc'"));
+  assert.ok(toc.includes('aria-current'));
 });

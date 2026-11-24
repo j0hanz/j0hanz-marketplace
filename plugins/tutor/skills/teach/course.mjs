@@ -115,6 +115,13 @@ export function readCourse(dir) {
   };
 }
 
+function assetsLine(assets) {
+  if (!assets.length) return `assets: missing; starters in ${STARTERS}`;
+  const missing = list(STARTERS).filter((n) => !assets.includes(n));
+  const have = `assets: ${assets.join(', ')}`;
+  return missing.length ? `${have}; missing ${missing.join(', ')}; starters in ${STARTERS}` : have;
+}
+
 export function formatState(c, now = Date.now()) {
   const next = (items) =>
     String(items.length ? Number(items.at(-1).number) + 1 : 1).padStart(4, '0');
@@ -146,7 +153,7 @@ export function formatState(c, now = Date.now()) {
     c.glossary ? `glossary: ${c.glossary.length} terms` : 'glossary: missing',
     `resources: ${c.has.resources ? 'present' : 'missing'}`,
     `notes: ${c.has.notes ? 'present' : 'missing'}`,
-    c.assets.length ? `assets: ${c.assets.join(', ')}` : `assets: missing; starters in ${STARTERS}`,
+    assetsLine(c.assets),
   );
   return lines.join('\n');
 }

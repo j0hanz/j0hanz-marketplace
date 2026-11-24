@@ -19,6 +19,7 @@
   --radius: 12px;
   --radius-sm: 8px;
   --measure: 44rem;
+  --rail: 0rem; /* width of the table of contents beside the column */
   --flow: 1.25rem; /* space below a block */
   --small: 0.9375rem;
   --sans:
@@ -32,16 +33,18 @@
 *::after {
   box-sizing: border-box;
 }
+/* every rem grows from 16px on a phone to 19px on a wide screen */
 html {
+  font-size: clamp(1rem, 0.875rem + 0.3vw, 1.1875rem);
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: 4rem;
+  scroll-padding-top: 5rem;
 }
 body {
   margin: 0;
-  padding-bottom: 5rem;
+  padding: 0 0 5rem var(--rail);
   background: var(--bg);
   color: var(--fg);
-  font: 1.0625rem/1.7 var(--sans);
+  font: 1rem/1.7 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 h1,
@@ -57,10 +60,8 @@ h1 {
   font-weight: 700;
 }
 h2 {
-  margin: 3rem 0 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--rule);
-  font-size: 1.4rem;
+  margin: 3.5rem 0 1rem;
+  font-size: 1.6rem;
   font-weight: 650;
 }
 h3 {
@@ -125,15 +126,14 @@ kbd {
 }
 :not(pre) > code,
 kbd {
-  padding: 0.08em 0.35em;
+  padding: 0.1em 0.35em;
   background: var(--fill);
-  border: 1px solid var(--rule);
   border-radius: 0.3em;
   white-space: nowrap;
 }
 pre {
   overflow-x: auto;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.125rem;
   background: var(--fill);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
@@ -144,12 +144,16 @@ pre code {
   font-size: 1em;
 }
 
-/* tables: scroll sideways instead of overflowing the page */
 table {
-  display: block;
-  overflow-x: auto;
   border-collapse: collapse;
   font-size: var(--small);
+}
+/* on a phone a table scrolls sideways instead of overflowing the page */
+@media (max-width: 40rem) {
+  table {
+    display: block;
+    overflow-x: auto;
+  }
 }
 th,
 td {
@@ -165,18 +169,70 @@ th {
   letter-spacing: 0.02em;
 }
 
-/* layout: one centred column, with or without <main>; code runs a little
-   wider. It comes after the base rules so it sets the side margins of every
-   top-level block; component rules below set only top and bottom margins. */
+/* layout: one centred column, with or without <main>. It comes after the
+   base rules so it sets the side margins of every top-level block; component
+   rules below set only top and bottom margins. On a wide screen the table of
+   contents takes --rail on the left, and rail plus column centre together. */
 :is(body, main) > * {
   width: min(var(--measure), 100% - 2rem);
   margin-inline: auto;
 }
-:is(body, main) > pre {
-  width: min(var(--measure) + 8rem, 100% - 2rem);
-}
 body > main {
   width: auto;
+}
+nav.toc {
+  display: none;
+}
+@media (min-width: 75rem) {
+  body:has(> nav.toc) {
+    --rail: 16rem;
+  }
+  nav.toc {
+    display: block;
+    position: fixed;
+    top: 5.5rem;
+    left: calc((100% - var(--rail) - var(--measure)) / 2);
+    width: calc(var(--rail) - 3rem);
+    max-height: calc(100vh - 7rem);
+    overflow-y: auto;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+}
+nav.toc::before {
+  content: 'On this page';
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+nav.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--rule);
+}
+nav.toc li {
+  margin: 0;
+}
+nav.toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 0.35rem 0 0.35rem 0.9rem;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  text-decoration: none;
+}
+nav.toc a:hover {
+  color: var(--fg);
+}
+nav.toc a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--fg);
+  font-weight: 600;
 }
 
 /* secondary text */
@@ -329,9 +385,9 @@ nav.crumbs {
   top: 0;
   z-index: 1;
   width: auto;
-  margin-bottom: 2.5rem;
-  /* full-width bar, its link on the column's left edge */
-  padding: 0.7rem max(1rem, (100% - var(--measure)) / 2);
+  margin: 0 0 2.5rem calc(-1 * var(--rail));
+  /* full-width bar, its links on the column's left edge */
+  padding: 0.7rem 1rem 0.7rem max(1rem, (100% - var(--measure)) / 2 + var(--rail));
   background: color-mix(in srgb, var(--bg) 85%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--rule);
@@ -347,6 +403,11 @@ nav.crumbs a:first-child::before {
 }
 nav.crumbs a:hover {
   color: var(--fg);
+}
+nav.crumbs span::before {
+  content: '/';
+  margin-inline: 0.6em;
+  color: var(--rule);
 }
 @supports (animation-timeline: scroll()) {
   /* reading progress along the bottom edge of the bar */
@@ -399,8 +460,6 @@ form.quiz fieldset {
 .recap h2,
 .continue h2 {
   margin-top: 0;
-  padding-top: 0;
-  border: 0;
 }
 .recap h2 {
   margin-bottom: 0.5rem;
@@ -596,6 +655,7 @@ button:active {
     font-size: 11pt;
   }
   nav.crumbs,
+  nav.toc,
   .ask,
   form.quiz button {
     display: none;
