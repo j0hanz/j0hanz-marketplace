@@ -66,7 +66,7 @@ Done when the review page is open and any misconception record is written.
 
 ## Lesson pages
 
-Lessons, reviews and reference sheets share one contract. Each is a single self-contained HTML file, beautiful (clean typography, Tufte-like), short, and tied to the mission.
+Lessons, reviews and reference sheets share one contract. Each is a single self-contained HTML file, beautiful (clean, modern typography from `assets/style.css`), short, and tied to the mission.
 
 - In `<head>`: `<title>` (short, human), then `<meta name="description" content="one line">` with **`name` before `content`** (the course home reads it), then `<link rel="stylesheet" href="../assets/style.css" />`.
 - The body starts with `<nav class="crumbs"><a href="../index.html">Course home</a></nav>`.
