@@ -1,7 +1,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,8 @@ const put = (root, rel, text = '') => {
   writeFileSync(p, text);
 };
 const crlf = (lines) => lines.join('\r\n') + '\r\n';
+const REVIEWED = new Date('2026-11-19T12:00:00Z');
+const NOW = Date.parse('2026-11-24T12:00:00Z');
 
 before(() => {
   tmp = mkdtempSync(join(tmpdir(), 'tutor-'));
@@ -75,6 +77,7 @@ before(() => {
   put(full, 'reference/cheatsheet.html', '<title>Ownership cheat sheet</title>');
   put(full, 'assets/style.css');
   put(full, 'assets/quiz.js');
+  utimesSync(join(full, 'lessons/0002-review-moves.html'), REVIEWED, REVIEWED);
 });
 
 after(() => rmSync(tmp, { recursive: true, force: true }));
@@ -113,9 +116,10 @@ test('readCourse parses the full fixture', () => {
 });
 
 test('formatState reports the full fixture', () => {
-  const lines = formatState(readCourse(full)).split('\n');
+  const lines = formatState(readCourse(full), NOW).split('\n');
   assert.ok(lines.includes('mission: Rust ownership: Stop fighting the borrow checker at work.'));
   assert.ok(lines.includes('lessons: 3, last 0003-borrowing "Borrowing <rules>", next 0004'));
+  assert.ok(lines.includes('review: last 0002-review-moves, 1 lesson since, 5 days ago'));
   assert.ok(
     lines.includes(
       'records: 2, last 0002-moves-deeper "Moves include function arguments", next 0003',
@@ -132,6 +136,7 @@ test('formatState on an empty folder', () => {
   for (const line of [
     'mission: missing',
     'lessons: 0, next 0001',
+    'review: none yet, 0 lessons',
     'records: 0, next 0001',
     'references: 0',
     'glossary: missing',

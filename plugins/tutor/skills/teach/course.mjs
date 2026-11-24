@@ -79,6 +79,7 @@ export function readCourse(dir) {
     ...l,
     ...meta(read(join(root, l.file)), l.slug),
     review: l.slug.startsWith('review-'),
+    modified: statSync(join(root, l.file)).mtimeMs,
   }));
   const records = numbered(root, 'learning-records', 'md').map((r) => {
     const text = read(join(root, r.file));
@@ -114,18 +115,27 @@ export function readCourse(dir) {
   };
 }
 
-export function formatState(c) {
+export function formatState(c, now = Date.now()) {
   const next = (items) =>
     String(items.length ? Number(items.at(-1).number) + 1 : 1).padStart(4, '0');
   const tail = (label, items) =>
     items.length
       ? `${label}: ${items.length}, last ${items.at(-1).number}-${items.at(-1).slug} "${items.at(-1).title}", next ${next(items)}`
       : `${label}: 0, next 0001`;
+  const plural = (n) => `${n} lesson${n === 1 ? '' : 's'}`;
+  const review = () => {
+    const at = c.lessons.findLastIndex((l) => l.review);
+    if (at === -1) return `review: none yet, ${plural(c.lessons.length)}`;
+    const r = c.lessons[at];
+    const days = Math.max(0, Math.floor((now - r.modified) / 86_400_000));
+    return `review: last ${r.number}-${r.slug}, ${plural(c.lessons.length - at - 1)} since, ${days} day${days === 1 ? '' : 's'} ago`;
+  };
   const gone = c.records.filter((r) => r.superseded).map((r) => `${r.number}-${r.slug}`);
   const lines = [
     `course: ${c.dir}`,
     c.has.mission ? `mission: ${c.topic}: ${c.why ?? ''}` : 'mission: missing',
     tail('lessons', c.lessons),
+    review(),
     tail('records', c.records),
   ];
   if (gone.length) lines.push(`superseded: ${gone.join(', ')}`);

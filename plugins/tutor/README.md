@@ -6,7 +6,7 @@ Learn one topic over many sessions. `/teach` builds a course in the current fold
 
 - `/teach <topic>` starts a course in the current folder, for example `/teach Rust ownership`.
 - `/teach` resumes the course in the current folder with the next lesson.
-- `/teach review` writes a quiz from your learning records and past lessons.
+- `/teach review` writes a quiz from your learning records and past lessons. The tutor offers one after three lessons or a week without a review.
 
 A topic named exactly `review` routes to the review command. Quote a longer phrase to get around it, for example `/teach "code review"`.
 
