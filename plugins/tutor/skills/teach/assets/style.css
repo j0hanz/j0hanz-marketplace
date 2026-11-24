@@ -51,7 +51,6 @@ html {
   scroll-padding-top: 4rem;
 }
 body {
-  margin: 0;
   background: var(--bg);
   color: var(--fg);
   font: 1.0625rem/1.7 var(--sans);
