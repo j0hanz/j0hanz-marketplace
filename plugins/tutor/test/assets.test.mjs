@@ -30,6 +30,10 @@ test('stylesheet styles every contract selector and stays offline', () => {
     '.answer',
     '.picked',
     '.score',
+    '.prereq',
+    'details.solution',
+    '.recap',
+    '.next',
   ]) {
     assert.ok(css.includes(sel), sel);
   }

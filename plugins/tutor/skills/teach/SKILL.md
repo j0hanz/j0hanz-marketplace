@@ -70,7 +70,29 @@ Lessons, reviews and reference sheets share one contract. Each is a single self-
 
 - In `<head>`: `<title>` (short, human), then `<meta name="description" content="one line">` with **`name` before `content`** (the course home reads it), then `<link rel="stylesheet" href="../assets/style.css" />`.
 - The body starts with `<nav class="crumbs"><a href="../index.html">Course home</a></nav>`.
-- Lessons: a `.win` callout first (the one **win**), then the knowledge (short, littered with citation links), then practice with a tight feedback loop (a quiz, or real-world steps with a check). After that, a `.source` box with the single best primary source, and an `.ask` line inviting follow-up questions to you. Link to other lessons and reference sheets.
+- Lessons, in this order: a `.win` callout (the one **win**); a `<p class="prereq">` line with the time the lesson takes and what must be installed or done first (for example: "About 20 minutes. Needs Node.js 26 and the `practice/` folder from lesson 0001."); the knowledge, one idea per `h2`, short and littered with citation links; practice with a tight feedback loop (real-world steps, each ending in a **Check:** the learner can see, then a quiz); a `.recap`; a `.source` box with the single best primary source; a `<p class="next">` naming what the next lesson covers; and an `.ask` line inviting follow-up questions to you. Link to other lessons and reference sheets.
+- Keep code lines at 76 characters or fewer. When a lesson shows a whole program, number its parts in the text and mark the same numbers in code comments (`// 1`), so the learner can map each idea to its lines.
+- A practice step that asks the learner to write or change code gets a hidden solution right after its check:
+
+  ```html
+  <details class="solution">
+    <summary>Solution</summary>
+    <pre><code>...the code...</code></pre>
+    <p>One line on why it works.</p>
+  </details>
+  ```
+
+- The `.recap` holds three to five takeaways, each a sentence the learner should be able to say from memory at the next review:
+
+  ```html
+  <section class="recap">
+    <h2>Recap</h2>
+    <ul>
+      <li>...</li>
+    </ul>
+  </section>
+  ```
+
 - Quizzes use this markup, one `fieldset` per question, one `form` per quiz:
 
   ```html
@@ -87,7 +109,15 @@ Lessons, reviews and reference sheets share one contract. Each is a single self-
   <script src="../assets/quiz.js" defer></script>
   ```
 
-  Options have the same number of words, the correct position varies across questions, and every `.feedback` explains why. A mouse click grades at once. A keyboard learner moves between options with the arrow keys and confirms with Space or Enter, so tell learners that.
+  Write each quiz to these rules:
+
+  - Test only what this page taught, or earlier lessons in a review. A fact that appears only in a code comment, an optional step or another question's feedback is not taught.
+  - One idea per question. No two questions test the same fact.
+  - At least one question asks the learner to apply or predict (what a program prints, why a call fails, which choice fits a new case), not only to recall.
+  - Options are plain, full phrases of similar length and tone, so no option stands out by its wording. The correct position varies across questions.
+  - Every `.feedback` explains why the answer is right and links the source.
+
+  A mouse click grades at once. A keyboard learner moves between options with the arrow keys and confirms with Space or Enter, so tell learners that.
 
 - Pages load only files from `../assets/`. External URLs appear only as citation links.
 - Reuse components in `assets/`. Put any new reusable component there and link it, rather than inlining code a later lesson would repeat.

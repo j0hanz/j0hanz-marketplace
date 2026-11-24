@@ -157,6 +157,12 @@ pre code {
   font-size: 1em;
 }
 
+@media (min-width: 62rem) {
+  main > pre {
+    margin-inline: -4rem;
+  }
+}
+
 /* tables and quotes */
 table {
   width: 100%;
@@ -416,6 +422,49 @@ nav.crumbs a:hover {
 .ask {
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.prereq {
+  margin: -0.75rem 0 2rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+details.solution {
+  margin: 0.75rem 0 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+}
+details.solution > summary {
+  padding: 0.55rem 0.9rem;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+details.solution[open] > summary {
+  border-bottom: 1px solid var(--rule);
+}
+details.solution > :not(summary) {
+  margin: 0.75rem 0.9rem;
+}
+.recap {
+  margin: 3rem 0 0;
+  padding: 1.1rem 1.25rem 0.25rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+.recap h2 {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: 0;
+  font-size: 1.1rem;
+}
+.next {
+  margin: 2rem 0 0.5rem;
+  padding: 0.9rem 1.25rem;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  font-weight: 600;
 }
 
 /* quiz */
