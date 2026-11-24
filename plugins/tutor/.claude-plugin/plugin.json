@@ -3,17 +3,17 @@
   "name": "tutor",
   "displayName": "Tutor",
   "version": "1.0.0",
-  "description": "Teach one topic across many sessions. Mission, sources, glossary and a spaced-repetition schedule live in a workspace directory; every lesson is a self-contained offline HTML page sealed behind a retrieval quiz.",
+  "description": "Teach one topic across many sessions. A course folder holds your mission, trusted sources, glossary and learning records; short HTML lessons with quizzes link from a generated course home page.",
   "author": { "name": "j0hanz", "email": "l.johansson93@outlook.com" },
   "license": "MIT",
   "keywords": [
     "learning",
     "teaching",
     "tutor",
-    "spaced-repetition",
+    "quiz",
     "retrieval-practice",
     "study",
     "curriculum",
-    "offline"
+    "course"
   ]
 }

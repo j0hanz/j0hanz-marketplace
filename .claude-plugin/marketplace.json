@@ -9,7 +9,7 @@
     {
       "name": "tutor",
       "source": "./plugins/tutor",
-      "description": "Teach one topic across many sessions: workspace, spaced repetition, offline HTML lessons sealed behind a retrieval quiz",
+      "description": "Teach one topic across many sessions: a course folder with mission, sourced lessons, quizzes and a browsable course home",
       "category": "learning"
     },
     {

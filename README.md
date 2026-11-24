@@ -108,6 +108,7 @@ Antigravity CLI reads no third-party catalog, so there is no marketplace to add:
 <!-- antigravity:start -->
 
 ```text
+agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/tutor
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/frontend
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/mcp-hub
 agy plugin install https://github.com/j0hanz/j0hanz-marketplace/tree/main/plugins/filesystem-mcp
@@ -134,10 +135,9 @@ Check with `agy plugin list`, or `/plugin` inside a session. Skills run as slash
 
 ### tutor
 
-Teach one topic across many sessions: workspace, spaced repetition, offline HTML lessons sealed behind a retrieval quiz
+Teach one topic across many sessions: a course folder with mission, sourced lessons, quizzes and a browsable course home
 
 - Commands: `/tutor:teach`
-- Hooks: `SessionStart`, `Stop`
 
 ### css
 

@@ -25,13 +25,7 @@ const sharedLanguageOptions = {
 
 export default [
   {
-    ignores: [
-      'node_modules',
-      'dist',
-      'site/src/data',
-      'plugins/telltale/.claude-plugin/types/**',
-      'plugins/tutor/templates/assets/**',
-    ],
+    ignores: ['node_modules', 'dist', 'site/src/data', 'plugins/telltale/.claude-plugin/types/**'],
   },
   {
     files: ['**/*.{js,mjs,jsx,ts,tsx}'],
