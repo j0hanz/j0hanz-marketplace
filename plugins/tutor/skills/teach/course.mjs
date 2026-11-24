@@ -143,9 +143,15 @@ export function formatState(c) {
 
 const inline = (s) =>
   esc(s)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/_(.+?)_/g, '<em>$1</em>');
+    .split(/(`[^`]+`)/)
+    .map((part, i) =>
+      i % 2
+        ? `<code>${part.slice(1, -1)}</code>`
+        : part
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<em>$1</em>'),
+    )
+    .join('');
 
 export function renderIndex(c) {
   const para = (s) => (s ? `<p>${esc(s)}</p>` : '');

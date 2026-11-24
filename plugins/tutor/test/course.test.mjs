@@ -179,3 +179,25 @@ test('CLI: index writes the page, state exits 0, bad input exits non-zero', () =
   assert.equal(run('bogus').status, 2);
   assert.equal(run('state', join(full, 'nope')).status, 1);
 });
+
+test('renderIndex keeps code spans and snake_case words intact in the glossary', () => {
+  const def = (definition) => ({ group: null, term: 'T', definition, avoid: null });
+  const html = renderIndex({
+    topic: 'T',
+    why: null,
+    lessons: [],
+    references: [],
+    glossary: [
+      def('Listed by `list_roots` and `search_text`.'),
+      def('Field read_file and write_file share.'),
+      def('An _important_ rule.'),
+      def('Use `a < b` with **care**.'),
+    ],
+  });
+  assert.ok(
+    html.includes('<dd>Listed by <code>list_roots</code> and <code>search_text</code>.</dd>'),
+  );
+  assert.ok(html.includes('<dd>Field read_file and write_file share.</dd>'));
+  assert.ok(html.includes('<dd>An <em>important</em> rule.</dd>'));
+  assert.ok(html.includes('<dd>Use <code>a &lt; b</code> with <strong>care</strong>.</dd>'));
+});
