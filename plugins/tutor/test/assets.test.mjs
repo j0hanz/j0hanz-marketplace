@@ -37,7 +37,8 @@ test('stylesheet styles every contract selector and stays offline', () => {
   ]) {
     assert.ok(css.includes(sel), sel);
   }
-  assert.match(css, /prefers-color-scheme:\s*dark/);
+  assert.match(css, /color-scheme:\s*light dark/);
+  assert.match(css, /light-dark\(/);
   assert.match(css, /@media print/);
   assert.doesNotMatch(css, /@import|url\(\s*['"]?https?:/);
 });
