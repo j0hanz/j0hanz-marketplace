@@ -44,9 +44,24 @@ h2,
 legend,
 button,
 nav,
-.num,
+.tag {
+  font-family: var(--sans);
+}
 h1 {
   font-size: 2rem;
+}
+a,
+a:visited {
+  color: var(--accent);
+}
+code,
+pre {
+  font-family: var(--mono);
+}
+pre {
+  overflow-x: auto;
+  padding: 0.75rem 1rem;
+  background: var(--card);
 }
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -180,9 +195,15 @@ label.picked:not(.answer) {
 
 /* print */
 @media print {
-  body {
-    background: #fff;
-    color: #000;
+  :root {
+    --bg: #fff;
+    --fg: #000;
+    --card: #fff;
+    --muted: #444;
+    --rule: #999;
+    --accent: #0b3d91;
+    --ok: #0b5d27;
+    --bad: #8c1a14;
   }
   nav.crumbs,
   .ask,

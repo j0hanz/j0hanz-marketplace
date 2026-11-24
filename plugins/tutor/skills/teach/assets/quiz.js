@@ -42,21 +42,38 @@
       retry = null;
     }
 
+    function grade(set, input) {
+      const want = set.dataset.answer;
+      set.querySelectorAll('input').forEach((i) => {
+        const label = i.closest('label');
+        if (i.value === want && label) label.classList.add('answer');
+        if (i === input && label) label.classList.add('picked');
+        i.disabled = true;
+      });
+      set.classList.add(input.value === want ? 'correct' : 'wrong');
+      const fb = set.querySelector('.feedback');
+      if (fb) fb.hidden = false;
+      update();
+    }
+
+    const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     sets.forEach((set) => {
+      let moving = false; // an arrow key is moving the selection: do not grade it
+      set.addEventListener('keydown', (e) => {
+        if (e.target.type !== 'radio') return;
+        if (arrows.includes(e.key)) {
+          moving = true;
+        } else if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          e.target.checked = true;
+          grade(set, e.target);
+        }
+      });
+      set.addEventListener('keyup', (e) => {
+        if (arrows.includes(e.key)) moving = false;
+      });
       set.addEventListener('change', (e) => {
-        const input = e.target;
-        if (input.type !== 'radio') return;
-        const want = set.dataset.answer;
-        set.querySelectorAll('input').forEach((i) => {
-          const label = i.closest('label');
-          if (i.value === want && label) label.classList.add('answer');
-          if (i === input && label) label.classList.add('picked');
-          i.disabled = true;
-        });
-        set.classList.add(input.value === want ? 'correct' : 'wrong');
-        const fb = set.querySelector('.feedback');
-        if (fb) fb.hidden = false;
-        update();
+        if (e.target.type === 'radio' && !moving) grade(set, e.target);
       });
     });
 
